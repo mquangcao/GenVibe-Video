@@ -1,0 +1,13 @@
+﻿global using AIGenVideo.Server.Bootstraping;
+global using AIGenVideo.Server.Models.RequestModels;
+global using Microsoft.AspNetCore.Mvc;
+global using Microsoft.AspNetCore.Identity;
+global using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+global using Microsoft.EntityFrameworkCore;
+global using AIGenVideo.Server.Data.Entities;
+global using AIGenVideo.Server.Models.ResponseModels;
+global using AIGenVideo.Server.Abstractions;
+global using AIGenVideo.Server.Data;
+global using AIGenVideo.Server.Services;
+global using Microsoft.AspNetCore.Authentication.JwtBearer;
+global using Microsoft.OpenApi.Models;

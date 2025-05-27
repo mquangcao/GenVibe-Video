@@ -1,6 +1,6 @@
 @AIGenVideo.Server_HostAddress = http://localhost:5028
 
-GET {{AIGenVideo.Server_HostAddress}}/weatherforecast/
+GET {{AIGenVideo.Server_HostAddress}}/api/home
 Accept: application/json
 
 ###
