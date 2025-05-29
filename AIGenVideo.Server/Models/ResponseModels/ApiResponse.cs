@@ -1,9 +1,21 @@
-﻿namespace AIGenVideo.Server.Models.ResponseModels;
+﻿using System.Text.Json.Serialization;
 
-public sealed record ApiResponse<T>
+namespace AIGenVideo.Server.Models.ResponseModels;
+
+public sealed class ApiResponse : ApiResponse<object>
 {
+
+}
+
+public class ApiResponse<T>
+{
+    [JsonPropertyName("success")]
     public bool Success { get; init; }
+
+    [JsonPropertyName("message")]
     public string? Message { get; init; }
+
+    [JsonPropertyName("data")]
     public T? Data { get; init; }
     public static ApiResponse<T> SuccessResponse(T? data, string? message = null)
     {

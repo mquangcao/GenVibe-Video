@@ -1,4 +1,8 @@
-﻿namespace AIGenVideo.Server.Bootstraping;
+﻿using AIGenVideo.Server.Models.Configurations;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.IdentityModel.Tokens;
+
+namespace AIGenVideo.Server.Bootstraping;
 
 public static class ApplicationServiceExtensions
 {
@@ -13,6 +17,7 @@ public static class ApplicationServiceExtensions
         // Add application services here
         // Example: builder.Services.AddScoped<IMyService, MyService>();
         builder.Services.AddSingleton<IEmailSender, DefaultEmailSender>();
+        builder.Services.AddScoped<ITokenService, JwtTokenService>();
 
         return builder;
     }
@@ -74,9 +79,34 @@ public static class ApplicationServiceExtensions
     {
         builder.Services.AddAuthentication(options =>
         {
-            options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-            options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-        }).AddJwtBearer();
+            options.DefaultAuthenticateScheme =
+            options.DefaultChallengeScheme =
+            options.DefaultForbidScheme =
+            options.DefaultScheme =
+            options.DefaultSignInScheme =
+            options.DefaultSignOutScheme = JwtBearerDefaults.AuthenticationScheme;
+
+        }).AddJwtBearer(options =>
+        {
+            var jwtOptions = builder.Configuration.GetSection("JWT").Get<JwtOptions>() ?? throw new InvalidOperationException("JWT configuration not found.");
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuer = jwtOptions.ValidateIssuer,
+                ValidIssuer = jwtOptions.Issuer,
+                ValidateAudience = jwtOptions.ValidateAudience,
+                ValidAudience = jwtOptions.Audience,
+                ValidateIssuerSigningKey = jwtOptions.ValidateIssuerSigningKey,
+                IssuerSigningKey = new SymmetricSecurityKey(
+                    System.Text.Encoding.UTF8.GetBytes(jwtOptions.SigningKey)
+                )
+            };
+        });
+        return builder;
+    }
+
+    public static IHostApplicationBuilder AddOptionPattern(this IHostApplicationBuilder builder)
+    {
+        builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("JWT"));
         return builder;
     }
 }

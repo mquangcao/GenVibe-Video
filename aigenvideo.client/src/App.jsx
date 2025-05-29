@@ -1,14 +1,16 @@
-import { Button } from "./components/ui/button"
-
+import { BrowserRouter } from "react-router-dom";
+import AppRoutes from "@/routes"
+import AuthProvider from "./providers/authProvider";
 
 
 function App() {
   return (
-    <div>
-     <Button>Click me</Button>
-
-    </div>
-  )
+    <AuthProvider>
+      <BrowserRouter>
+        <AppRoutes />
+      </BrowserRouter>
+    </AuthProvider>
+  );
 }
 
 export default App

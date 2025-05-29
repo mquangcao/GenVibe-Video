@@ -4,6 +4,7 @@ builder.AddApplicationServices();
 builder.AddSwaggerUIService();
 builder.AddIdentityServices();
 builder.AddAuthenticationScheme();
+builder.AddOptionPattern();
 
 var app = builder.Build();
 
