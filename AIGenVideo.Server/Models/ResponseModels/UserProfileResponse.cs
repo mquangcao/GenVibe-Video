@@ -12,5 +12,7 @@ public sealed record UserProfileResponse
     public string Email { get; set; } = string.Empty;
     [JsonPropertyName("name")]
     public string Name { get; set; } = string.Empty;
+    [JsonPropertyName("role")]
+    public string Role { get; set; } = string.Empty;
 
 }

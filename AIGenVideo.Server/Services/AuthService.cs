@@ -1,4 +1,4 @@
-﻿
+﻿using AIGenVideo.Server.Helpers;
 using AIGenVideo.Server.Models.Configurations;
 using Microsoft.Extensions.Options;
 
@@ -10,17 +10,122 @@ public class AuthService : IAuthService
     private readonly UserManager<AppUser> _userManager;
     private readonly ITokenService _tokenService;
     private readonly JwtOptions _jwtOptions;
+    private readonly ILogger<AuthService> _logger;
 
-    public AuthService(SignInManager<AppUser> signInManager, UserManager<AppUser> userManager, ITokenService tokenService, IOptions<JwtOptions> options)
+    public AuthService(SignInManager<AppUser> signInManager, UserManager<AppUser> userManager, ITokenService tokenService, IOptions<JwtOptions> options, ILogger<AuthService> logger)
     {
         _signInManager = signInManager;
         _userManager = userManager;
         _tokenService = tokenService;
         _jwtOptions = options.Value;
+        _logger = logger;
     }
 
-    public Task<ApiResponse<LoginResponse>> LoginAsync(LoginRequest request)
+    public async Task<ApiResponse<LoginResponse>> LoginAsync(LoginRequest request)
     {
-        throw new NotImplementedException("LoginAsync method is not implemented yet. Please implement the logic for user authentication and token generation here.");
+        try
+        {
+            var user = await _userManager.Users.FirstOrDefaultAsync(u => u.UserName == request.Email);
+            if (user == null)
+            {
+                return ApiResponse<LoginResponse>.FailResponse("Invalid username!");
+            }
+            var result = await _signInManager.CheckPasswordSignInAsync(user, request.Password, false);
+            if (!result.Succeeded)
+            {
+                return ApiResponse<LoginResponse>.FailResponse("Username not found and/or password incorrect");
+            }
+
+            var refreshToken = TokenHelper.GenerateRefreshToken();
+            user.RefreshToken = refreshToken;
+            user.RefreshTokenExpiryTime = DateTime.UtcNow.AddMinutes(_jwtOptions.RefeshTokenExpirationInMinutes);
+            await _userManager.UpdateAsync(user);
+
+            var roles = await _userManager.GetRolesAsync(user);
+
+            return ApiResponse<LoginResponse>.SuccessResponse(new LoginResponse
+            {
+                Username = user.UserName ?? string.Empty,
+                Token = _tokenService.CreateToken(user),
+                RefreshToken = refreshToken,
+                Role = roles.FirstOrDefault() ?? Constants.USER_ROLE,
+            }, "Login successful");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Exception occurred during user login for email: {Email}", request.Email);
+            return ApiResponse<LoginResponse>.FailResponse(Constants.MESSAGE_SERVER_ERROR, Constants.SERVER_ERROR_CODE);
+        }
     }
+
+    public async Task<ApiResponse<RefreshTokenResponse>> RefreshTokenAsync(RefreshTokenRequest request)
+    {
+        try
+        {
+            var user = await _userManager.FindByNameAsync(request.Username);
+            
+
+            if (user == null || user.RefreshTokenExpiryTime == null || user.RefreshTokenExpiryTime <= DateTime.UtcNow )
+            {
+                return ApiResponse<RefreshTokenResponse>.FailResponse("Expired refresh token.");
+            }
+
+            if (!string.Equals(user.RefreshToken, request.RefreshToken))
+            {
+                return ApiResponse<RefreshTokenResponse>.FailResponse("Invalid refresh token.");
+            }
+
+            var newToken = _tokenService.CreateToken(user);
+            var newRefreshToken = TokenHelper.GenerateRefreshToken();
+
+            user.RefreshToken = newRefreshToken;
+            user.RefreshTokenExpiryTime = DateTime.UtcNow.AddMinutes(_jwtOptions.RefeshTokenExpirationInMinutes);
+            await _userManager.UpdateAsync(user);
+
+            return ApiResponse<RefreshTokenResponse>.SuccessResponse(new RefreshTokenResponse
+            {
+                Token = newToken,
+                RefreshToken = newRefreshToken
+            }, "Refresh token successful");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Exception occurred during refresh token for request: {@Request}", request);
+            return ApiResponse<RefreshTokenResponse>.FailResponse(Constants.MESSAGE_SERVER_ERROR, Constants.SERVER_ERROR_CODE);
+        }
+    }
+
+    public async Task<ApiResponse<object>> RegisterAsync(RegisterRequest request, string role = Constants.USER_ROLE)
+    {
+        try
+        {
+            var user = new AppUser
+            {
+                UserName = request.Email,
+                Email = request.Email
+            };
+
+            var result = await _signInManager.UserManager.CreateAsync(user, request.Password);
+            if (!result.Succeeded)
+            {
+                var friendlyError = result.Errors.Select(e => e.Description).FirstOrDefault() ?? "Registration failed.";
+                return ApiResponse.FailResponse(friendlyError);
+            }
+
+            var addRoleResult = await _userManager.AddToRoleAsync(user, role);
+            if (!addRoleResult.Succeeded)
+            {
+                _logger.LogError("Failed to assign role to user {UserId}: {Errors}", user.Id, addRoleResult.Errors);
+                return ApiResponse.FailResponse("An error occurred while setting up the account.");
+            }
+
+            return ApiResponse.SuccessResponse(null, "User registered successfully.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Exception occurred during user registration for email: {Email}", request.Email);
+            return ApiResponse.FailResponse(Constants.MESSAGE_SERVER_ERROR, Constants.SERVER_ERROR_CODE);
+        }
+    }
+
 }

@@ -31,13 +31,16 @@ public class AccountController : ControllerBase
         {
             return NotFound(ApiResponse.FailResponse("User not found"));
         }
+        var role = await _userManager.GetRolesAsync(user);
+
         return Ok(ApiResponse<UserProfileResponse>.SuccessResponse(
             new UserProfileResponse()
             {
                 Avatar = "",
                 Username = user.UserName ?? "",
                 Email = user.Email ?? "",
-                Name = user.Email ?? ""
+                Name = user.Email ?? "",
+                Role = role.FirstOrDefault() ?? "user"
             }));
     }
 }

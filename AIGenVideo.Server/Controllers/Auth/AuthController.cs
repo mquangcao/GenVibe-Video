@@ -1,6 +1,5 @@
 ﻿using AIGenVideo.Server.Helpers;
-using AIGenVideo.Server.Models.Configurations;
-using Microsoft.Extensions.Options;
+using AIGenVideo.Server.Models.RequestModels.Auth;
 
 namespace AIGenVideo.Server.Controllers.Auth;
 
@@ -8,17 +7,11 @@ namespace AIGenVideo.Server.Controllers.Auth;
 [Route("api/[controller]")]
 public class AuthController : ControllerBase
 {
-    private readonly SignInManager<AppUser> _signInManager;
-    private readonly UserManager<AppUser> _userManager;
-    private readonly ITokenService _tokenService;
-    private readonly JwtOptions _jwtOptions;
+    private readonly IAuthService _authService;
 
-    public AuthController(SignInManager<AppUser> signInManager, UserManager<AppUser> userManager, ITokenService tokenService, IOptions<JwtOptions> options)
+    public AuthController(IAuthService authService)
     {
-        _signInManager = signInManager;
-        _userManager = userManager;
-        _tokenService = tokenService;
-        _jwtOptions = options.Value;
+        _authService = authService;
     }
 
 
@@ -28,58 +21,59 @@ public class AuthController : ControllerBase
     {
         if (!ModelState.IsValid)
         {
-            return Ok(ApiResponse.FailResponse("Username or password is ..."));
+            return BadRequest(ApiResponse.FailResponse("Invalid request"));
         }
 
-        var user = await _userManager.Users.FirstOrDefaultAsync(u => u.UserName == request.Email);
-        if (user == null)
+        var result = await _authService.LoginAsync(request);
+        if (result.Success)
         {
-            return Unauthorized(ApiResponse.FailResponse("Invalid username!"));
+            return Ok(result);
         }
 
-        var result = await _signInManager.CheckPasswordSignInAsync(user, request.Password, false);
-
-        if (!result.Succeeded)
-        {
-            return Unauthorized(ApiResponse.FailResponse("Username not found and/or password incorrect"));
-        }
-
-        var refreshToken = TokenHelper.GenerateRefreshToken();
-        user.RefreshToken = refreshToken;
-        user.RefreshTokenExpiryTime = DateTime.UtcNow.AddMinutes(_jwtOptions.RefeshTokenExpirationInMinutes);
-        await _userManager.UpdateAsync(user);
-
-        return Ok(ApiResponse.SuccessResponse(new
-        {
-            id = user.Id,
-            username = user.UserName,
-            email = user.Email,
-            token = _tokenService.CreateToken(user),
-            refreshToken
-        }, "Login successful."));
+        return Unauthorized(result);
     }
 
     [HttpPost]
     [Route("register")]
-    public async Task<IActionResult> Register([FromBody] LoginRequest request)
+    public async Task<IActionResult> Register([FromBody] RegisterRequest request)
     {
         if (!ModelState.IsValid)
         {
             return BadRequest(ApiResponse.FailResponse("Username or password is ..."));
         }
-        var user = new AppUser()
+        var result = await _authService.RegisterAsync(request);
+        if (result.Success)
         {
-            UserName = request.Email,
-            Email = request.Email
-        };
-
-        var result = await _signInManager.UserManager.CreateAsync(user, request.Password);
-        if (result.Succeeded)
-        {
-            return Created("", ApiResponse.SuccessResponse(null, "User registered successfully."));
+            return Ok(result);
         }
-        return BadRequest(ApiResponse.FailResponse("Error register user"));
+
+        if (result.StatusCode == Constants.SERVER_ERROR_CODE)
+        {
+            return StatusCode(Constants.SERVER_ERROR_CODE, result);
+        }
+        return BadRequest(result);
     }
 
+    [HttpPost]
+    [Route("refresh-token")]
+    public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenRequest request)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ApiResponse.FailResponse("Invalid request"));
+        }
+        var result = await _authService.RefreshTokenAsync(request);
+        if (result.Success)
+        {
+            return Ok(result);
+        }
+
+        if (result.StatusCode == Constants.SERVER_ERROR_CODE)
+        {
+            return StatusCode(Constants.SERVER_ERROR_CODE, result);
+        }
+
+        return Unauthorized(result);
+    }
 
 }

@@ -1,6 +1,6 @@
 ﻿namespace AIGenVideo.Server.Models.Configurations;
 
-public class JwtOptions
+public sealed record JwtOptions
 {
     public string Issuer { get; set; } = string.Empty;
     public string Audience { get; set; } = string.Empty;
@@ -11,4 +11,5 @@ public class JwtOptions
     public bool ValidateLifetime { get; set; } = true;
     public bool ValidateIssuerSigningKey { get; set; } = true;
     public int RefeshTokenExpirationInMinutes { get; set; } = 60 * 24 * 7; // 7 days
+    public int AccessTokenExpirationInMinutes { get; set; } = 60 * 24; // 24 hours
 }

@@ -5,12 +5,22 @@ import { useAuth } from '@/hooks';
 import { login } from '@/redux';
 import { useState } from 'react';
 import { saveAuthTokens } from '@/utils';
+import { useNavigate } from 'react-router-dom';
+
+const navigateTo = (role, navigate) => {
+  if (role === 'admin') {
+    navigate('/admin/user');
+  } else {
+    navigate('/');
+  }
+};
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
-  const { isAuthenticated, authDispatch } = useAuth();
-
+  const { isAuthenticated, authDispatch, role } = useAuth();
+  const navigate = useNavigate();
   if (isAuthenticated) {
+    navigateTo(role, navigate);
     return null;
   }
 
@@ -24,6 +34,8 @@ export default function LoginPage() {
 
         const responseProfile = await accountService.getAccountProfile();
         authDispatch(login(responseProfile.data.data));
+
+        navigateTo(responseProfile.data.data.role, navigate);
       }
     } catch (error) {
       console.error('Login error:', error);

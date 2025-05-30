@@ -26,10 +26,13 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar';
 import { useAuth } from '@/hooks';
+import { logout } from '@/redux';
+import { useNavigate } from 'react-router-dom';
 
 export function NavUser() {
   const { isMobile } = useSidebar();
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, authDispatch } = useAuth();
+  const navigate = useNavigate();
 
   if (!isAuthenticated) {
     return (
@@ -38,6 +41,13 @@ export function NavUser() {
       </div>
     );
   }
+
+  const logoutAction = () => {
+    // Implement your logout logic here
+    // For example, you might want to clear user data and redirect to login page
+    authDispatch(logout());
+    navigate('/login');
+  };
 
   return (
     <SidebarMenu>
@@ -100,7 +110,7 @@ export function NavUser() {
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={logoutAction}>
               <LogOut />
               Log out
             </DropdownMenuItem>
