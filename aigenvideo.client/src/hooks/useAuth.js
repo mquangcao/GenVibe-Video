@@ -9,7 +9,10 @@ const useAuth = () => {
     }
 
     return {
-        ...context
+        authState : context.authState,
+        authDispatch : context.authDispatch,
+        user : context.authState.user,
+        isAuthenticated : context.authState.isAuthenticated,
     }
 }
 
