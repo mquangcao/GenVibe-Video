@@ -18,6 +18,7 @@ public static class ApplicationServiceExtensions
         // Example: builder.Services.AddScoped<IMyService, MyService>();
         builder.Services.AddSingleton<IEmailSender, DefaultEmailSender>();
         builder.Services.AddScoped<ITokenService, JwtTokenService>();
+        builder.Services.AddScoped<IAuthService, AuthService>();
 
         return builder;
     }
@@ -98,7 +99,9 @@ public static class ApplicationServiceExtensions
                 ValidateIssuerSigningKey = jwtOptions.ValidateIssuerSigningKey,
                 IssuerSigningKey = new SymmetricSecurityKey(
                     System.Text.Encoding.UTF8.GetBytes(jwtOptions.SigningKey)
-                )
+                ),
+                ValidateLifetime = jwtOptions.ValidateLifetime,
+                ClockSkew = TimeSpan.Zero
             };
         });
         return builder;

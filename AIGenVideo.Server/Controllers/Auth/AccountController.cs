@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using AIGenVideo.Server.Extensions;
+using Microsoft.AspNetCore.Authorization;
 
 namespace AIGenVideo.Server.Controllers.Auth;
 
@@ -15,15 +16,31 @@ public class AccountController : ControllerBase
         _signInManager = signInManager;
         _tokenService = tokenService;
     }
-    // Add methods for account management here (e.g., register, login, logout, etc.)
-    [HttpGet("{id}")]
-    public async Task<IActionResult> GetUserInfo(string id)
+    
+    [HttpGet("profile")]
+    public async Task<IActionResult> GetUserInfo()
     {
-        var user = await _userManager.FindByIdAsync(id);
+        var username = HttpContext.User.GetUsername();
+        if (string.IsNullOrEmpty(username))
+        {
+            return BadRequest(ApiResponse.FailResponse("Username not found in token claims"));
+        }
+
+        var user = await _userManager.FindByNameAsync(username);
         if (user == null)
         {
             return NotFound(ApiResponse.FailResponse("User not found"));
         }
-        return Ok(ApiResponse<AppUser>.SuccessResponse(user));
+        var role = await _userManager.GetRolesAsync(user);
+
+        return Ok(ApiResponse<UserProfileResponse>.SuccessResponse(
+            new UserProfileResponse()
+            {
+                Avatar = "",
+                Username = user.UserName ?? "",
+                Email = user.Email ?? "",
+                Name = user.Email ?? "",
+                Role = role.FirstOrDefault() ?? "user"
+            }));
     }
 }

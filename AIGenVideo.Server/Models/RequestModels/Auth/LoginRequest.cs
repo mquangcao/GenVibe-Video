@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace AIGenVideo.Server.Models.RequestModels;
+namespace AIGenVideo.Server.Models.RequestModels.Auth;
 
 public class LoginRequest
 {

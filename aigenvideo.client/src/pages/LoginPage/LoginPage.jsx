@@ -1,51 +1,44 @@
-import { GalleryVerticalEnd } from "lucide-react"
-import { LoginForm } from "@/components/LoginForm"
-import { useNavigate } from "react-router-dom";
-import { accountService, signIn } from "@/apis";
-import { useEffect, useState } from "react";
-import { useAuth } from "@/hooks";
-import { actions } from "@/providers/AuthProvider";
+import { GalleryVerticalEnd } from 'lucide-react';
+import { LoginForm } from '@/components/LoginForm';
+import { accountService, signIn } from '@/apis';
+import { useAuth } from '@/hooks';
+import { login } from '@/redux';
+import { useState } from 'react';
+import { saveAuthTokens } from '@/utils';
+import { useNavigate } from 'react-router-dom';
 
+const navigateTo = (role, navigate) => {
+  if (role === 'admin') {
+    navigate('/admin/user');
+  } else {
+    navigate('/');
+  }
+};
 
 export default function LoginPage() {
+  const [isLoading, setIsLoading] = useState(false);
+  const { isAuthenticated, authDispatch, role } = useAuth();
   const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(false)
-  const { state, dispatch } = useAuth();
-
-  useEffect(() => {
-    if (state.isAuthenticated) {
-    navigate("/admin/user");
-    return;
+  if (isAuthenticated) {
+    navigateTo(role, navigate);
+    return null;
   }
-  }, []);
-  
+
   const handleLogin = async ({ email, password }) => {
     setIsLoading(true);
-    
-    try 
-    {
+
+    try {
       const response = await signIn({ email, password });
       if (response.data.success) {
-        localStorage.setItem("token", response.data.data.token); 
-        localStorage.setItem("refreshToken", response.data.data.refreshToken); 
-        localStorage.setItem("id", response.data.data.id);
-        accountService.getAccountInfo(response.data.data.id)
-          .then((response) => {
-            if (response.data.success) {
-              dispatch({
-                type: actions.LOGIN_SUCCESS,
-                payload: response.data.data,
-              });
-            }
-          })
-          .catch((error) => {
-            console.error("Get account info error:", error);
-          });
-        navigate("/admin/user");
-      }
+        saveAuthTokens(response.data.data);
 
+        const responseProfile = await accountService.getAccountProfile();
+        authDispatch(login(responseProfile.data.data));
+
+        navigateTo(responseProfile.data.data.role, navigate);
+      }
     } catch (error) {
-      console.error("Login error:", error);
+      console.error('Login error:', error);
     } finally {
       setIsLoading(false);
     }
@@ -63,5 +56,5 @@ export default function LoginPage() {
         <LoginForm onSubmit={handleLogin} isLoading={isLoading} />
       </div>
     </div>
-  )
+  );
 }
