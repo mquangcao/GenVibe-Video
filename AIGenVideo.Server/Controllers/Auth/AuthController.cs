@@ -1,7 +1,4 @@
-﻿using AIGenVideo.Server.Helpers;
-using AIGenVideo.Server.Models.RequestModels.Auth;
-
-namespace AIGenVideo.Server.Controllers.Auth;
+﻿namespace AIGenVideo.Server.Controllers.Auth;
 
 //[ApiController]
 [Route("api/[controller]")]
@@ -74,6 +71,27 @@ public class AuthController : ControllerBase
         }
 
         return Unauthorized(result);
+    }
+
+    [HttpPost]
+    [Route("logout")]
+    public async Task<IActionResult> Logout()
+    {
+        var username = User.GetUsername();
+        if (string.IsNullOrWhiteSpace(username))
+        {
+            return BadRequest(ApiResponse.FailResponse("Username is required"));
+        }
+        var result = await _authService.LogoutAsync(username);
+        if (result.Success)
+        {
+            return Ok(result);
+        }
+        if (result.StatusCode == Constants.SERVER_ERROR_CODE)
+        {
+            return StatusCode(Constants.SERVER_ERROR_CODE, result);
+        }
+        return BadRequest(result);
     }
 
 }

@@ -90,7 +90,6 @@ public static class ApplicationServiceExtensions
         }).AddJwtBearer(options =>
         {
             var jwtOptions = builder.Configuration.GetSection("JWT").Get<JwtOptions>() ?? throw new InvalidOperationException("JWT configuration not found.");
-            Console.WriteLine(jwtOptions);
             options.TokenValidationParameters = new TokenValidationParameters
             {
                 ValidateIssuer = jwtOptions.ValidateIssuer,

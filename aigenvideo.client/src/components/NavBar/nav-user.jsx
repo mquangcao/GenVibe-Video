@@ -1,13 +1,6 @@
 'use client';
 
-import {
-  BadgeCheck,
-  Bell,
-  ChevronsUpDown,
-  CreditCard,
-  LogOut,
-  Sparkles,
-} from 'lucide-react';
+import { BadgeCheck, Bell, ChevronsUpDown, CreditCard, LogOut, Sparkles } from 'lucide-react';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
@@ -19,15 +12,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import {
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  useSidebar,
-} from '@/components/ui/sidebar';
+import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from '@/components/ui/sidebar';
 import { useAuth } from '@/hooks';
 import { logout } from '@/redux';
 import { useNavigate } from 'react-router-dom';
+import { logout as logoutAccount } from '@/apis';
 
 export function NavUser() {
   const { isMobile } = useSidebar();
@@ -42,10 +31,20 @@ export function NavUser() {
     );
   }
 
-  const logoutAction = () => {
-    // Implement your logout logic here
-    // For example, you might want to clear user data and redirect to login page
-    authDispatch(logout());
+  const logoutAction = async () => {
+    try {
+      const response = await logoutAccount();
+      if (response.data.success) {
+        console.log('Logout successful');
+      } else {
+        console.error('Logout failed:', response.data.message);
+      }
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      authDispatch(logout());
+    }
+
     navigate('/login');
   };
 

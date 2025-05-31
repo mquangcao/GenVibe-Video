@@ -1,5 +1,6 @@
 ﻿using AIGenVideo.Server.Helpers;
 using AIGenVideo.Server.Models.Configurations;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Options;
 
 namespace AIGenVideo.Server.Services;
@@ -55,6 +56,28 @@ public class AuthService : IAuthService
         {
             _logger.LogError(ex, "Exception occurred during user login for email: {Email}", request.Email);
             return ApiResponse<LoginResponse>.FailResponse(Constants.MESSAGE_SERVER_ERROR, Constants.SERVER_ERROR_CODE);
+        }
+    }
+
+    [Authorize]
+    public async Task<ApiResponse<object>> LogoutAsync(string username)
+    {
+        try
+        {
+            var user = await _userManager.FindByNameAsync(username);
+            if (user == null)
+            {
+                return ApiResponse.FailResponse("User not found.");
+            }
+            user.RefreshToken = string.Empty;
+            user.RefreshTokenExpiryTime = null;
+            await _userManager.UpdateAsync(user);
+            return ApiResponse.SuccessResponse(null, "Logout successful.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Exception occurred during logout for user: {Username}", username);
+            return ApiResponse.FailResponse(Constants.MESSAGE_SERVER_ERROR, Constants.SERVER_ERROR_CODE);
         }
     }
 
