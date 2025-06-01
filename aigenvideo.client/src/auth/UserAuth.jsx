@@ -1,8 +1,14 @@
 import { Navigate } from 'react-router-dom';
-import { useAuth } from '@/hooks'; // giả sử bạn có hook này
+import { useAuth } from '@/hooks';
+import LoadingSpinner from '@/components/LoadingSpinner';
 
-const UserAuth = ({ children, requiredRoles }) => {
-  const { isAuthenticated, role } = useAuth();
+const UserAuth = ({ children }) => {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    // Nếu đang tải dữ liệu, có thể hiển thị một loading spinner hoặc gì đó
+    return <LoadingSpinner />;
+  }
 
   if (!isAuthenticated) {
     // Chưa đăng nhập → chuyển về trang login

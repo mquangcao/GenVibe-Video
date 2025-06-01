@@ -1,9 +1,14 @@
 import { Navigate } from 'react-router-dom';
-import { useAuth } from '@/hooks'; // giả sử bạn có hook này
+import { useAuth } from '@/hooks';
+import LoadingSpinner from '@/components/LoadingSpinner';
 
 const AdminAuth = ({ children, requiredRoles }) => {
-  const { isAuthenticated, role } = useAuth();
+  const { isAuthenticated, role, isLoading } = useAuth();
   console.log('AdminAuth', { isAuthenticated, role });
+
+  if (isLoading) {
+    return <LoadingSpinner />;
+  }
 
   if (!isAuthenticated) {
     // Chưa đăng nhập → chuyển về trang login

@@ -1,9 +1,9 @@
-import { clearAuthTokens } from '@/utils';
 import { authAction } from '../actions/authAction';
 export const authInitState = {
   user: null,
   isAuthenticated: false,
   error: null,
+  isLoading: true,
 };
 
 export const authReducer = (state, action) => {
@@ -14,14 +14,15 @@ export const authReducer = (state, action) => {
         user: action.payload,
         isAuthenticated: true,
         error: null,
+        isLoading: false,
       };
     case authAction.LOGOUT:
-      clearAuthTokens();
       return {
         ...state,
         user: null,
         isAuthenticated: false,
         error: null,
+        isLoading: false,
       };
     default:
       return state;

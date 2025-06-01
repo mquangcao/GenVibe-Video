@@ -9,7 +9,7 @@ import { Navigate, useNavigate } from 'react-router-dom';
 
 const navigateTo = (role) => {
   if (role === 'admin') {
-    return <Navigate to="/admin/user-manager" replace />;
+    return <Navigate to="/admin" replace />;
   } else {
     return <Navigate to="/" replace />;
   }

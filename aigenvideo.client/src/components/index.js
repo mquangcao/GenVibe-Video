@@ -1,4 +1,5 @@
 export * from './Layouts';
 export * from './Button';
 export * from './LoginForm';
-export * from "./NavBar"
+export * from './NavBar';
+export * from './LoadingSpinner';

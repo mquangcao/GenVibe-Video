@@ -13,6 +13,7 @@ const useAuth = () => {
     user: context.authState.user,
     isAuthenticated: context.authState.isAuthenticated,
     role: context.authState.user?.role || null,
+    isLoading: context.authState.isLoading,
   };
 };
 
