@@ -36,7 +36,7 @@ public class AuthController : ControllerBase
     {
         if (!ModelState.IsValid)
         {
-            return BadRequest(ApiResponse.FailResponse("Username or password is ..."));
+            return BadRequest(ApiResponse.FailResponse("Invalid email or password"));
         }
         var result = await _authService.RegisterAsync(request);
         if (result.Success)

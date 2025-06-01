@@ -1,12 +1,10 @@
-import { GalleryVerticalEnd } from 'lucide-react';
-import { LoginForm } from '@/components/LoginForm';
-import { accountService, signIn } from '@/apis';
-import { useAuth } from '@/hooks';
-import { login } from '@/redux';
-import { useState } from 'react';
-import { saveAuthTokens } from '@/utils';
-import { Navigate } from 'react-router-dom';
+import { signUp } from '@/apis';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import SignupForm from '@/components/SignUpForm';
+import { useAuth } from '@/hooks';
+import { GalleryVerticalEnd } from 'lucide-react';
+import React, { useState } from 'react';
+import { Navigate, useNavigate } from 'react-router-dom';
 
 const navigateTo = (role) => {
   if (role === 'admin') {
@@ -16,7 +14,8 @@ const navigateTo = (role) => {
   }
 };
 
-export default function LoginPage() {
+function SignUpPage() {
+  const navaigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const { isAuthenticated, authDispatch, role, isLoading: loadApi } = useAuth();
 
@@ -28,21 +27,23 @@ export default function LoginPage() {
     return navigateTo(role);
   }
 
-  const handleLogin = async ({ email, password }) => {
+  const handleSignUp = async ({ email, password, name, confirmPassword }) => {
     setIsLoading(true);
+    console.log('Sign up details:', { email, password, name, confirmPassword });
+    if (password !== confirmPassword) {
+      alert('Passwords do not match');
+      setIsLoading(false);
+      return;
+    }
 
     try {
-      const response = await signIn({ email, password });
+      const response = await signUp({ email, password, name });
       if (response.data.success) {
-        saveAuthTokens(response.data.data);
-
-        const responseProfile = await accountService.getAccountProfile();
-        authDispatch(login(responseProfile.data.data));
-
-        navigateTo(responseProfile.data.data.role);
+        alert('Sign up successful! Please log in.');
+        navaigate('/login');
       }
     } catch (error) {
-      console.error('Login error:', error);
+      console.error('Sign up error:', error.response?.data?.message || error.message);
     } finally {
       setIsLoading(false);
     }
@@ -57,8 +58,10 @@ export default function LoginPage() {
           </div>
           AI Gen Video
         </span>
-        <LoginForm onSubmit={handleLogin} isLoading={isLoading} />
+        <SignupForm onSubmit={handleSignUp} isLoading={isLoading} />
       </div>
     </div>
   );
 }
+
+export default SignUpPage;
