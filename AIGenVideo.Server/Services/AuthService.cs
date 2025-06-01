@@ -125,7 +125,8 @@ public class AuthService : IAuthService
             var user = new AppUser
             {
                 UserName = request.Email,
-                Email = request.Email
+                Email = request.Email,
+                FullName = request.FullName,
             };
 
             var result = await _signInManager.UserManager.CreateAsync(user, request.Password);

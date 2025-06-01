@@ -39,7 +39,7 @@ public class AccountController : ControllerBase
                 Avatar = "",
                 Username = user.UserName ?? "",
                 Email = user.Email ?? "",
-                Name = user.Email ?? "",
+                Name = user.FullName ?? "",
                 Role = role.FirstOrDefault() ?? "user"
             }));
     }

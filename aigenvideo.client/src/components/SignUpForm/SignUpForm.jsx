@@ -3,24 +3,21 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import React, { useState } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
-export default function LoginForm({
-  className,
-  isLoading,
-  onSubmit, // Callback function to handle form submission
-  ...props
-}) {
+export default function SignupForm({ className, isLoading, onSubmit, ...props }) {
+  const navigate = useNavigate();
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const navigate = useNavigate();
+  const [confirmPassword, setConfirmPassword] = useState('');
 
   const handleSubmit = (e) => {
     e.preventDefault();
 
     if (onSubmit) {
-      onSubmit({ email, password });
+      onSubmit({ name, email, password, confirmPassword });
     }
   };
 
@@ -28,8 +25,8 @@ export default function LoginForm({
     <div className={cn('flex flex-col gap-6', className)} {...props}>
       <Card>
         <CardHeader className="text-center">
-          <CardTitle className="text-xl">Welcome back</CardTitle>
-          <CardDescription>Login with your Apple or Google account</CardDescription>
+          <CardTitle className="text-xl">Create an account</CardTitle>
+          <CardDescription>Sign up with your Apple or Google account</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit}>
@@ -42,7 +39,7 @@ export default function LoginForm({
                       fill="currentColor"
                     />
                   </svg>
-                  Login with Apple
+                  Sign up with Apple
                 </Button>
                 <Button variant="outline" className="w-full">
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
@@ -51,14 +48,18 @@ export default function LoginForm({
                       fill="currentColor"
                     />
                   </svg>
-                  Login with Google
+                  Sign up with Google
                 </Button>
               </div>
-              <div className="after:border-border relative text-center text-sm after:absolute after:inset-0 after:top-1/2 after:z-0 after:flex after:items-center after:border-t">
-                <span className="bg-card text-muted-foreground relative z-10 px-2">Or continue with</span>
+              <div className="relative text-center text-sm after:absolute after:inset-0 after:top-1/2 after:z-0 after:flex after:items-center after:border-t after:border-border">
+                <span className="relative z-10 bg-background px-2 text-muted-foreground">Or continue with</span>
               </div>
               <div className="grid gap-6">
-                <div className="grid gap-3">
+                <div className="grid gap-2">
+                  <Label htmlFor="name">Full name</Label>
+                  <Input id="name" placeholder="John Doe" value={name} onChange={(e) => setName(e.target.value)} required />
+                </div>
+                <div className="grid gap-2">
                   <Label htmlFor="email">Email</Label>
                   <Input
                     id="email"
@@ -69,36 +70,41 @@ export default function LoginForm({
                     required
                   />
                 </div>
-                <div className="grid gap-3">
-                  <div className="flex items-center">
-                    <Label htmlFor="password">Password</Label>
-                    <a href="#" className="ml-auto text-sm underline-offset-4 hover:underline">
-                      Forgot your password?
-                    </a>
-                  </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="password">Password</Label>
                   <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
                 </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="confirmPassword">Confirm password</Label>
+                  <Input
+                    id="confirmPassword"
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                  />
+                </div>
                 <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? 'Logging in...' : 'Login'}
+                  {isLoading ? 'Signing up...' : 'Sign up'}
                 </Button>
               </div>
               <div className="text-center text-sm">
-                Don&apos;t have an account?{' '}
+                Already have an account?{' '}
                 <span
                   className="underline underline-offset-4 cursor-pointer"
                   onClick={(e) => {
                     e.preventDefault();
-                    navigate('/signup');
+                    navigate('/login');
                   }}
                 >
-                  Sign up
+                  Log in
                 </span>
               </div>
             </div>
           </form>
         </CardContent>
       </Card>
-      <div className="text-muted-foreground *:[a]:hover:text-primary text-center text-xs text-balance *:[a]:underline *:[a]:underline-offset-4">
+      <div className="text-balance text-center text-xs text-muted-foreground [&_a]:underline [&_a]:underline-offset-4 [&_a]:hover:text-primary  ">
         By clicking continue, you agree to our <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>.
       </div>
     </div>

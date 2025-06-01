@@ -17,6 +17,7 @@ import { useAuth } from '@/hooks';
 import { logout } from '@/redux';
 import { useNavigate } from 'react-router-dom';
 import { logout as logoutAccount } from '@/apis';
+import { clearAuthTokens } from '@/utils';
 
 export function NavUser() {
   const { isMobile } = useSidebar();
@@ -42,6 +43,7 @@ export function NavUser() {
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
+      clearAuthTokens();
       authDispatch(logout());
     }
 
@@ -53,17 +55,21 @@ export function NavUser() {
       <SidebarMenuItem>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <SidebarMenuButton
-              size="lg"
-              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
-            >
+            <SidebarMenuButton size="lg" className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground">
               <Avatar className="h-8 w-8 rounded-lg">
                 <AvatarImage src={user.avatar} alt={user.name} />
-                <AvatarFallback className="rounded-lg">CN</AvatarFallback>
+                <AvatarFallback className="rounded-lg">
+                  {user.name
+                    .trim()
+                    .split(/\s+/)
+                    .slice(0, 2)
+                    .map((word) => word[0].toUpperCase())
+                    .join('')}
+                </AvatarFallback>
               </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-medium">{user.username}</span>
-                <span className="truncate text-xs">{user.email}</span>
+                <span className="truncate font-medium">{user.name}</span>
+                <span className="truncate text-xs">{user.username}</span>
               </div>
               <ChevronsUpDown className="ml-auto size-4" />
             </SidebarMenuButton>
