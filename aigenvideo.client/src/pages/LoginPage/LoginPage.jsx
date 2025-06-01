@@ -5,13 +5,13 @@ import { useAuth } from '@/hooks';
 import { login } from '@/redux';
 import { useState } from 'react';
 import { saveAuthTokens } from '@/utils';
-import { useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 
-const navigateTo = (role, navigate) => {
+const navigateTo = (role) => {
   if (role === 'admin') {
-    navigate('/admin/user');
+    return <Navigate to="/admin" replace />;
   } else {
-    navigate('/');
+    return <Navigate to="/" replace />;
   }
 };
 
@@ -20,8 +20,7 @@ export default function LoginPage() {
   const { isAuthenticated, authDispatch, role } = useAuth();
   const navigate = useNavigate();
   if (isAuthenticated) {
-    navigateTo(role, navigate);
-    return null;
+    return navigateTo(role);
   }
 
   const handleLogin = async ({ email, password }) => {
