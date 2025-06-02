@@ -36,11 +36,11 @@ public class AccountController : ControllerBase
         return Ok(ApiResponse<UserProfileResponse>.SuccessResponse(
             new UserProfileResponse()
             {
-                Avatar = "",
-                Username = user.UserName ?? "",
-                Email = user.Email ?? "",
-                Name = user.FullName ?? "",
-                Role = role.FirstOrDefault() ?? "user"
+                Avatar = string.Empty,
+                Username = user.UserName ?? string.Empty,
+                Email = user.Email ?? string.Empty,
+                Name = user.FullName ?? string.Empty,
+                Role = role.FirstOrDefault() ?? Constants.USER_ROLE
             }));
     }
 }

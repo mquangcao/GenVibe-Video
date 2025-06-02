@@ -1,7 +1,7 @@
 import { signUp } from '@/apis';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import SignupForm from '@/components/SignUpForm';
-import { useAuth } from '@/hooks';
+import { useAuth, useToast } from '@/hooks';
 import { GalleryVerticalEnd } from 'lucide-react';
 import React, { useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
@@ -15,9 +15,10 @@ const navigateTo = (role) => {
 };
 
 function SignUpPage() {
-  const navaigate = useNavigate();
+  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
-  const { isAuthenticated, authDispatch, role, isLoading: loadApi } = useAuth();
+  const { isAuthenticated, role, isLoading: loadApi } = useAuth();
+  const { ToastSuccess, ToastError } = useToast();
 
   if (loadApi) {
     return <LoadingSpinner />;
@@ -29,9 +30,8 @@ function SignUpPage() {
 
   const handleSignUp = async ({ email, password, name, confirmPassword }) => {
     setIsLoading(true);
-    console.log('Sign up details:', { email, password, name, confirmPassword });
     if (password !== confirmPassword) {
-      alert('Passwords do not match');
+      ToastError('Passwords do not match');
       setIsLoading(false);
       return;
     }
@@ -39,11 +39,12 @@ function SignUpPage() {
     try {
       const response = await signUp({ email, password, name });
       if (response.data.success) {
-        alert('Sign up successful! Please log in.');
-        navaigate('/login');
+        ToastSuccess('Sign up successful! Please log in.');
+        navigate('/login');
       }
     } catch (error) {
       console.error('Sign up error:', error.response?.data?.message || error.message);
+      ToastError(error.response?.data?.message || 'Sign up failed');
     } finally {
       setIsLoading(false);
     }

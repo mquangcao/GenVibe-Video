@@ -1,7 +1,7 @@
 import { GalleryVerticalEnd } from 'lucide-react';
 import { LoginForm } from '@/components/LoginForm';
 import { accountService, signIn } from '@/apis';
-import { useAuth } from '@/hooks';
+import { useAuth, useToast } from '@/hooks';
 import { login } from '@/redux';
 import { useState } from 'react';
 import { saveAuthTokens } from '@/utils';
@@ -19,6 +19,7 @@ const navigateTo = (role) => {
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const { isAuthenticated, authDispatch, role, isLoading: loadApi } = useAuth();
+  const { ToastSuccess, ToastError } = useToast();
 
   if (loadApi) {
     return <LoadingSpinner />;
@@ -38,11 +39,16 @@ export default function LoginPage() {
 
         const responseProfile = await accountService.getAccountProfile();
         authDispatch(login(responseProfile.data.data));
-
+        ToastSuccess('Login successful!');
         navigateTo(responseProfile.data.data.role);
       }
     } catch (error) {
       console.error('Login error:', error);
+      if (error.response && error.response.data) {
+        ToastError(error.response.data.message || 'Login failed');
+      } else {
+        ToastError('An unexpected error occurred');
+      }
     } finally {
       setIsLoading(false);
     }
