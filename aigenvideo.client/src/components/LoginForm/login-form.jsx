@@ -72,9 +72,15 @@ export default function LoginForm({
                 <div className="grid gap-3">
                   <div className="flex items-center">
                     <Label htmlFor="password">Password</Label>
-                    <a href="#" className="ml-auto text-sm underline-offset-4 hover:underline">
+                    <span
+                      className="ml-auto text-sm underline-offset-4 hover:underline  pointer cursor-pointer"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        navigate('/forgot-password');
+                      }}
+                    >
                       Forgot your password?
-                    </a>
+                    </span>
                   </div>
                   <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
                 </div>

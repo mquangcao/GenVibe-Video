@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace AIGenVideo.Server.Models.ResponseModels;
+namespace AIGenVideo.Server.Models.ResponseModels.Auth;
 
 public class RefreshTokenResponse
 {
