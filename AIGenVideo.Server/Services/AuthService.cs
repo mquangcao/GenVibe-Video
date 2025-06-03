@@ -1,7 +1,9 @@
 ﻿using AIGenVideo.Server.Helpers;
 using AIGenVideo.Server.Models.Configurations;
+using AIGenVideo.Server.Models.ResponseModels.Auth;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Options;
+using System.Web;
 
 namespace AIGenVideo.Server.Services;
 
@@ -12,14 +14,53 @@ public class AuthService : IAuthService
     private readonly ITokenService _tokenService;
     private readonly JwtOptions _jwtOptions;
     private readonly ILogger<AuthService> _logger;
+    private readonly IEmailSender _emailSender;
 
-    public AuthService(SignInManager<AppUser> signInManager, UserManager<AppUser> userManager, ITokenService tokenService, IOptions<JwtOptions> options, ILogger<AuthService> logger)
+    public AuthService(SignInManager<AppUser> signInManager, UserManager<AppUser> userManager, ITokenService tokenService, IOptions<JwtOptions> options, ILogger<AuthService> logger, IEmailSender emailSender)
     {
         _signInManager = signInManager;
         _userManager = userManager;
         _tokenService = tokenService;
         _jwtOptions = options.Value;
         _logger = logger;
+        _emailSender = emailSender;
+    }
+
+    public async Task<ApiResponse<ForgotPasswordResponse>> ForgotPasswordAsync(ForgotPasswordRequest request)
+    {
+        try
+        {
+            var user = await _userManager.FindByEmailAsync(request.Email);
+            if (user == null)
+            {
+                return ApiResponse<ForgotPasswordResponse>.FailResponse("Email not found.");
+            }
+            var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+            var encodedToken = HttpUtility.UrlEncode(token);
+
+            var resetLink = $"{request.CallbackUrl}?email={user.Email}&token={encodedToken}";
+
+            var sendEmailResutl = await _emailSender.SendResetPasswordEmailAsync(request.Email, resetLink);
+
+            if (!sendEmailResutl.Success)
+            {
+                _logger.LogError("Failed to send reset password email to {Email}: {Error}", request.Email, sendEmailResutl.Message);
+                return ApiResponse<ForgotPasswordResponse>.FailResponse(Constants.MESSAGE_SERVER_ERROR, Constants.SERVER_ERROR_CODE);
+            }
+
+            return ApiResponse<ForgotPasswordResponse>.SuccessResponse(new ForgotPasswordResponse
+            {
+                Email = request.Email,
+            }, "If the email exists, a reset link has been sent.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Exception occurred during forgot password for email: {Email}", request.Email);
+            return ApiResponse<ForgotPasswordResponse>.FailResponse(Constants.MESSAGE_SERVER_ERROR, Constants.SERVER_ERROR_CODE);
+        }
+
+
+
     }
 
     public async Task<ApiResponse<LoginResponse>> LoginAsync(LoginRequest request)
@@ -152,4 +193,32 @@ public class AuthService : IAuthService
         }
     }
 
+    public async Task<ApiResponse<object>> ResetPasswordAsync(ResetPasswordRequest request)
+    {
+        try
+        {
+            var user = await _userManager.FindByEmailAsync(request.Email);
+            if (user == null)
+            {
+                return ApiResponse.FailResponse("Invalid request.");
+            }
+
+            var decodedToken = HttpUtility.UrlDecode(request.Token);
+
+            var result = await _userManager.ResetPasswordAsync(user, decodedToken, request.NewPassword);
+            if (!result.Succeeded)
+            {
+                var errors = string.Join("; ", result.Errors.Select(e => e.Description));
+                _logger.LogError("Password reset failed for user {Email}: {Errors}", request.Email, errors);
+                return ApiResponse.FailResponse($"Password reset failed: {errors}");
+            }
+
+            return ApiResponse.SuccessResponse(null, "Password has been reset successfully.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during password reset for email {Email}", request.Email);
+            return ApiResponse.FailResponse(Constants.MESSAGE_SERVER_ERROR, Constants.SERVER_ERROR_CODE);
+        }
+    }
 }

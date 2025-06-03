@@ -94,4 +94,44 @@ public class AuthController : ControllerBase
         return BadRequest(result);
     }
 
+    [HttpPost]
+    [Route("forgot-password")]
+    public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ApiResponse.FailResponse("Invalid email"));
+        }
+        var result = await _authService.ForgotPasswordAsync(request);
+        if (result.Success)
+        {
+            return Ok(result);
+        }
+        if (result.StatusCode == Constants.SERVER_ERROR_CODE)
+        {
+            return StatusCode(Constants.SERVER_ERROR_CODE, result);
+        }
+        return BadRequest(result);
+    }
+
+    [HttpPost]
+    [Route("reset-password")]
+    public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ApiResponse.FailResponse("Invalid request"));
+        }
+        var result = await _authService.ResetPasswordAsync(request);
+        if (result.Success)
+        {
+            return Ok(result);
+        }
+        if (result.StatusCode == Constants.SERVER_ERROR_CODE)
+        {
+            return StatusCode(Constants.SERVER_ERROR_CODE, result);
+        }
+        return BadRequest(result);
+    }
+
 }

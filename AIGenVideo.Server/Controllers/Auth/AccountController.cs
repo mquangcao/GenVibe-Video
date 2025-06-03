@@ -1,5 +1,4 @@
-﻿using AIGenVideo.Server.Extensions;
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 
 namespace AIGenVideo.Server.Controllers.Auth;
 

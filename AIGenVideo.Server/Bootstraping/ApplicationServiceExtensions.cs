@@ -13,10 +13,9 @@ public static class ApplicationServiceExtensions
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen();
 
-
         // Add application services here
         // Example: builder.Services.AddScoped<IMyService, MyService>();
-        builder.Services.AddSingleton<IEmailSender, DefaultEmailSender>();
+        builder.Services.AddSingleton<IEmailSender, MailKitEmailSender>();
         builder.Services.AddScoped<ITokenService, JwtTokenService>();
         builder.Services.AddScoped<IAuthService, AuthService>();
 
@@ -73,6 +72,12 @@ public static class ApplicationServiceExtensions
             .AddEntityFrameworkStores<ApplicationDbContext>()
             .AddDefaultTokenProviders();
 
+        // password reset token life time
+        builder.Services.Configure<DataProtectionTokenProviderOptions>(opt =>
+        {
+            opt.TokenLifespan = TimeSpan.FromMinutes(builder.Configuration.GetValue<int>("PasswordToken:LifeTimeInMinutes", 5)); 
+        });
+
         return builder;
     }
 
@@ -109,7 +114,9 @@ public static class ApplicationServiceExtensions
 
     public static IHostApplicationBuilder AddOptionPattern(this IHostApplicationBuilder builder)
     {
-        builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("JWT"));
+        builder.Services.Configure<JwtOptions>(builder.Configuration.GetRequiredSection("JWT"));
+        builder.Services.Configure<EmailOptions>(builder.Configuration.GetSection("EmailSettings"));
+
         return builder;
     }
 }
