@@ -10,4 +10,5 @@ public interface IAuthService
     Task<ApiResponse<object>> LogoutAsync(string username);
     Task<ApiResponse<ForgotPasswordResponse>> ForgotPasswordAsync(ForgotPasswordRequest request);
     Task<ApiResponse<object>> ResetPasswordAsync(ResetPasswordRequest request);
+    Task<ApiResponse<LoginResponse>> LoginGoogleAsync(GoogleCodeRequest request);
 }

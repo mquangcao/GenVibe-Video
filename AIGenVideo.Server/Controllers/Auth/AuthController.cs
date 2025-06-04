@@ -1,14 +1,19 @@
-﻿namespace AIGenVideo.Server.Controllers.Auth;
+﻿using Google.Apis.Auth;
+using System.Net.Http;
+using System.Text.Json;
+
+namespace AIGenVideo.Server.Controllers.Auth;
 
 //[ApiController]
 [Route("api/[controller]")]
 public class AuthController : ControllerBase
 {
     private readonly IAuthService _authService;
-
-    public AuthController(IAuthService authService)
+    private readonly IHttpClientFactory _httpClientFactory;
+    public AuthController(IAuthService authService, IHttpClientFactory httpClientFactory)
     {
         _authService = authService;
+        _httpClientFactory = httpClientFactory;
     }
 
 
@@ -133,5 +138,27 @@ public class AuthController : ControllerBase
         }
         return BadRequest(result);
     }
+
+    [HttpPost("google-login")]
+    public async Task<IActionResult> GoogleLogin([FromBody] GoogleCodeRequest request)
+    {
+        if( !ModelState.IsValid)
+        {
+            return BadRequest(ApiResponse.FailResponse("Invalid request"));
+        }
+
+        var result = await _authService.LoginGoogleAsync(request);
+        if (result.Success)
+        {
+            return Ok(result);
+        }
+
+        if (result.StatusCode == Constants.SERVER_ERROR_CODE)
+        {
+            return StatusCode(Constants.SERVER_ERROR_CODE, result);
+        }
+        return Unauthorized(result);
+    }
+
 
 }
