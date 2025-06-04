@@ -1,8 +1,13 @@
 ﻿using AIGenVideo.Server.Helpers;
 using AIGenVideo.Server.Models.Configurations;
 using AIGenVideo.Server.Models.ResponseModels.Auth;
+using Azure.Core;
+using Google.Apis.Auth;
+using Google.Apis.Auth.OAuth2;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Options;
+using Org.BouncyCastle.Asn1.Ocsp;
+using System.Text.Json;
 using System.Web;
 
 namespace AIGenVideo.Server.Services;
@@ -13,17 +18,21 @@ public class AuthService : IAuthService
     private readonly UserManager<AppUser> _userManager;
     private readonly ITokenService _tokenService;
     private readonly JwtOptions _jwtOptions;
+    private readonly LoginGoogleOptions _loginGoogleOptions;
     private readonly ILogger<AuthService> _logger;
     private readonly IEmailSender _emailSender;
+    private readonly IHttpClientFactory _httpClientFactory;
 
-    public AuthService(SignInManager<AppUser> signInManager, UserManager<AppUser> userManager, ITokenService tokenService, IOptions<JwtOptions> options, ILogger<AuthService> logger, IEmailSender emailSender)
+    public AuthService(SignInManager<AppUser> signInManager, UserManager<AppUser> userManager, ITokenService tokenService, IOptions<JwtOptions> options, ILogger<AuthService> logger, IEmailSender emailSender, IHttpClientFactory httpClientFactory, IOptions<LoginGoogleOptions> googleOptions)
     {
         _signInManager = signInManager;
         _userManager = userManager;
         _tokenService = tokenService;
         _jwtOptions = options.Value;
+        _loginGoogleOptions = googleOptions.Value;
         _logger = logger;
         _emailSender = emailSender;
+        _httpClientFactory = httpClientFactory;
     }
 
     public async Task<ApiResponse<ForgotPasswordResponse>> ForgotPasswordAsync(ForgotPasswordRequest request)
@@ -77,27 +86,162 @@ public class AuthService : IAuthService
             {
                 return ApiResponse<LoginResponse>.FailResponse("Username not found and/or password incorrect");
             }
+            var response = await GenerateLoginResponseAsync(user);
 
-            var refreshToken = TokenHelper.GenerateRefreshToken();
-            user.RefreshToken = refreshToken;
-            user.RefreshTokenExpiryTime = DateTime.UtcNow.AddMinutes(_jwtOptions.RefeshTokenExpirationInMinutes);
-            await _userManager.UpdateAsync(user);
-
-            var roles = await _userManager.GetRolesAsync(user);
-
-            return ApiResponse<LoginResponse>.SuccessResponse(new LoginResponse
-            {
-                Username = user.UserName ?? string.Empty,
-                Token = _tokenService.CreateToken(user),
-                RefreshToken = refreshToken,
-                Role = roles.FirstOrDefault() ?? Constants.USER_ROLE,
-            }, "Login successful");
+            return ApiResponse<LoginResponse>.SuccessResponse(response, "Login successful");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Exception occurred during user login for email: {Email}", request.Email);
             return ApiResponse<LoginResponse>.FailResponse(Constants.MESSAGE_SERVER_ERROR, Constants.SERVER_ERROR_CODE);
         }
+    }
+
+    public async Task<ApiResponse<LoginResponse>> LoginGoogleAsync(GoogleCodeRequest request)
+    {
+        try
+        {
+            var tokenData = await ExchangeCodeForTokensAsync(request.Code);
+            if (tokenData is null)
+            {
+                return ApiResponse<LoginResponse>.FailResponse("Failed to exchange Google code for token.");
+            }
+
+            if (!tokenData.Value.TryGetProperty("id_token", out var idTokenElement))
+            {
+                return ApiResponse<LoginResponse>.FailResponse("Missing id_token in Google response.");
+            }
+            var idToken = idTokenElement.GetString();
+
+            var payload = await GoogleJsonWebSignature.ValidateAsync(idToken);
+
+            if (payload == null)
+            {
+                return ApiResponse<LoginResponse>.FailResponse("Invalid Google ID token.");
+            }
+
+            var user = await CreateOrGetUserFromGooglePayloadAsync(payload);
+            if (user is null)
+            {
+                return ApiResponse<LoginResponse>.FailResponse("Could not create or retrieve user.");
+            }
+
+            await SaveGoogleTokensToUserManagerAsync(user, tokenData.Value);
+
+            var response = await GenerateLoginResponseAsync(user);
+
+            return ApiResponse<LoginResponse>.SuccessResponse(response, "Google login successful");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Exception occurred during Google login with code: {Code}", request.Code);
+            return ApiResponse<LoginResponse>.FailResponse(Constants.MESSAGE_SERVER_ERROR, Constants.SERVER_ERROR_CODE);
+        }
+
+    }
+
+    private async Task<JsonElement?> ExchangeCodeForTokensAsync(string code)
+    {
+        string baseUrlGoogleAuth = "https://oauth2.googleapis.com/token";
+
+        var client = _httpClientFactory.CreateClient();
+        var tokenResponse = await client.PostAsync(baseUrlGoogleAuth, new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+                { "code", code },
+                { "client_id", _loginGoogleOptions.ClientId },
+                { "client_secret", _loginGoogleOptions.ClientSecret },
+                { "redirect_uri", _loginGoogleOptions.RedirectUri },
+                { "grant_type", "authorization_code" }
+            }));
+
+        if (!tokenResponse.IsSuccessStatusCode)
+        {
+            return null;
+        }
+
+        var tokenJson = await tokenResponse.Content.ReadAsStringAsync();
+        return JsonDocument.Parse(tokenJson).RootElement;
+    }
+
+    private async Task<AppUser?> CreateOrGetUserFromGooglePayloadAsync(GoogleJsonWebSignature.Payload payload)
+    {
+        var user = await _userManager.FindByEmailAsync(payload.Email);
+        if (user != null)
+        {
+            return user;
+        }
+
+        user = new AppUser
+        {
+            UserName = payload.Email,
+            Email = payload.Email,
+            FullName = payload.Name
+        };
+
+        var createResult = await _userManager.CreateAsync(user);
+        if (!createResult.Succeeded)
+        {
+            var error = createResult.Errors.Select(e => e.Description).FirstOrDefault();
+            _logger.LogWarning("Failed to create user: {Error}", error);
+            return null;
+        }
+
+        var roleResult = await _userManager.AddToRoleAsync(user, Constants.USER_ROLE);
+        if (!roleResult.Succeeded)
+        {
+            _logger.LogError("Failed to assign role to user {UserId}: {Errors}", user.Id, roleResult.Errors);
+            return null;
+        }
+
+        var loginInfo = new UserLoginInfo("Google", payload.Subject, "Google");
+        var loginResult = await _userManager.AddLoginAsync(user, loginInfo);
+
+        if (!loginResult.Succeeded)
+        {
+            _logger.LogWarning("Failed to link Google login to user {UserId}", user.Id);
+            return null;
+        }
+
+        _logger.LogInformation("New user created from Google login: {Email}", payload.Email);
+        return user;
+
+    }
+
+    private async Task SaveGoogleTokensToUserManagerAsync(AppUser user, JsonElement tokenData)
+    {
+        var now = DateTime.UtcNow;
+        if (tokenData.TryGetProperty("access_token", out var at))
+        {
+            await _userManager.SetAuthenticationTokenAsync(user, "Google", "access_token", at.GetString());
+        }
+
+        if (tokenData.TryGetProperty("expires_in", out var exp))
+        {
+            var expiresAt = now.AddSeconds(exp.GetInt32()).ToString("o");
+            await _userManager.SetAuthenticationTokenAsync(user, "Google", "expires_at", expiresAt);
+        }
+
+        if (tokenData.TryGetProperty("refresh_token", out var rt))
+        {
+            await _userManager.SetAuthenticationTokenAsync(user, "Google", "refresh_token", rt.GetString());
+        }
+    }
+
+    private async Task<LoginResponse> GenerateLoginResponseAsync(AppUser user)
+    {
+        var refreshToken = TokenHelper.GenerateRefreshToken();
+        user.RefreshToken = refreshToken;
+        user.RefreshTokenExpiryTime = DateTime.UtcNow.AddMinutes(_jwtOptions.RefeshTokenExpirationInMinutes);
+        await _userManager.UpdateAsync(user);
+
+        var roles = await _userManager.GetRolesAsync(user);
+        return new LoginResponse
+        {
+            Username = user.UserName ?? string.Empty,
+            Token = _tokenService.CreateToken(user),
+            RefreshToken = refreshToken,
+            Role = roles.FirstOrDefault() ?? Constants.USER_ROLE,
+        };
     }
 
     [Authorize]
@@ -127,9 +271,9 @@ public class AuthService : IAuthService
         try
         {
             var user = await _userManager.FindByNameAsync(request.Username);
-            
 
-            if (user == null || user.RefreshTokenExpiryTime == null || user.RefreshTokenExpiryTime <= DateTime.UtcNow )
+
+            if (user == null || user.RefreshTokenExpiryTime == null || user.RefreshTokenExpiryTime <= DateTime.UtcNow)
             {
                 return ApiResponse<RefreshTokenResponse>.FailResponse("Expired refresh token.");
             }

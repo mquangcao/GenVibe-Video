@@ -19,3 +19,8 @@ export const forgotPassword = async (body) => {
 export const resetPassword = async (body) => {
   return await axiosClient.post('api/auth/reset-password', body);
 };
+
+export const loginWithGoogle = async (code) => {
+  console.log('Google Login Code:', { code: code });
+  return await axiosClient.post('api/auth/google-login', { code: code });
+};

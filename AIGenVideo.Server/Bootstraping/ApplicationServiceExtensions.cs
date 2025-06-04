@@ -12,6 +12,7 @@ public static class ApplicationServiceExtensions
 
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen();
+        builder.Services.AddHttpClient();
 
         // Add application services here
         // Example: builder.Services.AddScoped<IMyService, MyService>();
@@ -116,6 +117,7 @@ public static class ApplicationServiceExtensions
     {
         builder.Services.Configure<JwtOptions>(builder.Configuration.GetRequiredSection("JWT"));
         builder.Services.Configure<EmailOptions>(builder.Configuration.GetSection("EmailSettings"));
+        builder.Services.Configure<LoginGoogleOptions>(builder.Configuration.GetSection("Authentication:Google"));
 
         return builder;
     }
