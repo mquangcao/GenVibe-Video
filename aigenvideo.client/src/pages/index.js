@@ -7,3 +7,4 @@ export { default as BuyPage } from './BuyPage';
 export { default as SignUpPage } from './SignUpPage';
 export { default as ResetPasswordPage } from './ChangePasswordPage';
 export { default as ForgotPasswordPage } from './ForgotPasswordPage';
+export { default as VoiceGeneratorPage } from './VoiceGeneratorPage';
