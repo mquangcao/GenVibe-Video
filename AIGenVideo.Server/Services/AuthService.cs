@@ -165,13 +165,43 @@ public class AuthService : IAuthService
 
     private async Task<AppUser?> CreateOrGetUserFromGooglePayloadAsync(GoogleJsonWebSignature.Payload payload)
     {
-        var user = await _userManager.FindByEmailAsync(payload.Email);
+        var loginProvider = "Google";
+        var providerKey = payload.Subject;
+        var email = payload.Email;
+        var user = await _userManager.FindByLoginAsync(loginProvider, providerKey);
+
         if (user != null)
         {
             return user;
         }
 
-        user = new AppUser
+        user = await _userManager.FindByEmailAsync(email);
+        if (user == null)
+        {
+            user = await CreateNewUser(payload);
+            if (user == null)
+            {
+                _logger.LogWarning("Failed to create new user from Google login: {Email}", email);
+                return null;
+            }
+        }
+
+        var loginInfo = new UserLoginInfo(loginProvider, providerKey, loginProvider);
+        var loginResult = await _userManager.AddLoginAsync(user!, loginInfo);
+
+        if (!loginResult.Succeeded)
+        {
+            _logger.LogWarning("Failed to link Google login to user {UserId}", user!.Id);
+            return null;
+        }
+
+        _logger.LogInformation("New user created from Google login: {Email}", email);
+        return user;
+    }
+
+    private async Task<AppUser?> CreateNewUser(GoogleJsonWebSignature.Payload payload)
+    {
+        var user = new AppUser
         {
             UserName = payload.Email,
             Email = payload.Email,
@@ -179,6 +209,7 @@ public class AuthService : IAuthService
         };
 
         var createResult = await _userManager.CreateAsync(user);
+
         if (!createResult.Succeeded)
         {
             var error = createResult.Errors.Select(e => e.Description).FirstOrDefault();
@@ -193,18 +224,7 @@ public class AuthService : IAuthService
             return null;
         }
 
-        var loginInfo = new UserLoginInfo("Google", payload.Subject, "Google");
-        var loginResult = await _userManager.AddLoginAsync(user, loginInfo);
-
-        if (!loginResult.Succeeded)
-        {
-            _logger.LogWarning("Failed to link Google login to user {UserId}", user.Id);
-            return null;
-        }
-
-        _logger.LogInformation("New user created from Google login: {Email}", payload.Email);
         return user;
-
     }
 
     private async Task SaveGoogleTokensToUserManagerAsync(AppUser user, JsonElement tokenData)
