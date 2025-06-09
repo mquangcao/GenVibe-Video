@@ -3,7 +3,6 @@ import axios from 'axios';
 import { Header } from '@/components/Layouts/Header';
 import { SideBar } from '@/components/Layouts/SideBar';
 import { Mic, Download, Heart, Save, Volume2, Play, Pause, ChevronDown, ChevronUp } from 'lucide-react';
-
 function VoiceGeneratorPage() {
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     const [textInput, setTextInput] = useState('');
@@ -32,14 +31,10 @@ function VoiceGeneratorPage() {
     const [playSpeed, setPlaySpeed] = useState(1.0);
     const [showControls, setShowControls] = useState(true);
 
-    // Refs for audio elements
     const audioRefs = useRef({});
 
-    // ElevenLabs API configuration
-    //const API_KEY = process.env.REACT_APP_ELEVENLABS_API_KEY || 'jhgjh';
-    const API_KEY = 'sk_a63344a440315b0e5ae33d0fd53722e5bc471ae0be4fea39';
-    const VOICE_ID = 'B2e3SszxeBIVZp7k0tVh'; // Example voice ID (Rachel)
-
+    const API_KEY = import.meta.env.API_KEY;
+    const VOICE_ID = import.meta.env.VOICE_ID;
     const toggleSidebar = () => {
         setIsSidebarOpen(!isSidebarOpen);
     };
@@ -49,7 +44,6 @@ function VoiceGeneratorPage() {
         if (!textInput.trim()) return;
 
         try {
-            // Map quality to ElevenLabs model
             const qualityMap = {
                 High: 'eleven_multilingual_v2',
                 Medium: 'eleven_turbo_v2_5',
@@ -57,7 +51,6 @@ function VoiceGeneratorPage() {
             };
             const modelId = qualityMap[selectedQuality];
 
-            // Make API call to ElevenLabs
             const response = await axios({
                 method: 'POST',
                 url: `https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}`,
@@ -77,22 +70,19 @@ function VoiceGeneratorPage() {
                 responseType: 'arraybuffer',
             });
 
-            // Create a blob from the response data
             const blob = new Blob([response.data], { type: 'audio/mpeg' });
             const audioUrl = URL.createObjectURL(blob);
 
-            // Create new audio entry
             const newAudio = {
                 id: Date.now(),
                 text: textInput,
                 audioUrl,
                 isPlaying: false,
-                duration: '0:00', // You may need to calculate duration based on response
+                duration: '0:00',
                 volume: 1,
                 showVolume: false,
             };
 
-            // Update state
             setGeneratedAudios([newAudio, ...generatedAudios]);
             setTextInput('');
         } catch (error) {
