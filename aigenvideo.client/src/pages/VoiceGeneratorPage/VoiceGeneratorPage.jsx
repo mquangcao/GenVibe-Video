@@ -2,7 +2,11 @@ import React, { useState, useRef } from 'react';
 import axios from 'axios';
 import { Header } from '@/components/Layouts/Header';
 import { SideBar } from '@/components/Layouts/SideBar';
-import { Mic, Download, Heart, Save, Volume2, Play, Pause, ChevronDown, ChevronUp } from 'lucide-react';
+import { Mic, Download, Heart, Volume2, Play, Pause, ChevronDown, ChevronUp } from 'lucide-react';
+import { saveAs } from 'file-saver';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+
 function VoiceGeneratorPage() {
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     const [textInput, setTextInput] = useState('');
@@ -13,8 +17,11 @@ function VoiceGeneratorPage() {
             audioUrl: '',
             isPlaying: false,
             duration: '0:30',
+            remainingTime: '0:30',
             volume: 1,
             showVolume: false,
+            progress: 0,
+            liked: false,
         },
         {
             id: 2,
@@ -22,8 +29,11 @@ function VoiceGeneratorPage() {
             audioUrl: '',
             isPlaying: false,
             duration: '0:45',
+            remainingTime: '0:45',
             volume: 1,
             showVolume: false,
+            progress: 0,
+            liked: false,
         }
     ]);
     const [selectedLanguage, setSelectedLanguage] = useState('English');
@@ -33,10 +43,14 @@ function VoiceGeneratorPage() {
 
     const audioRefs = useRef({});
 
-    const API_KEY = import.meta.env.API_KEY;
-    const VOICE_ID = import.meta.env.VOICE_ID;
-    const toggleSidebar = () => {
-        setIsSidebarOpen(!isSidebarOpen);
+    const API_KEY = import.meta.env.VITE_API_KEY;
+    const VOICE_ID = import.meta.env.VITE_VOICE_ID;
+
+    const formatDuration = (seconds) => {
+        if (isNaN(seconds) || seconds < 0) return '0:00';
+        const minutes = Math.floor(seconds / 60);
+        const secs = Math.floor(seconds % 60);
+        return `${minutes}:${secs < 10 ? '0' : ''}${secs}`;
     };
 
     const handleGenerate = async (e) => {
@@ -73,14 +87,24 @@ function VoiceGeneratorPage() {
             const blob = new Blob([response.data], { type: 'audio/mpeg' });
             const audioUrl = URL.createObjectURL(blob);
 
+            const tempAudio = new Audio(audioUrl);
+            const duration = await new Promise((resolve) => {
+                tempAudio.addEventListener('loadedmetadata', () => {
+                    resolve(tempAudio.duration);
+                });
+            });
+
             const newAudio = {
                 id: Date.now(),
                 text: textInput,
                 audioUrl,
                 isPlaying: false,
-                duration: '0:00',
+                duration: formatDuration(duration),
+                remainingTime: formatDuration(duration),
                 volume: 1,
                 showVolume: false,
+                progress: 0,
+                liked: false,
             };
 
             setGeneratedAudios([newAudio, ...generatedAudios]);
@@ -92,27 +116,28 @@ function VoiceGeneratorPage() {
     };
 
     const togglePlayPause = (id) => {
-        setGeneratedAudios(prev =>
-            prev.map(audio =>
-                audio.id === id
-                    ? { ...audio, isPlaying: !audio.isPlaying }
-                    : { ...audio, isPlaying: false }
-            )
-        );
+        Object.entries(audioRefs.current).forEach(([audioId, audioEl]) => {
+            if (Number(audioId) !== id && audioEl) {
+                audioEl.pause();
+                audioEl.currentTime = 0;
+            }
+        });
+
         const audioEl = audioRefs.current[id];
         if (audioEl) {
-            audioEl.playbackRate = playSpeed; // Apply playback speed
+            audioEl.playbackRate = playSpeed;
             if (audioEl.paused) {
                 audioEl.play();
             } else {
                 audioEl.pause();
+                audioEl.currentTime = 0;
             }
         }
     };
 
     const toggleShowVolume = (id) => {
-        setGeneratedAudios(prev =>
-            prev.map(audio =>
+        setGeneratedAudios((prev) =>
+            prev.map((audio) =>
                 audio.id === id
                     ? { ...audio, showVolume: !audio.showVolume }
                     : { ...audio, showVolume: false }
@@ -121,8 +146,8 @@ function VoiceGeneratorPage() {
     };
 
     const handleVolumeChange = (id, value) => {
-        setGeneratedAudios(prev =>
-            prev.map(audio =>
+        setGeneratedAudios((prev) =>
+            prev.map((audio) =>
                 audio.id === id
                     ? { ...audio, volume: value }
                     : audio
@@ -135,22 +160,156 @@ function VoiceGeneratorPage() {
     };
 
     const toggleLike = (id) => {
-        setGeneratedAudios(prev =>
-            prev.map(audio =>
+        setGeneratedAudios((prev) =>
+            prev.map((audio) => {
+                if (audio.id === id) {
+                    const newLikedState = !audio.liked;
+                    toast.success(
+                        newLikedState
+                            ? 'Added to favorites!'
+                            : 'Removed from favorites!',
+                        {
+                            position: 'top-right',
+                            autoClose: 2000,
+                            hideProgressBar: false,
+                            closeOnClick: true,
+                            pauseOnHover: true,
+                            draggable: true,
+                            theme: 'dark',
+                        }
+                    );
+                    return { ...audio, liked: newLikedState };
+                }
+                return audio;
+            })
+        );
+    };
+
+    const handleTimeUpdate = (id) => {
+        const audioEl = audioRefs.current[id];
+        if (audioEl) {
+            const progress = (audioEl.currentTime / audioEl.duration) * 100;
+            const remainingTime = audioEl.duration - audioEl.currentTime;
+            setGeneratedAudios((prev) =>
+                prev.map((audio) =>
+                    audio.id === id
+                        ? {
+                            ...audio,
+                            progress: isNaN(progress) ? 0 : progress,
+                            remainingTime: formatDuration(remainingTime),
+                        }
+                        : audio
+                )
+            );
+        }
+    };
+
+    const handleAudioPlay = (id) => {
+        const audioEl = audioRefs.current[id];
+        if (audioEl) {
+            if (!isNaN(audioEl.duration) && audioEl.duration > 0) {
+                setGeneratedAudios((prev) =>
+                    prev.map((audio) =>
+                        audio.id === id
+                            ? {
+                                ...audio,
+                                isPlaying: true,
+                                duration: formatDuration(audioEl.duration),
+                                remainingTime: formatDuration(audioEl.duration),
+                            }
+                            : { ...audio, isPlaying: false, progress: 0 }
+                    )
+                );
+            } else {
+                audioEl.addEventListener(
+                    'loadedmetadata',
+                    () => {
+                        setGeneratedAudios((prev) =>
+                            prev.map((audio) =>
+                                audio.id === id
+                                    ? {
+                                        ...audio,
+                                        isPlaying: true,
+                                        duration: formatDuration(audioEl.duration),
+                                        remainingTime: formatDuration(audioEl.duration),
+                                    }
+                                    : { ...audio, isPlaying: false, progress: 0 }
+                            )
+                        );
+                    },
+                    { once: true }
+                );
+            }
+        }
+    };
+
+    const handleAudioPause = (id) => {
+        setGeneratedAudios((prev) =>
+            prev.map((audio) =>
                 audio.id === id
-                    ? { ...audio, liked: !audio.liked }
+                    ? { ...audio, isPlaying: false, remainingTime: audio.duration }
                     : audio
             )
         );
     };
 
+    const handleAudioEnded = (id) => {
+        setGeneratedAudios((prev) =>
+            prev.map((audio) =>
+                audio.id === id
+                    ? { ...audio, isPlaying: false, progress: 0, remainingTime: audio.duration }
+                    : audio
+            )
+        );
+    };
+
+    const handleDownload = async (audioUrl, id) => {
+        try {
+            const response = await fetch(audioUrl);
+            const blob = await response.blob();
+
+            if ('showSaveFilePicker' in window) {
+                const options = {
+                    suggestedName: `generated_audio_${id}.mp3`,
+                    types: [
+                        {
+                            description: 'Audio Files',
+                            accept: { 'audio/mpeg': ['.mp3'] },
+                        },
+                    ],
+                };
+                const fileHandle = await window.showSaveFilePicker(options);
+                const writable = await fileHandle.createWritable();
+                await writable.write(blob);
+                await writable.close();
+                toast.success('Audio saved successfully!', {
+                    position: 'top-right',
+                    autoClose: 2000,
+                    theme: 'dark',
+                });
+            } else {
+                saveAs(blob, `generated_audio_${id}.mp3`);
+                toast.success('Audio downloaded successfully!', {
+                    position: 'top-right',
+                    autoClose: 2000,
+                    theme: 'dark',
+                });
+            }
+        } catch (error) {
+            console.error('Error downloading audio:', error);
+            toast.error('Failed to save audio.', {
+                position: 'top-right',
+                autoClose: 2000,
+                theme: 'dark',
+            });
+        }
+    };
+
     return (
         <div className="flex h-screen bg-gray-800">
-            <SideBar isOpen={isSidebarOpen} toggleSideBar={toggleSidebar} />
-
+            <SideBar isOpen={isSidebarOpen} toggleSideBar={() => setIsSidebarOpen(!isSidebarOpen)} />
             <div className="flex-1 flex flex-col overflow-hidden">
                 <Header />
-
                 <main className="flex-1 overflow-y-auto bg-gray-800 p-4 md:p-6">
                     <section className="text-center text-white mb-8">
                         <h1 className="text-3xl md:text-4xl font-bold mb-4">
@@ -173,7 +332,6 @@ function VoiceGeneratorPage() {
                         </button>
                         {showControls && (
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-gray-700 rounded-lg p-6 shadow-xl mb-4">
-                                {/* Language Selection */}
                                 <div>
                                     <h6 className="text-white font-semibold mb-3">Language</h6>
                                     <select
@@ -187,7 +345,6 @@ function VoiceGeneratorPage() {
                                         <option value="Spanish">Spanish</option>
                                     </select>
                                 </div>
-                                {/* Quality Selection */}
                                 <div>
                                     <h6 className="text-white font-semibold mb-3">Quality & Details</h6>
                                     <select
@@ -203,7 +360,6 @@ function VoiceGeneratorPage() {
                                         Higher quality will result in better audio, but will take longer.
                                     </p>
                                 </div>
-                                {/* Play Speed */}
                                 <div>
                                     <h6 className="text-white font-semibold mb-3">Play Speed</h6>
                                     <div className="space-y-2">
@@ -290,7 +446,9 @@ function VoiceGeneratorPage() {
                                                         <Play className="h-5 w-5" />
                                                     )}
                                                 </button>
-                                                <span className="text-white text-sm">{audio.duration}</span>
+                                                <span className="text-white text-sm">
+                                                    {audio.isPlaying ? `-${audio.remainingTime}` : audio.duration} / {audio.duration}
+                                                </span>
                                             </div>
                                             <div className="relative">
                                                 <button
@@ -315,27 +473,27 @@ function VoiceGeneratorPage() {
                                                 )}
                                             </div>
                                         </div>
-                                        {/* Progress Bar */}
                                         <div className="w-full bg-gray-600 rounded-full h-2 mb-2">
-                                            <div className="bg-purple-500 h-2 rounded-full w-0"></div>
+                                            <div
+                                                className="bg-purple-500 h-2 rounded-full"
+                                                style={{ width: `${audio.progress}%` }}
+                                            ></div>
                                         </div>
-                                        {/* Audio element (hidden, for real playback) */}
                                         <audio
-                                            ref={el => (audioRefs.current[audio.id] = el)}
+                                            ref={(el) => (audioRefs.current[audio.id] = el)}
                                             src={audio.audioUrl}
-                                            volume={audio.volume}
+                                            onTimeUpdate={() => handleTimeUpdate(audio.id)}
+                                            onPlay={() => handleAudioPlay(audio.id)}
+                                            onPause={() => handleAudioPause(audio.id)}
+                                            onEnded={() => handleAudioEnded(audio.id)}
                                             style={{ display: 'none' }}
                                         />
                                     </div>
 
-                                    {/* Action Buttons */}
                                     <div className="flex justify-between items-center">
                                         <div className="flex space-x-3">
-                                            <button className="bg-gray-600 hover:bg-gray-500 text-white p-2 rounded-lg transition-colors">
-                                                <Save className="h-4 w-4" />
-                                            </button>
                                             <button
-                                                className={`bg-gray-600 hover:bg-gray-500 text-white p-2 rounded-lg transition-colors ${audio.liked ? 'text-red-500' : ''}`}
+                                                className={`bg-gray-600 hover:bg-gray-500 text-white p-2 rounded-full transition-colors ${audio.liked ? 'text-red-500' : ''}`}
                                                 onClick={() => toggleLike(audio.id)}
                                                 type="button"
                                             >
@@ -345,7 +503,10 @@ function VoiceGeneratorPage() {
                                                 />
                                             </button>
                                         </div>
-                                        <button className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg inline-flex items-center transition-colors">
+                                        <button
+                                            onClick={() => handleDownload(audio.audioUrl, audio.id)}
+                                            className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg inline-flex items-center transition-colors"
+                                        >
                                             <Download className="mr-2 h-4 w-4" />
                                             Download
                                         </button>
@@ -354,6 +515,7 @@ function VoiceGeneratorPage() {
                             ))}
                         </div>
                     </section>
+                    <ToastContainer />
                     <div className="h-16"></div>
                 </main>
             </div>
