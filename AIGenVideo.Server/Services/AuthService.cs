@@ -254,13 +254,14 @@ public class AuthService : IAuthService
         user.RefreshTokenExpiryTime = DateTime.UtcNow.AddMinutes(_jwtOptions.RefeshTokenExpirationInMinutes);
         await _userManager.UpdateAsync(user);
 
-        var roles = await _userManager.GetRolesAsync(user);
+        var rolesList = await _userManager.GetRolesAsync(user);
+        var role = rolesList.FirstOrDefault() ?? Constants.USER_ROLE;
         return new LoginResponse
         {
             Username = user.UserName ?? string.Empty,
-            Token = _tokenService.CreateToken(user),
+            Token = _tokenService.CreateToken(user, role),
             RefreshToken = refreshToken,
-            Role = roles.FirstOrDefault() ?? Constants.USER_ROLE,
+            Role = role,
         };
     }
 
@@ -302,8 +303,10 @@ public class AuthService : IAuthService
             {
                 return ApiResponse<RefreshTokenResponse>.FailResponse("Invalid refresh token.");
             }
+            var roles = await _userManager.GetRolesAsync(user);
+            var role = roles.FirstOrDefault() ?? Constants.USER_ROLE;
 
-            var newToken = _tokenService.CreateToken(user);
+            var newToken = _tokenService.CreateToken(user, role);
             var newRefreshToken = TokenHelper.GenerateRefreshToken();
 
             user.RefreshToken = newRefreshToken;

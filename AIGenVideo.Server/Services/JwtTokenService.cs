@@ -19,12 +19,13 @@ public class JwtTokenService : ITokenService
         _options = options.Value;
         _key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_options.SigningKey ?? throw new InvalidOperationException("Config jwt??")));
     }
-    public string CreateToken(AppUser user)
+    public string CreateToken(AppUser user, string role = Constants.USER_ROLE)
     {
         var claims = new List<Claim>
             {
                 new Claim(JwtRegisteredClaimNames.Email, user.Email ?? ""),
-                new Claim(JwtRegisteredClaimNames.GivenName, user.UserName ?? "")
+                new Claim(JwtRegisteredClaimNames.GivenName, user.UserName ?? ""),
+                new Claim(ClaimTypes.Role, role),
             };
         var creds = new SigningCredentials(_key, SecurityAlgorithms.HmacSha512Signature);
         var tokenDescriptor = new SecurityTokenDescriptor
