@@ -3,34 +3,210 @@ import { Table, TableBody, TableCaption, TableCell, TableFooter, TableHead, Tabl
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { BadgeCheckIcon, BadgeInfoIcon, User, ShieldUser, SquareX, CircleUserRound, ChevronDownIcon } from 'lucide-react';
+import { BadgeCheckIcon, BadgeInfoIcon, User, ShieldUser, SquareX, CircleUserRound, ChevronDownIcon, ListFilter } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Link } from 'react-router-dom';
 import PaginationWrapper from '@/components/PaginationWrapper';
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import { useDebounce, useFetchList, useQuery } from '@/hooks';
+import { Label } from '@/components/ui/label';
+import { useForm } from 'react-hook-form';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
 
 const sortOptions = [
   { label: 'Sort by Email', value: { sort: 'email', order: 'asc' } },
   { label: 'Sort by Name', value: { sort: 'name', order: 'asc' } },
 ];
 
-const FilterSearchSelect = ({ handleOptionSortChange, handleSearchChange }) => {
+const filterSchema = z.object({
+  id: z.string().optional(),
+  email: z
+    .string()
+    .transform((val) => val.trim()) // loại bỏ khoảng trắng nếu có
+    .refine((val) => val === '' || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val), {
+      message: 'Email không hợp lệ',
+    }),
+  role: z.string().min(1, 'Phải chọn vai trò'),
+  lockoutEnabled: z.string(), // chưa bắt buộc
+});
+
+const roles = [
+  { key: 'all', label: '-- Chọn vai trò --' },
+  { key: 'user', label: 'User' },
+  { key: 'admin', label: 'Admin' },
+  { key: 'vip', label: 'VIP' },
+];
+
+const lockoutEnabled = [
+  { key: 'all', label: '-- Chọn trạng thái --' },
+  { key: 'locked', label: 'Locked' },
+  { key: 'active', label: 'Active' },
+];
+
+const FilterForm = ({ onFilterAdvanced, query }) => {
+  const dialogCloseRef = useRef(null);
+  const form = useForm({
+    resolver: zodResolver(filterSchema),
+    defaultValues: {
+      id: '',
+      email: '',
+      role: query.role || roles[0].key, // Default to 'all'
+      lockoutEnabled: query.lockoutEnabled || lockoutEnabled[0].key, // Default to 'all'
+    },
+  });
+  const onSubmits = (data) => {
+    onFilterAdvanced(data);
+    dialogCloseRef.current?.click();
+  };
+
   return (
-    <div className="flex justify-between gap-3 mb-4">
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmits)} className="space-y-4">
+        <DialogHeader>
+          <DialogTitle>Filter</DialogTitle>
+          <DialogDescription>Use the form below to filter users based on ID, email, role, and lockout status.</DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-4">
+          <FormField
+            control={form.control}
+            name="id"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>ID</FormLabel>
+                <FormControl>
+                  <Input placeholder="Input ID..." {...field} />
+                </FormControl>
+                <FormDescription>If you know the user's ID, you can enter it here.</FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="email"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Email</FormLabel>
+                <FormControl>
+                  <Input placeholder="Input Email..." {...field} />
+                </FormControl>
+                <FormDescription>If you know the user's email, you can enter it here.</FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="role"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Role</FormLabel>
+
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger className={'border !border-gray-600 w-full '}>
+                      <SelectValue />
+                    </SelectTrigger>
+                  </FormControl>
+
+                  <SelectContent>
+                    <SelectGroup>
+                      {roles &&
+                        roles.map((role) => (
+                          <SelectItem key={role.key} value={role.key}>
+                            {role.label}
+                          </SelectItem>
+                        ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+                <FormDescription>The role you want to filter.</FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="lockoutEnabled"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Lockout Status</FormLabel>
+
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger className={'border !border-gray-600 w-full '}>
+                      <SelectValue />
+                    </SelectTrigger>
+                  </FormControl>
+
+                  <SelectContent>
+                    <SelectGroup>
+                      {lockoutEnabled &&
+                        lockoutEnabled.map((lockoutEnd) => (
+                          <SelectItem key={lockoutEnd.key} value={lockoutEnd.key}>
+                            {lockoutEnd.label}
+                          </SelectItem>
+                        ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+                <FormDescription>The lockout status you want to filter.</FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button variant="outline" ref={dialogCloseRef}>
+              Cancel
+            </Button>
+          </DialogClose>
+          <Button type="submit">OK</Button>
+        </DialogFooter>
+      </form>
+    </Form>
+  );
+};
+
+const FilterSearchSelect = ({ handleOptionSortChange, handleSearchChange, onFilterAdvanced, query }) => {
+  return (
+    <div className="flex flex-col lg:flex-row justify-between gap-3 mb-4">
       <div className="flex items-center gap-3 mb-4">
-        <Input placeholder="Filter ..." className="w-[200px] md:w-sm" onChange={(e) => handleSearchChange(e.target.value)} />
+        <Input placeholder="Filter ..." className="w-full lg:w-sm" onChange={(e) => handleSearchChange(e.target.value)} />
       </div>
 
-      <div className="flex items-center gap-3 mb-4">
-        {/* <Popover>
-          <PopoverTrigger>Open</PopoverTrigger>
-          <PopoverContent>Place content for the popover here.</PopoverContent>
-        </Popover> */}
+      <div className="flex items-center justify-between gap-3 mb-4">
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button variant="outline" className="flex items-center gap-2 !border !border-gray-600 text-gray-500 font-light">
+              <ListFilter />
+              <span className="hidden sm:inline">Filter</span>
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[425px]">
+            <FilterForm {...{ onFilterAdvanced, query }} />
+          </DialogContent>
+        </Dialog>
+
         <Select onValueChange={handleOptionSortChange}>
-          <SelectTrigger className={'border !border-gray-600 '}>
-            <SelectValue placeholder="Sort by Email" />
+          <SelectTrigger className={'border !border-gray-600  '}>
+            <SelectValue placeholder={<span>Sort by Email</span>} />
           </SelectTrigger>
           <SelectContent>
             <SelectGroup defaultValue="email">
@@ -60,15 +236,20 @@ const UserManagerPage = () => {
     sort: 'email',
     order: 'asc',
     search: '',
+    id: '',
+    email: '',
+    role: 'all',
+    lockoutEnabled: 'all',
   });
   const { data, loading, error } = useFetchList('/api/admin/users', query);
   let items = [];
   if (data) {
+    console.log(data);
     items = data.items.map((user) => ({
       id: user.id,
       name: user.fullName || 'N/A',
       email: user.email || 'N/A',
-      isLocked: user.lockoutEnd || false,
+      isLocked: user.isLocked,
       role: user.role.toUpperCase() || 'USER',
       expires: user.expires ? new Date(user.expires) : null,
     }));
@@ -87,6 +268,13 @@ const UserManagerPage = () => {
     setSearch(value);
   };
 
+  const onFilterAdvanced = (filterData) => {
+    updateQuery({
+      ...filterData,
+      page: 1,
+    });
+  };
+
   useEffect(() => {
     if (isFirstRender.current) {
       isFirstRender.current = false;
@@ -101,7 +289,7 @@ const UserManagerPage = () => {
 
   return (
     <div className="items-center py-4 w-[calc(100%-80px)] mx-auto">
-      <FilterSearchSelect handleOptionSortChange={handleOptionSortChange} handleSearchChange={handleSearchChange} />
+      <FilterSearchSelect {...{ handleOptionSortChange, handleSearchChange, onFilterAdvanced, query }} />
       {data && <span className="text-sm text-gray-500">Total Users: {data.count}</span>}
 
       <Table className={' mt-4  '}>

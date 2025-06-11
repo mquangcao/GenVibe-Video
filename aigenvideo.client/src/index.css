@@ -137,3 +137,13 @@
     - alternate: Đảo chiều animation sau mỗi lượt.
   */
 }
+
+@layer components {
+  .sidebar.collapsed .sidebar-item-text {
+    display: none;
+  }
+
+  .sidebar.collapsed a {
+    justify-content: center;
+  }
+}

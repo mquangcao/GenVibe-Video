@@ -1,5 +1,5 @@
 import { AdminLayout } from '@/components';
-import { BuyPage, HomePage, UserManagerPage } from '@/pages';
+import { BuyPage, CreateUserPage, HomePage, UserManagerPage } from '@/pages';
 
 export const protectRoutes = [
   {
@@ -11,6 +11,12 @@ export const protectRoutes = [
   {
     path: 'admin/user-manager',
     element: <UserManagerPage />,
+    layout: AdminLayout,
+    requiredRoles: ['admin'],
+  },
+  {
+    path: 'admin/user-manager/create',
+    element: <CreateUserPage />,
     layout: AdminLayout,
     requiredRoles: ['admin'],
   },

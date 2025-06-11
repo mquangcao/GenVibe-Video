@@ -8,9 +8,11 @@ namespace AIGenVideo.Server.Controllers.Admin;
 public class UsersController : ControllerBase
 {
     private readonly UserManager<AppUser> _userManager;
-    public UsersController(UserManager<AppUser> userManager)
+    private readonly IRoleRepository _roleRepository;
+    public UsersController(UserManager<AppUser> userManager, IRoleRepository roleRepository)
     {
         _userManager = userManager;
+        _roleRepository = roleRepository;
     }
     [HttpGet]
     public async Task<IActionResult> GetAllUsers([FromQuery] FilterParams request)
@@ -43,6 +45,46 @@ public class UsersController : ControllerBase
                     ? query.OrderByDescending(u => EF.Property<object>(u, sortBy))
                     : query.OrderBy(u => EF.Property<object>(u, sortBy));
             }
+
+            if (!string.IsNullOrEmpty(request.Id))
+            {
+                query = query.Where(u => u.Id == request.Id);
+            }
+
+            if (!string.IsNullOrEmpty(request.Email))
+            {
+                query = query.Where(u => !string.IsNullOrEmpty(u.Email) && u.Email.Contains(request.Email));
+            }
+
+            if (!request.LockoutEnable.Equals("all", StringComparison.CurrentCultureIgnoreCase))
+            {
+                var dir = new Dictionary<string, bool>() {
+                    {"locked", false },
+                    {"active", true }
+                };
+                if (!dir.TryGetValue(request.LockoutEnable, out var isLocked))
+                {
+                    return BadRequest(ApiResponse.FailResponse("Invalid lockout status"));
+                }
+                
+                query = query.Where(u => u.LockoutEnabled == isLocked);
+            }
+            
+
+            if (!request.Role.Equals("all", StringComparison.CurrentCultureIgnoreCase))
+            {
+                var usersRole = await _roleRepository.GetUserIdsByRoleNameAsync(request.Role);
+
+                if (usersRole.Any())
+                {
+                    query = query.Where(u => usersRole.Contains(u.Id));
+                }
+                else
+                {
+                    query = query.Where(u => false);
+                }
+
+            }
             var totalCount = await query.CountAsync();
 
             query = query
@@ -62,7 +104,8 @@ public class UsersController : ControllerBase
                     FullName = u.FullName,
                     Email = u.Email,
                     Role = role,
-                    VipExpries = DateTime.UtcNow.AddDays(7).ToString("yyyy-MM-dd HH:mm:ss")
+                    VipExpries = DateTime.UtcNow.AddDays(7).ToString("yyyy-MM-dd HH:mm:ss"),
+                    IsLocked = !u.LockoutEnabled
                 });
             }
 

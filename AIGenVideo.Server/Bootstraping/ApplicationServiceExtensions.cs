@@ -1,4 +1,5 @@
 ﻿using AIGenVideo.Server.Models.Configurations;
+using AIGenVideo.Server.Repository;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.IdentityModel.Tokens;
 
@@ -19,6 +20,8 @@ public static class ApplicationServiceExtensions
         builder.Services.AddSingleton<IEmailSender, MailKitEmailSender>();
         builder.Services.AddScoped<ITokenService, JwtTokenService>();
         builder.Services.AddScoped<IAuthService, AuthService>();
+        builder.Services.AddScoped<IRoleRepository, RoleRepository>();
+
 
         return builder;
     }
