@@ -49,7 +49,7 @@ function AdminLayout({ children }) {
 
   const getHeaderTitle = () => {
     const activeItem = items.find((item) => isActive(item.url));
-    return `${activeItem ? activeItem.title : 'Dashboard'} Page`;
+    return `${activeItem ? activeItem.title : ''} Page`;
   };
 
   return (

@@ -2,6 +2,7 @@
 
 public class ApplicationDbContext : IdentityDbContext<AppUser, AppRole, string>
 {
+    public DbSet<UserVipSubscription> UserVipSubscriptions { get; set; }
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
     {
     }
