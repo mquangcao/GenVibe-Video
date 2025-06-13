@@ -1,5 +1,3 @@
-'use client';
-
 import React from 'react';
 import { useState } from 'react';
 import { CreditCard, Calendar, CheckCircle, Shield, Clock } from 'lucide-react';
@@ -8,6 +6,9 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { CustomRadioGroup, CustomRadioItem } from '@/components/ui/radio-button-fix';
+import { Icons } from '@/common';
+
+// console.log('Momo icon:', Icons.Momo);
 
 // Giả lập dữ liệu từ URL parameters
 const planType = 'monthly'; // Có thể là "monthly" hoặc "yearly"
@@ -97,7 +98,7 @@ export default function CheckoutPage() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
           {/* Order Summary */}
           <div className="lg:col-span-5">
-            <Card className="overflow-hidden border-0 shadow-lg">
+            <Card className="overflow-hidden border-1 shadow-lg">
               <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6">
                 <h2 className="text-xl font-bold mb-1">Order Summary</h2>
                 <p className="text-blue-100 text-sm">Review your subscription details</p>
@@ -195,7 +196,7 @@ export default function CheckoutPage() {
 
           {/* Payment Form */}
           <div className="lg:col-span-7">
-            <Card className="border-0 shadow-lg">
+            <Card className="border-1 shadow-lg">
               <div className="p-6 sm:p-8">
                 <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center">
                   <CreditCard className="mr-2 h-5 w-5 text-blue-600" />
@@ -204,7 +205,7 @@ export default function CheckoutPage() {
 
                 <form onSubmit={handleSubmit} className="space-y-6">
                   <div>
-                    <Label htmlFor="email" className="text-gray-700 font-medium">
+                    <Label htmlFor="email" className="text-gray-700 font-medium mb-3">
                       Email address
                     </Label>
                     <Input
@@ -237,17 +238,7 @@ export default function CheckoutPage() {
                             className="flex items-center"
                           ></CustomRadioItem>
                           <div className="bg-purple-100 rounded-lg p-2 flex items-center justify-center w-12 h-12">
-                            <svg viewBox="0 0 24 24" fill="none" className="w-8 h-8 text-purple-600" xmlns="http://www.w3.org/2000/svg">
-                              <rect width="24" height="24" rx="12" fill="currentColor" fillOpacity="0.2" />
-                              <path
-                                d="M12 6L7 11H10V18H14V11H17L12 6Z"
-                                fill="currentColor"
-                                stroke="currentColor"
-                                strokeWidth="1.5"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                              />
-                            </svg>
+                            <Icons.Momo />
                           </div>
                           <div>
                             <Label htmlFor="momo" className="cursor-pointer font-medium text-gray-900 ">
@@ -274,16 +265,7 @@ export default function CheckoutPage() {
                             className="flex items-center"
                           ></CustomRadioItem>
                           <div className="bg-blue-100 rounded-lg p-2 flex items-center justify-center w-12 h-12">
-                            <svg viewBox="0 0 24 24" fill="none" className="w-8 h-8 text-blue-600" xmlns="http://www.w3.org/2000/svg">
-                              <rect width="24" height="24" rx="12" fill="currentColor" fillOpacity="0.2" />
-                              <path
-                                d="M7 10L12 15L17 10"
-                                stroke="currentColor"
-                                strokeWidth="1.5"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                              />
-                            </svg>
+                            <Icons.VnPay />
                           </div>
                           <div>
                             <Label htmlFor="vnpay" className="cursor-pointer font-medium text-gray-900">
