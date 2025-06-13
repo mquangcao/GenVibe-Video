@@ -1,5 +1,6 @@
 import { AdminLayout } from '@/components';
 import { BuyPage, CreateUserPage, EditUserPage, HomePage, UserManagerPage } from '@/pages';
+import PricingPage from '@/pages/BuyPage';
 
 export const protectRoutes = [
   {
@@ -27,9 +28,9 @@ export const protectRoutes = [
     requiredRoles: ['admin'],
   },
   {
-    path: 'buy',
-    element: <BuyPage />,
-    layout: null, // No layout for buy page
+    path: 'pricing',
+    element: <PricingPage />,
+    layout: null, // No layout for pricing page
     requiredRoles: ['user', 'vip', 'admin'],
   },
 ];
