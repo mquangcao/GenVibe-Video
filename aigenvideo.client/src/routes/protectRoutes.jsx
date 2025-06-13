@@ -1,6 +1,7 @@
 import { AdminLayout } from '@/components';
-import { BuyPage, CreateUserPage, EditUserPage, HomePage, UserManagerPage } from '@/pages';
+import { BuyPage, CreateUserPage, EditUserPage, HomePage, PaymentSuccessPage, UserManagerPage } from '@/pages';
 import PricingPage from '@/pages/BuyPage';
+import CheckoutPage from '@/pages/CheckoutPage';
 
 export const protectRoutes = [
   {
@@ -31,6 +32,18 @@ export const protectRoutes = [
     path: 'pricing',
     element: <PricingPage />,
     layout: null, // No layout for pricing page
+    requiredRoles: ['user', 'vip', 'admin'],
+  },
+  {
+    path: 'payment-success',
+    element: <PaymentSuccessPage />,
+    layout: null, // No layout for payment success page
+    requiredRoles: ['user', 'vip', 'admin'],
+  },
+  {
+    path: 'checkout',
+    element: <CheckoutPage />,
+    layout: null, // No layout for checkout page
     requiredRoles: ['user', 'vip', 'admin'],
   },
 ];
