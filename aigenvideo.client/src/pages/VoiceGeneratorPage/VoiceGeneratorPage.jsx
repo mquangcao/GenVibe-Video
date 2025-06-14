@@ -43,8 +43,56 @@ function VoiceGeneratorPage() {
 
     const audioRefs = useRef({});
 
+    // Voice ID mapping with languages - loaded from environment variables
+    const voiceIdMapping = {
+        'Chinese': [
+            import.meta.env.VITE_CHINESE_VOICE_1,
+            import.meta.env.VITE_CHINESE_VOICE_2
+        ].filter(Boolean), // Remove undefined values
+        'English': [
+            import.meta.env.VITE_ENGLISH_VOICE_1,
+            import.meta.env.VITE_ENGLISH_VOICE_2
+        ].filter(Boolean),
+        'French': [
+            import.meta.env.VITE_FRENCH_VOICE_1,
+            import.meta.env.VITE_FRENCH_VOICE_2
+        ].filter(Boolean),
+        'German': [
+            import.meta.env.VITE_GERMAN_VOICE_1,
+            import.meta.env.VITE_GERMAN_VOICE_2
+        ].filter(Boolean),
+        'Japanese': [
+            import.meta.env.VITE_JAPANESE_VOICE_1
+        ].filter(Boolean),
+        'Vietnamese': [
+            import.meta.env.VITE_VIETNAMESE_VOICE_1,
+            import.meta.env.VITE_VIETNAMESE_VOICE_2
+        ].filter(Boolean),
+        'Russian': [
+            import.meta.env.VITE_RUSSIAN_VOICE_1,
+            import.meta.env.VITE_RUSSIAN_VOICE_2
+        ].filter(Boolean)
+    };
+
     const API_KEY = import.meta.env.VITE_API_KEY;
-    const VOICE_ID = import.meta.env.VITE_VOICE_ID;
+
+    // Function to get random voice ID for selected language
+    const getCurrentVoiceId = () => {
+        const voiceIds = voiceIdMapping[selectedLanguage];
+        if (!voiceIds || voiceIds.length === 0) {
+            console.warn(`No voice IDs found for language: ${selectedLanguage}`);
+            return import.meta.env.VITE_VOICE_ID; // Fallback to default voice ID
+        }
+
+        // If only one voice ID, return it directly
+        if (voiceIds.length === 1) {
+            return voiceIds[0];
+        }
+
+        // If multiple voice IDs, pick random one
+        const randomIndex = Math.floor(Math.random() * voiceIds.length);
+        return voiceIds[randomIndex];
+    };
 
     const formatDuration = (seconds) => {
         if (isNaN(seconds) || seconds < 0) return '0:00';
@@ -64,10 +112,13 @@ function VoiceGeneratorPage() {
                 Low: 'eleven_flash_v2_5',
             };
             const modelId = qualityMap[selectedQuality];
+            const currentVoiceId = getCurrentVoiceId();
+
+            console.log(`Using voice ID: ${currentVoiceId} for language: ${selectedLanguage}`);
 
             const response = await axios({
                 method: 'POST',
-                url: `https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}`,
+                url: `https://api.elevenlabs.io/v1/text-to-speech/${currentVoiceId}`,
                 headers: {
                     accept: 'audio/mpeg',
                     'content-type': 'application/json',
@@ -105,13 +156,40 @@ function VoiceGeneratorPage() {
                 showVolume: false,
                 progress: 0,
                 liked: false,
+                language: selectedLanguage, // Store the language used
+                voiceId: currentVoiceId, // Store the voice ID used
             };
 
             setGeneratedAudios([newAudio, ...generatedAudios]);
             setTextInput('');
+
+            toast.success(`Audio generated successfully using ${selectedLanguage} voice!`, {
+                position: 'top-right',
+                autoClose: 3000,
+                theme: 'dark',
+            });
         } catch (error) {
             console.error('Error generating audio:', error);
-            alert('Failed to generate audio. Please check your API key and try again.');
+            toast.error('Failed to generate audio. Please check your API key and try again.', {
+                position: 'top-right',
+                autoClose: 4000,
+                theme: 'dark',
+            });
+        }
+    };
+
+    const handleLanguageChange = (e) => {
+        const newLanguage = e.target.value;
+        setSelectedLanguage(newLanguage);
+
+        // Show which voice will be used (for debugging/info)
+        const voiceIds = voiceIdMapping[newLanguage];
+        if (voiceIds && voiceIds.length > 1) {
+            toast.info(`${newLanguage} selected. Will randomly choose from ${voiceIds.length} available voices.`, {
+                position: 'top-right',
+                autoClose: 2000,
+                theme: 'dark',
+            });
         }
     };
 
@@ -336,14 +414,20 @@ function VoiceGeneratorPage() {
                                     <h6 className="text-white font-semibold mb-3">Language</h6>
                                     <select
                                         value={selectedLanguage}
-                                        onChange={(e) => setSelectedLanguage(e.target.value)}
+                                        onChange={handleLanguageChange}
                                         className="w-full bg-gray-800 text-white border border-gray-600 rounded-lg py-2 px-3 focus:border-purple-500 focus:outline-none"
                                     >
                                         <option value="English">English</option>
-                                        <option value="Bangla">Bangla</option>
-                                        <option value="Hindi">Hindi</option>
-                                        <option value="Spanish">Spanish</option>
+                                        <option value="Chinese">Chinese</option>
+                                        <option value="French">French</option>
+                                        <option value="German">German</option>
+                                        <option value="Japanese">Japanese</option>
+                                        <option value="Vietnamese">Vietnamese</option>
+                                        <option value="Russian">Russian</option>
                                     </select>
+                                    <p className="text-gray-400 text-sm mt-2">
+                                        Voice will be automatically selected for the chosen language.
+                                    </p>
                                 </div>
                                 <div>
                                     <h6 className="text-white font-semibold mb-3">Quality & Details</h6>
@@ -405,7 +489,7 @@ function VoiceGeneratorPage() {
                                         className="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-6 rounded-lg inline-flex items-center transition-colors"
                                     >
                                         <Mic className="mr-2 h-5 w-5" />
-                                        Generate Voice
+                                        Generate Voice ({selectedLanguage})
                                     </button>
                                     <select
                                         className="bg-gray-800 text-white border border-gray-600 rounded-lg py-3 px-4 focus:border-purple-500 focus:outline-none"
@@ -427,7 +511,14 @@ function VoiceGeneratorPage() {
                             {generatedAudios.map((audio) => (
                                 <div key={audio.id} className="bg-gray-700 rounded-lg p-6 shadow-xl">
                                     <div className="mb-4">
-                                        <p className="text-gray-300 text-sm mb-2">Generated from:</p>
+                                        <div className="flex justify-between items-start mb-2">
+                                            <p className="text-gray-300 text-sm">Generated from:</p>
+                                            {audio.language && (
+                                                <span className="bg-purple-600 text-white px-2 py-1 rounded text-xs">
+                                                    {audio.language}
+                                                </span>
+                                            )}
+                                        </div>
                                         <p className="text-white bg-gray-800 p-3 rounded border-l-4 border-purple-500">
                                             {audio.text}
                                         </p>
