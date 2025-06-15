@@ -2,8 +2,10 @@ import { Check, ChevronRight, Crown, Calendar, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Progress } from '@/components/ui/progress';
+import { useEffect, useState } from 'react';
+import { getPlans } from '@/apis/paymentService';
 
 const plans = [
   {
@@ -30,6 +32,8 @@ const plans = [
     buttonVariant: 'default',
     buttonIcon: null,
     popular: false,
+    durationMonths: 1,
+    planType: 'monthly',
     features: [
       'Unlimited usage',
       'Premium quality',
@@ -52,6 +56,8 @@ const plans = [
     buttonVariant: 'default',
     buttonIcon: null,
     popular: true,
+    durationMonths: 12,
+    planType: 'yearly',
     features: [
       'Unlimited usage',
       'Premium quality',
@@ -66,7 +72,7 @@ const plans = [
   },
 ];
 
-const userStatus = {
+const baseStatus = {
   isVIP: true,
   daysRemaining: 1,
   totalDays: 30,
@@ -74,6 +80,58 @@ const userStatus = {
 };
 
 export default function PricingPage() {
+  const [userStatus, setUserStatus] = useState(baseStatus);
+  const navigate = useNavigate();
+  useEffect(() => {
+    // Fetch user status from API
+    const fetchUserStatus = async () => {
+      try {
+        const response = await getPlans();
+        if (!response.data.success) {
+          throw new Error('Failed to fetch user status');
+        }
+
+        const startDate = new Date(response.data.data.startDate);
+        const expirationDate = new Date(response.data.data.expirationDate);
+        const now = new Date();
+        const daysRemaining = Math.ceil((expirationDate - now) / (1000 * 60 * 60 * 24));
+        const totalDays = Math.ceil((expirationDate - startDate) / (1000 * 60 * 60 * 24));
+
+        setUserStatus({
+          isVIP: response.data.data.isVip,
+          daysRemaining: daysRemaining > 0 ? daysRemaining : 0,
+          totalDays: totalDays > 0 ? totalDays : 30,
+          expiryDate: expirationDate.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+          }),
+        });
+      } catch (error) {
+        console.error(error);
+        setUserStatus({
+          isVIP: false,
+          daysRemaining: 0,
+          totalDays: 30,
+          expiryDate: 'N/A',
+        });
+      }
+    };
+
+    fetchUserStatus();
+  }, []);
+
+  const onBuyPlanClick = (plan) => {
+    const planData = {
+      duration: plan.durationMonths,
+      planType: plan.planType,
+    };
+
+    localStorage.setItem('payment_plan', JSON.stringify(planData));
+
+    navigate('/checkout');
+  };
+
   const percentRemaining = (userStatus.daysRemaining / userStatus.totalDays) * 100;
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4">
@@ -180,6 +238,7 @@ export default function PricingPage() {
                   }`}
                   variant={plan.buttonVariant}
                   disabled={plan.name === 'Free'}
+                  onClick={() => onBuyPlanClick(plan)}
                 >
                   {plan.buttonText}
                   {plan.buttonIcon && <plan.buttonIcon className="w-4 h-4 ml-2" />}

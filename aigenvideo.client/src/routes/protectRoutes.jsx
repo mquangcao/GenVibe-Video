@@ -44,6 +44,6 @@ export const protectRoutes = [
     path: 'checkout',
     element: <CheckoutPage />,
     layout: null, // No layout for checkout page
-    requiredRoles: ['user', 'vip', 'admin'],
+    // requiredRoles: ['user', 'vip', 'admin'],
   },
 ];

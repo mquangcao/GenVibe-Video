@@ -23,6 +23,7 @@ public class JwtTokenService : ITokenService
     {
         var claims = new List<Claim>
             {
+                new Claim(ClaimTypes.NameIdentifier, user.Id),
                 new Claim(JwtRegisteredClaimNames.Email, user.Email ?? ""),
                 new Claim(JwtRegisteredClaimNames.GivenName, user.UserName ?? ""),
                 new Claim(ClaimTypes.Role, role),

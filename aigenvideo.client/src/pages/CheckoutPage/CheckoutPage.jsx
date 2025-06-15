@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useState } from 'react';
 import { CreditCard, Calendar, CheckCircle, Shield, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -7,56 +7,73 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { CustomRadioGroup, CustomRadioItem } from '@/components/ui/radio-button-fix';
 import { Icons } from '@/common';
-
-// console.log('Momo icon:', Icons.Momo);
-
-// Giả lập dữ liệu từ URL parameters
-const planType = 'monthly'; // Có thể là "monthly" hoặc "yearly"
+import { checkout, payment } from '@/apis/paymentService';
+import { th } from 'date-fns/locale';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 export default function CheckoutPage() {
   const [paymentMethod, setPaymentMethod] = useState('momo');
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
+  const navigate = useNavigate();
+  const [planData, setPlanData] = useState({});
 
-  // Plan details based on selection
-  const planDetails = {
-    monthly: {
-      name: 'VIP Monthly',
-      price: '50.000',
-      period: 'month',
-      duration: '1 month',
-      nextBillingDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      }),
-    },
-    yearly: {
-      name: 'VIP Yearly',
-      price: '500.000',
-      period: 'year',
-      originalPrice: '600.000',
-      savings: '100.000',
-      duration: '1 year',
-      nextBillingDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      }),
-    },
-  };
-
-  const plan = planDetails[planType];
+  useEffect(() => {
+    const { duration } = JSON.parse(localStorage.getItem('payment_plan')) || {};
+    if (!duration) {
+      navigate('/not-found');
+      return;
+    }
+    const fetchPlan = async () => {
+      try {
+        const response = await checkout(duration);
+        console.log(response.data.data);
+        if (response.data.success) {
+          setPlanData({
+            ...response.data.data,
+            price: response.data.data.price.toLocaleString('vi-VN'),
+            originalPrice: response.data.data.originalPrice.toLocaleString('vi-VN'),
+            savings: response.data.data.savings.toLocaleString('vi-VN'),
+            nextBillingDate: new Date(response.data.data.nextBillingDate).toLocaleDateString('en-US', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+            }),
+          });
+        } else {
+          console.error('Failed to fetch plan data:', response.data.message);
+          navigate('/not-found'); // hoặc set error
+        }
+      } catch (error) {
+        console.error('Error fetching plan data:', error);
+        navigate('/not-found'); // hoặc set error
+      }
+    };
+    fetchPlan();
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
 
-    // Simulate payment processing
-    setTimeout(() => {
-      // Redirect to success page or handle payment gateway redirect
-      window.location.href = `/payment-success?plan=${planType}&method=${paymentMethod}`;
-    }, 2000);
+    const data = {
+      email,
+      provider: paymentMethod,
+      duration: planData.durationMonths,
+      returnUrl: `${window.location.origin}/payment-success`,
+    };
+
+    try {
+      const response = await payment(data);
+      if (!response.data.success) {
+        throw new Error(response.data.message || 'Payment failed');
+      }
+      console.log('Payment successful:', response.data.data);
+    } catch (error) {
+      console.error('Error processing payment:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const goBack = () => {
@@ -108,22 +125,22 @@ export default function CheckoutPage() {
                 <div className="space-y-6">
                   <div className="flex items-center justify-between pb-4 border-b border-gray-100">
                     <div>
-                      <p className="font-semibold text-lg text-gray-900">{plan.name}</p>
-                      <p className="text-gray-500 text-sm">{plan.duration} subscription</p>
+                      <p className="font-semibold text-lg text-gray-900">{planData.name}</p>
+                      <p className="text-gray-500 text-sm">{planData.duration} subscription</p>
                     </div>
                     <div className="text-right">
-                      <p className="font-bold text-xl text-gray-900">{plan.price}đ</p>
-                      <p className="text-gray-500 text-xs">{planType === 'monthly' ? 'Billed monthly' : 'Billed annually'}</p>
+                      <p className="font-bold text-xl text-gray-900">{planData.price}đ</p>
+                      <p className="text-gray-500 text-xs">{planData.planType === 'monthly' ? 'Billed monthly' : 'Billed annually'}</p>
                     </div>
                   </div>
 
-                  {planType === 'yearly' && (
+                  {planData.planType === 'yearly' && (
                     <div className="bg-green-50 rounded-lg p-3 flex items-start">
                       <div className="bg-green-100 p-1 rounded-full mr-3 mt-0.5">
                         <CheckCircle className="h-4 w-4 text-green-600" />
                       </div>
                       <div>
-                        <p className="text-green-800 font-medium text-sm">You save {plan.savings}đ</p>
+                        <p className="text-green-800 font-medium text-sm">You save {planData.savings}đ</p>
                         <p className="text-green-700 text-xs">That's 17% off compared to the monthly plan for a full year</p>
                       </div>
                     </div>
@@ -134,7 +151,7 @@ export default function CheckoutPage() {
                       <Calendar className="h-5 w-5 text-blue-600 mr-3" />
                       <div>
                         <p className="text-sm text-gray-700">
-                          <span className="font-medium">Next billing date:</span> {plan.nextBillingDate}
+                          <span className="font-medium">Next billing date:</span> {planData.nextBillingDate}
                         </p>
                       </div>
                     </div>
@@ -160,8 +177,8 @@ export default function CheckoutPage() {
                     <div className="flex justify-between items-center">
                       <p className="font-semibold text-gray-900">Total</p>
                       <div className="text-right">
-                        <p className="font-bold text-2xl text-gray-900">{plan.price}đ</p>
-                        {planType === 'yearly' && <p className="text-gray-500 line-through text-sm">{plan.originalPrice}đ</p>}
+                        <p className="font-bold text-2xl text-gray-900">{planData.price}đ</p>
+                        {planData.planType === 'yearly' && <p className="text-gray-500 line-through text-sm">{planData.originalPrice}đ</p>}
                       </div>
                     </div>
                   </div>
@@ -306,7 +323,7 @@ export default function CheckoutPage() {
                           Processing...
                         </span>
                       ) : (
-                        <span className="flex items-center justify-center">Complete Payment • {plan.price}đ</span>
+                        <span className="flex items-center justify-center">Complete Payment • {planData.price}đ</span>
                       )}
                     </Button>
 

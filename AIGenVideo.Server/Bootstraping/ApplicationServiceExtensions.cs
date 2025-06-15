@@ -21,6 +21,8 @@ public static class ApplicationServiceExtensions
         builder.Services.AddScoped<ITokenService, JwtTokenService>();
         builder.Services.AddScoped<IAuthService, AuthService>();
         builder.Services.AddScoped<IRoleRepository, RoleRepository>();
+        builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
+        builder.Services.AddScoped<IVipPlansRepository, VipPlansRepository>();
 
 
         return builder;
