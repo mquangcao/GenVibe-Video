@@ -18,7 +18,7 @@ const SideBar = ({ isOpen, toggleSideBar }) => {
 
       {/* Phần menu trên */}
       <nav className="space-y-2">
-        <a href="#" className={`flex items-center space-x-2 p-2 rounded-md hover:bg-slate-600 ${!isOpen && 'justify-center'}`}>
+        <a href="/" className={`flex items-center space-x-2 p-2 rounded-md hover:bg-slate-600 ${!isOpen && 'justify-center'}`}>
           <FaHome size={20} />
           {isOpen && <span>Home</span>}
         </a>
@@ -35,11 +35,17 @@ const SideBar = ({ isOpen, toggleSideBar }) => {
           <FaRobot size={20} />
           {isOpen && <span>AI Video Generator</span>}
         </a>
-        <a href="#" className={`flex items-center space-x-2 p-2 rounded-md hover:bg-slate-600 ${!isOpen && 'justify-center'}`}>
+        <a
+          href="/voice-generator"
+          className={`flex items-center space-x-2 p-2 rounded-md hover:bg-slate-600 ${!isOpen && 'justify-center'}`}
+        >
           <FaKeyboard size={20} />
           {isOpen && <span>Voice Generate</span>}
         </a>
-        <a href="#" className={`flex items-center space-x-2 p-2 rounded-md hover:bg-slate-600 ${!isOpen && 'justify-center'}`}>
+        <a
+          href="/content-generator"
+          className={`flex items-center space-x-2 p-2 rounded-md hover:bg-slate-600 ${!isOpen && 'justify-center'}`}
+        >
           <FaFileAlt size={20} />
           {isOpen && <span>Content Generate</span>}
         </a>
