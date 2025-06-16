@@ -67,10 +67,11 @@ export default function CheckoutPage() {
 
     try {
       const response = await payment(data);
+      console.log(response);
       if (!response.data.success) {
         throw new Error(response.data.message || 'Payment failed');
       }
-      console.log('Payment successful:', response.data.data);
+      window.location.href = response.data.data.paymentUrl;
     } catch (error) {
       console.error('Error processing payment:', error);
     } finally {

@@ -39,17 +39,38 @@ public class MomoCollectionLinkRequest
         );
 
         var createPaymentLinkRes = await client.PostAsync(paymentUrl, httpContent);
-
+        var errorContent = await createPaymentLinkRes.Content.ReadAsStringAsync();
+        Console.WriteLine($"Lỗi HTTP {(int)createPaymentLinkRes.StatusCode}: {createPaymentLinkRes.ReasonPhrase}");
+        Console.WriteLine("Nội dung lỗi: " + errorContent);
         if (createPaymentLinkRes.IsSuccessStatusCode)
         {
             var responseContent = await createPaymentLinkRes.Content.ReadAsStringAsync();
-            var responseData = JsonSerializer.Deserialize<MomoCollectionLinkResponse>(responseContent);
+            var optionsResponse = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            };
+            MomoCollectionLinkResponse responseData = default!;
+
+            try
+            {
+                responseData = JsonSerializer.Deserialize<MomoCollectionLinkResponse>(responseContent, optionsResponse);
+                Console.WriteLine("==== TẠO ĐƠN THANH TOÁN ====");
+                Console.WriteLine("Thời gian tạo đơn (UTC): " + DateTime.UtcNow.ToString("O"));
+                Console.WriteLine("orderId: " + OrderId);
+                Console.WriteLine("requestId: " + RequestId);
+                Console.WriteLine("payUrl: " + responseData?.PayUrl);
+                Console.WriteLine("responseTime từ MoMo (ms): " + responseData?.ResponseTime);
+            }
+            catch(Exception ex)
+            {
+                
+            }
             if (responseData == null)
             {
                 return (false, "Failed to deserialize response");
             }
 
-            if (responseData.ResultCode == "0")
+            if (responseData.ResultCode == 0)
             {
                 return (true, responseData.PayUrl);
             }

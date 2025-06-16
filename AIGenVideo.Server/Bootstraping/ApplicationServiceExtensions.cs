@@ -2,6 +2,12 @@
 using AIGenVideo.Server.Repository;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.IdentityModel.Tokens;
+using Payment.Abstractions;
+using Payment.Gateway;
+using Payment.Gateway.Momo;
+using Payment.Gateway.Momo.Config;
+using Payment.Gateway.VnPay;
+using Payment.Gateway.VnPay.Config;
 
 namespace AIGenVideo.Server.Bootstraping;
 
@@ -23,6 +29,11 @@ public static class ApplicationServiceExtensions
         builder.Services.AddScoped<IRoleRepository, RoleRepository>();
         builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
         builder.Services.AddScoped<IVipPlansRepository, VipPlansRepository>();
+
+        // payment
+        builder.Services.AddScoped<VnPayPaymentGateway>();
+        builder.Services.AddScoped<MomoPaymentGateway>();
+        builder.Services.AddScoped<IPaymentGatewayFactory, PaymentGatewayFactory>();
 
 
         return builder;
@@ -123,6 +134,8 @@ public static class ApplicationServiceExtensions
         builder.Services.Configure<JwtOptions>(builder.Configuration.GetRequiredSection("JWT"));
         builder.Services.Configure<EmailOptions>(builder.Configuration.GetSection("EmailSettings"));
         builder.Services.Configure<LoginGoogleOptions>(builder.Configuration.GetSection("Authentication:Google"));
+        builder.Services.Configure<MomoConfig>(builder.Configuration.GetSection("Payment:Momo"));
+        builder.Services.Configure<VnpayConfig>(builder.Configuration.GetSection("Payment:VnPay"));
 
         return builder;
     }

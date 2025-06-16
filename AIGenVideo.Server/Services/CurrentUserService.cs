@@ -14,7 +14,7 @@ public class CurrentUserService : ICurrentUserService
     }
     public string? UserId => _httpContextAccessor?.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier);
 
-    public string? IpAddress => _httpContextAccessor?.HttpContext?.Connection?.LocalIpAddress?.ToString();
+    public string? IpAddress => _httpContextAccessor?.HttpContext?.Connection?.LocalIpAddress?.MapToIPv4().ToString();
 
     public async Task<(bool, DateTimeOffset)>  GetVipExpiryDateAsync()
     {

@@ -1,4 +1,5 @@
-﻿using Payment.Abstractions;
+﻿using Microsoft.Extensions.Options;
+using Payment.Abstractions;
 using Payment.Gateway.VnPay.Common;
 using Payment.Gateway.VnPay.Config;
 using Payment.Gateway.VnPay.Request;
@@ -11,16 +12,16 @@ public class VnPayPaymentGateway : IPaymentGateway
 {
     private readonly VnpayConfig _config;
 
-    public VnPayPaymentGateway(VnpayConfig config)
+    public VnPayPaymentGateway(IOptions<VnpayConfig> config)
     {
-        _config = config;
+        _config = config.Value;
     }
 
     public Task<PaymentUrlResult> CreatePaymentUrlAsync(PaymentRequest request)
     {
         var vnpayRequest = new VnpayPayRequest()
         {
-            Locale = "vn",
+            Locale = Constant.VN_LOCALE,
             IpAddr = request.IpAddress,
             Version = Constant.VERSION,
             CurrCode = Constant.CURR_CODE,
@@ -30,7 +31,7 @@ public class VnPayPaymentGateway : IPaymentGateway
             Command = Constant.COMMAND,
             OrderType = "100000",
             OrderInfo = TextHelper.NormalizeOrderInfo(request.OrderDescription),
-            ReturnUrl = request.ReturnUrl,
+            ReturnUrl = !string.IsNullOrEmpty(request.ReturnUrl) ? (request.ReturnUrl) : _config.ReturnUrl,
             TxnRef = request.OrderId,
             ExpireDate = DateTime.UtcNow.AddHours(7).AddMinutes(15).ToString("yyyyMMddHHmmss")
         };

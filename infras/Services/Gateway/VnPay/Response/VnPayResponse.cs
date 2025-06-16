@@ -9,7 +9,6 @@ public class VnpayPayResponse
 {
     private readonly SortedList<string, string> _responseData = new SortedList<string, string>(new VnPayCompare());
     
-
     public bool IsValidSignature(string secretKey)
     {
         MakeResponseData();
