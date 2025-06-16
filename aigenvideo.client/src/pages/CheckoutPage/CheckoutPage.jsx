@@ -63,6 +63,8 @@ export default function CheckoutPage() {
       returnUrl: `${window.location.origin}/payment-success`,
     };
 
+    localStorage.removeItem('payment_plan');
+
     try {
       const response = await payment(data);
       if (!response.data.success) {
