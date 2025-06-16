@@ -13,7 +13,7 @@ public class VnpayPayRequest
     private readonly SortedList<string, string> requestData = new(new VnPayCompare());
     public VnpayPayRequest() { }
     public VnpayPayRequest(string version, string tmnCode, DateTime createDate, string ipAddress,
-        decimal amount, string currCode, string orderType, string orderInfo,
+        long amount, string currCode, string orderType, string orderInfo,
         string returnUrl, string txnRef)
     {
         Locale = "vn";
@@ -78,11 +78,11 @@ public class VnpayPayRequest
         if (Version != null)
             requestData.Add("vnp_Version", Version);
     }
-    public required decimal? Amount { get; set; }
+    public required long? Amount { get; set; }
     public required string? Command { get; set; }
     public required string? CreateDate { get; set; }
     public required string? CurrCode { get; set; }
-    public required string? BankCode { get; set; }
+    public string? BankCode { get; set; }
     public required string? IpAddr { get; set; }
     public required string? Locale { get; set; }
     public required string? OrderInfo { get; set; }
@@ -92,5 +92,5 @@ public class VnpayPayRequest
     public required string? ExpireDate { get; set; }
     public required string? TxnRef { get; set; }
     public required string? Version { get; set; }
-    public required string? SecureHash { get; set; }
+    public string? SecureHash { get; set; }
 }

@@ -23,7 +23,7 @@ public class MomoCollectionLinkRequest
         Lang = lang;
     }
 
-    public async Task<(bool, string?)> GetLink(string paymentUrl, string accessKey, string secretKey)
+    public async Task<(bool, string?)> GetLinkAsync(string paymentUrl, string accessKey, string secretKey)
     {
         MakeSignature(accessKey, secretKey);
         using var client = new HttpClient();
@@ -89,5 +89,5 @@ public class MomoCollectionLinkRequest
     public required string RequestType { get; set; } = string.Empty;
     public required string ExtraData { get; set; } = string.Empty;
     public required string Lang { get; set; } = "vi";
-    public required string Signature { get; set; } = string.Empty;
+    public string Signature { get; set; } = string.Empty;
 }

@@ -10,5 +10,6 @@ public class PaymentRequest
     public string CustomerEmail { get; set; } = string.Empty;
     public string CustomerPhone { get; set; } = string.Empty;
     public string Gateway { get; set; } = string.Empty;
+    public string IpAddress { get; set; } = string.Empty;
     public string Language { get; set; } = "vi";
 }
