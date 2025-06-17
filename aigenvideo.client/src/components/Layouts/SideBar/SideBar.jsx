@@ -1,6 +1,7 @@
 import React from 'react';
-import { FaHome, FaCreditCard, FaRobot, FaKeyboard, FaFileAlt, FaUserPlus, FaCog, FaSignOutAlt } from 'react-icons/fa';
-import { ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
+import { FaHome, FaCreditCard, FaRobot, FaKeyboard, FaFileAlt, FaUserPlus, FaCog, FaSignOutAlt, FaVideo, FaBullhorn, FaRocket } from 'react-icons/fa';
+import { ChevronsLeft, ChevronsRight, PanelLeftIcon } from 'lucide-react';
 
 const SideBar = ({ isOpen, toggleSideBar }) => {
   return (
@@ -31,7 +32,9 @@ const SideBar = ({ isOpen, toggleSideBar }) => {
       {/* Phần các công cụ AI */}
       <nav className="space-y-2">
         {isOpen && <h3 className="text-xs uppercase text-gray-400 font-semibold pt-4 px-2">AI Tools</h3>}
-        <a href="#" className={`flex items-center space-x-2 p-2 rounded-md hover:bg-slate-600 ${!isOpen && 'justify-center'}`}>
+        <a 
+          href="/ai-video-generator" 
+          className={`flex items-center space-x-2 p-2 rounded-md hover:bg-slate-600 ${!isOpen && 'justify-center'}`}>
           <FaRobot size={20} />
           {isOpen && <span>AI Video Generator</span>}
         </a>

@@ -13,4 +13,5 @@ export { default as PricingPage } from './BuyPage/PricingPage';
 export { default as PaymentSuccessPage } from './PaymentSuccessPage/PaymentSuccessPage';
 
 export { default as ContentGeneratorPage } from './ContentGeneratorPage';
+export { default as AIVideoGeneratorPage } from './AIVideoGeneratorPage';
 
