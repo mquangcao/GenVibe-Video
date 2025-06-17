@@ -1,17 +1,12 @@
-﻿using AIGenVideo.Server.Abstractions;
-using AIGenVideo.Server.Abstractions.ContentGenerate;
+﻿using AIGenVideo.Server.Abstractions.ContentGenerate;
 using AIGenVideo.Server.Infrastructure.Clients;
 using AIGenVideo.Server.Services.ContentGenerate;
-using Polly;
-using Polly.Extensions.Http;
-using System.Net.Http;
-using Microsoft.Extensions.Logging;
 
 namespace AIGenVideo.Server.Bootstraping.ContentGenerate;
 public class ApiKeysSettings
 {
     public const string SectionName = "ApiKeys";
-    public string YouTube { get; set; }
+    public string YouTube { get; set; } = string.Empty;
     public string Gemini { get; set; } = string.Empty;
     public string Groq { get; set; } = string.Empty;
     // Add other API keys as needed

@@ -2,7 +2,7 @@ import { clearAuthTokens, getAccessToken, getRefreshToken, getUsername } from '@
 import axios from 'axios';
 
 const axiosClient = axios.create({
-  baseURL: '/',
+  baseURL: import.meta.env.VITE_SERVER_PROXY,
   timeout: 30000, // Set a timeout of 30 seconds
   headers: {
     'Content-Type': 'application/json',
@@ -32,7 +32,7 @@ const REFRESH_TOKEN_URL = 'api/auth/refresh-token';
 
 const handleResponseErr = async (error) => {
   console.error('Response error:', error.response?.data || error.message);
-  
+
   const originalRequest = error.config;
 
   if (error.response && error.response.status === 401 && !originalRequest.url.includes(REFRESH_TOKEN_URL)) {

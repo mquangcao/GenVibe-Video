@@ -22,7 +22,6 @@ public static class ApplicationServiceExtensions
         builder.Services.AddHttpClient();
 
         // Add application services here
-        // Example: builder.Services.AddScoped<IMyService, MyService>();
         builder.Services.AddSingleton<IEmailSender, MailKitEmailSender>();
         builder.Services.AddScoped<ITokenService, JwtTokenService>();
         builder.Services.AddScoped<IAuthService, AuthService>();
@@ -105,11 +104,11 @@ public static class ApplicationServiceExtensions
     {
         builder.Services.AddAuthentication(options =>
         {
-            options.DefaultAuthenticateScheme =
-            options.DefaultChallengeScheme =
-            options.DefaultForbidScheme =
-            options.DefaultScheme =
-            options.DefaultSignInScheme =
+            options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+            options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+            options.DefaultForbidScheme = JwtBearerDefaults.AuthenticationScheme;
+            options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+            options.DefaultSignInScheme = JwtBearerDefaults.AuthenticationScheme;
             options.DefaultSignOutScheme = JwtBearerDefaults.AuthenticationScheme;
 
         }).AddJwtBearer(options =>
@@ -140,6 +139,22 @@ public static class ApplicationServiceExtensions
         builder.Services.Configure<MomoConfig>(builder.Configuration.GetSection("Payment:Momo"));
         builder.Services.Configure<VnpayConfig>(builder.Configuration.GetSection("Payment:VnPay"));
 
+        return builder;
+    }
+
+    public static IHostApplicationBuilder AddCors(this IHostApplicationBuilder builder)
+    {
+        builder.Services.AddCors(options =>
+        {
+            options.AddPolicy("AllowAll", policy =>
+            {
+                policy
+                    .WithOrigins("https://localhost:50464")      
+                    .AllowAnyMethod()
+                    .AllowAnyHeader()
+                    .AllowCredentials();     // nếu có dùng cookie / auth
+            });
+        });
         return builder;
     }
 }
