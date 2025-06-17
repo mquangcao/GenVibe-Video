@@ -4,6 +4,7 @@ using AIGenVideo.Server.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AIGenVideo.Server.Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250617023451_AddTablePayment")]
+    partial class AddTablePayment
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -154,12 +157,6 @@ namespace AIGenVideo.Server.Data.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<string>("GatewayTransactionId")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("PackageId")
-                        .HasColumnType("nvarchar(450)");
-
                     b.Property<DateTime?>("PaidAt")
                         .HasColumnType("datetime2");
 
@@ -167,9 +164,6 @@ namespace AIGenVideo.Server.Data.Migrations
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("ReturnUrl")
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -181,8 +175,6 @@ namespace AIGenVideo.Server.Data.Migrations
                         .HasColumnType("nvarchar(450)");
 
                     b.HasKey("PaymentId");
-
-                    b.HasIndex("PackageId");
 
                     b.HasIndex("UserId");
 
@@ -354,17 +346,11 @@ namespace AIGenVideo.Server.Data.Migrations
 
             modelBuilder.Entity("AIGenVideo.Server.Data.Entities.Payment", b =>
                 {
-                    b.HasOne("AIGenVideo.Server.Data.Entities.VipPlan", "Package")
-                        .WithMany()
-                        .HasForeignKey("PackageId");
-
                     b.HasOne("AIGenVideo.Server.Data.Entities.AppUser", "User")
                         .WithMany("Payments")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("Package");
 
                     b.Navigation("User");
                 });

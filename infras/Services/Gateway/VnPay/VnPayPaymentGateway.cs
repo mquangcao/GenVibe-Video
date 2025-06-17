@@ -3,8 +3,10 @@ using Payment.Abstractions;
 using Payment.Gateway.VnPay.Common;
 using Payment.Gateway.VnPay.Config;
 using Payment.Gateway.VnPay.Request;
+using Payment.Gateway.VnPay.Response;
 using Payment.Helper;
 using Payment.Models;
+using System.Text.Json;
 
 namespace Payment.Gateway.VnPay;
 
@@ -58,6 +60,40 @@ public class VnPayPaymentGateway : IPaymentGateway
 
     public Task<PaymentResult> ProcessCallbackAsync(Dictionary<string, string> callbackData)
     {
-        throw new NotImplementedException();
+        var response = JsonSerializer.Deserialize<VnPayResponse>(JsonSerializer.Serialize(callbackData));
+        var isValid = response?.IsValidSignature(_config.HashSecret);
+        if (isValid == false || response == null)
+        {
+            return Task.FromResult(new PaymentResult
+            {
+                Success = false,
+                Message = "Invalid signature"
+            });
+        }
+
+        if (response.vnp_ResponseCode != "00")
+        {
+            return Task.FromResult(new PaymentResult
+            {
+                Success = false,
+                Message = $"Payment failed with response code: {response.vnp_ResponseCode}"
+            });
+        }
+        decimal actualAmount = 0m;
+        if (int.TryParse(response.vnp_Amount, out var intAmount))
+        {
+            actualAmount = intAmount / 100m;
+        }
+
+        return Task.FromResult(new PaymentResult()
+        {
+            Success = true,
+            OrderId = response.vnp_TxnRef,
+            Amount = actualAmount,
+            Message = "Payment successful",
+            TransactionId = response.vnp_TransactionNo,
+            Gateway = "vnpay",
+            PaidAt = DateTime.UtcNow
+        });
     }
 }

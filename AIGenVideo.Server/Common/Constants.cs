@@ -8,4 +8,9 @@ public class Constants
 
     public const string MESSAGE_SERVER_ERROR = "Internal server error. Please try again later.";
     public const int SERVER_ERROR_CODE = 500;
+
+    public const string VNPAY_GATEWAY = "vnpay";
+    public const string MOMO_GATEWAY = "momo";
+
+    public const string CURRENCY_VND = "VND";
 }

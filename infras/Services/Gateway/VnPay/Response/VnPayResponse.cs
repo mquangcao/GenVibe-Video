@@ -5,7 +5,7 @@ using System.Text;
 
 namespace Payment.Gateway.VnPay.Response;
 
-public class VnpayPayResponse
+public class VnPayResponse
 {
     private readonly SortedList<string, string> _responseData = new SortedList<string, string>(new VnPayCompare());
     
@@ -61,7 +61,7 @@ public class VnpayPayResponse
     public string vnp_TxnRef { get; set; } = string.Empty;
     public string vnp_SecureHashType { get; set; } = string.Empty;
     public string vnp_SecureHash { get; set; } = string.Empty;
-    public int? vnp_Amount { get; set; }
+    public string vnp_Amount { get; set; } = string.Empty;
     public string? vnp_ResponseCode { get; set; }
     public string vnp_PayDate { get; set; } = string.Empty;
 }

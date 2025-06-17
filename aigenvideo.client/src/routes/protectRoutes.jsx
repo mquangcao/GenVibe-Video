@@ -38,7 +38,7 @@ export const protectRoutes = [
     path: 'payment-success',
     element: <PaymentSuccessPage />,
     layout: null, // No layout for payment success page
-    requiredRoles: ['user', 'vip', 'admin'],
+    // requiredRoles: ['user', 'vip', 'admin'],
   },
   {
     path: 'checkout',

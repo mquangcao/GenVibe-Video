@@ -29,6 +29,9 @@ public static class ApplicationServiceExtensions
         builder.Services.AddScoped<IRoleRepository, RoleRepository>();
         builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
         builder.Services.AddScoped<IVipPlansRepository, VipPlansRepository>();
+        builder.Services.AddScoped<IPaymentService, PaymentService>();
+        builder.Services.AddScoped<IUserVipService, UserVipService>();
+        builder.Services.AddScoped<IUserVipSubscriptionRepository, UserVipSubscriptionRepository>();
 
         // payment
         builder.Services.AddScoped<VnPayPaymentGateway>();

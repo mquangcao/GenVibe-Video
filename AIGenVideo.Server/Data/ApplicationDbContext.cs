@@ -2,8 +2,10 @@
 
 public class ApplicationDbContext : IdentityDbContext<AppUser, AppRole, string>
 {
+    public DbSet<Entities.Payment> Payments { get; set; }
     public DbSet<UserVipSubscription> UserVipSubscriptions { get; set; }
     public DbSet<VipPlan> VipPlans { get; set; }
+    
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
     {
     }

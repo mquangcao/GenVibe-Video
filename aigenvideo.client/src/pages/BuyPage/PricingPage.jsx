@@ -122,6 +122,7 @@ export default function PricingPage() {
   }, []);
 
   const onBuyPlanClick = (plan) => {
+    console.log(plan);
     const planData = {
       duration: plan.durationMonths,
       planType: plan.planType,

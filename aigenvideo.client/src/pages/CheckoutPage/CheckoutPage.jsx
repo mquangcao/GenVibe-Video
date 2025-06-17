@@ -20,6 +20,7 @@ export default function CheckoutPage() {
 
   useEffect(() => {
     const { duration } = JSON.parse(localStorage.getItem('payment_plan')) || {};
+
     if (!duration) {
       navigate('/not-found');
       return;
@@ -27,13 +28,13 @@ export default function CheckoutPage() {
     const fetchPlan = async () => {
       try {
         const response = await checkout(duration);
-        console.log(response.data.data);
         if (response.data.success) {
           setPlanData({
             ...response.data.data,
             price: response.data.data.price.toLocaleString('vi-VN'),
             originalPrice: response.data.data.originalPrice.toLocaleString('vi-VN'),
             savings: response.data.data.savings.toLocaleString('vi-VN'),
+            durationMonths: duration,
             nextBillingDate: new Date(response.data.data.nextBillingDate).toLocaleDateString('en-US', {
               year: 'numeric',
               month: 'long',

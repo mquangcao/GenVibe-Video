@@ -3,42 +3,30 @@ import { CheckCircle, Calendar, CreditCard, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
+import { useLocation } from 'react-router-dom';
 
 export default function PaymentSuccessPage() {
   const [countdown, setCountdown] = useState(5);
+  const [plan, setPlan] = useState({});
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
 
-  // Giả lập lấy thông tin từ URL parameters
-  // Trong thực tế, bạn có thể sử dụng URLSearchParams hoặc thư viện query-string
-  const planType = 'monthly'; // Có thể là "monthly" hoặc "yearly"
-  const paymentMethod = 'momo'; // Có thể là "momo" hoặc "vnpay"
+  const name = searchParams.get('name');
+  const price = searchParams.get('price');
+  const method = searchParams.get('paymentmethod');
 
-  // Plan details based on selection
-  const planDetails = {
-    monthly: {
-      name: 'VIP Monthly',
-      price: '50.000',
-      period: 'month',
-      duration: '1 month',
-      expiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      }),
-    },
-    yearly: {
-      name: 'VIP Yearly',
-      price: '500.000',
-      period: 'year',
-      duration: '1 year',
-      expiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      }),
-    },
-  };
-
-  const plan = planDetails[planType];
+  // Set the plan state based on the selected plan type
+  useEffect(() => {
+    if (!name || !price || !method) {
+      navigate('/not-found');
+      return;
+    }
+    setPlan({
+      name: name,
+      price: new Intl.NumberFormat('vi-VN').format(price),
+      paymentMethod: method,
+    });
+  }, []);
 
   // Auto-redirect after countdown
   useEffect(() => {
@@ -80,13 +68,13 @@ export default function PaymentSuccessPage() {
             </div>
 
             <div className="space-y-3 mt-4">
-              <div className="flex justify-between items-center">
+              {/* <div className="flex justify-between items-center">
                 <div className="flex items-center gap-2">
                   <Calendar className="h-4 w-4 text-green-600" />
                   <span className="text-sm text-gray-700">Expiry date</span>
                 </div>
                 <span className="font-medium text-sm">{plan.expiryDate}</span>
-              </div>
+              </div> */}
 
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-2">
@@ -110,7 +98,7 @@ export default function PaymentSuccessPage() {
                   </svg>
                   <span className="text-sm text-gray-700">Payment method</span>
                 </div>
-                <span className="font-medium text-sm capitalize">{paymentMethod}</span>
+                <span className="font-medium text-sm capitalize">{plan.paymentMethod}</span>
               </div>
             </div>
           </div>

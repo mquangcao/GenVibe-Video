@@ -9,4 +9,6 @@ public class AppUser : IdentityUser
     public DateTime? RefreshTokenExpiryTime { get; set; }
     [JsonIgnore]
     public UserVipSubscription VipSubscription { get; set; } = default!;
+    [JsonIgnore]
+    public ICollection<Payment> Payments { get; set; } = [];
 }
