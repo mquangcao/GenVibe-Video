@@ -8,3 +8,9 @@ export { default as SignUpPage } from './SignUpPage';
 export { default as ResetPasswordPage } from './ChangePasswordPage';
 export { default as ForgotPasswordPage } from './ForgotPasswordPage';
 export { default as VoiceGeneratorPage } from './VoiceGeneratorPage';
+
+export { default as PricingPage } from './BuyPage/PricingPage';
+export { default as PaymentSuccessPage } from './PaymentSuccessPage/PaymentSuccessPage';
+
+export { default as ContentGeneratorPage } from './ContentGeneratorPage';
+

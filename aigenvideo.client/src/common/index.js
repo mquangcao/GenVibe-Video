@@ -1,1 +1,1 @@
-// export { default as Icon } from "./icon.js";
+export * as Icons from './Icons';

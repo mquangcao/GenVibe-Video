@@ -1,18 +1,21 @@
+
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.Identity.Web;
+using AIGenVideo.Server.Bootstraping.ContentGenerate;  // Add this using statement
+
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddMicrosoftIdentityWebApi(builder.Configuration.GetSection("AzureAd"));
+//builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+//    .AddMicrosoftIdentityWebApi(builder.Configuration.GetSection("AzureAd"));
 
 builder.AddApplicationServices();
 builder.AddSwaggerUIService();
 builder.AddIdentityServices();
-builder.AddAuthenticationScheme();
+//builder.AddAuthenticationScheme();    
 builder.AddOptionPattern();
-
+builder.Services.AddContentGenerateServices(builder.Configuration);  // Add this line
 var app = builder.Build();
 
 app.UseDefaultFiles();
@@ -31,10 +34,11 @@ app.UseHttpsRedirection();
 app.UseRequestLogging();
 
 app.UseAuthentication();
-app.UseAuthorization();
 
+app.UseAuthorization();
 app.MapControllers();
 
 app.MapFallbackToFile("/index.html");
 
 app.Run();
+
