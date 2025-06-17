@@ -33,6 +33,7 @@ export default function LoginForm({
   console.log(window.location.origin);
   const login = useGoogleLogin({
     prompt: 'consent',
+    scope: 'openid email profile https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly',
     onSuccess: async (codeResponse) => {
       if (!codeResponse || !codeResponse.code) {
         ToastError('Google login failed. Please try again.');
