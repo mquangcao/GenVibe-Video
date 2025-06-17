@@ -1,4 +1,4 @@
-import { ForgotPasswordPage, LoginPage, SignUpPage, VoiceGeneratorPage, ContentGeneratorPage } from '@/pages';
+import { ForgotPasswordPage, LoginPage, SignUpPage, VoiceGeneratorPage, ContentGeneratorPage, AIVideoGeneratorPage } from '@/pages';
 import ChangePasswordPage from '@/pages/ChangePasswordPage';
 
 // Các route ai cũng truy cập được, không cần đăng nhập.
@@ -33,4 +33,9 @@ export const publicRoutes = [
     element: <ContentGeneratorPage />,
     layout: null,
   },
+  {
+    path: '/ai-video-generator',
+    element: <AIVideoGeneratorPage />,
+    layout: null, // No layout for AI video generator page
+  }
 ];
