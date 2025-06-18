@@ -1,12 +1,10 @@
-// src/pages/AIVideoGeneratorPage/AIVideoGeneratorPage.jsx
 import React, { useState, useEffect } from 'react';
 import { Header } from '@/components/Layouts/Header';
 import { SideBar } from '@/components/Layouts/SideBar';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-// import { generateVideo, getTrendingTopics } from '@/apis'; // Các hàm API mới (cần tạo)
-import { Loader2, Film } from 'lucide-react'; // Thêm icon Film
+import { Loader2, Film } from 'lucide-react';
 
 const AIVideoGeneratorPage = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -153,7 +151,7 @@ const AIVideoGeneratorPage = () => {
               <label htmlFor="promptInput" className="block text-sm font-medium text-slate-300 mb-2">
                 2. Describe Your Video (Prompt)
               </label>
-              <textarea // Component Textarea của bạn
+              <textarea
                 id="promptInput"
                 placeholder="Detail your video idea. e.g., 'A 30-second explainer on quantum entanglement, use a friendly voice and simple animations. Include a call to action to learn more.'"
                 value={prompt}
@@ -163,14 +161,6 @@ const AIVideoGeneratorPage = () => {
               />
               <p className="mt-1 text-xs text-slate-400">The more detailed your prompt, the better the result.</p>
             </div>
-            {/* TÙY CHỌN: Input cho kịch bản nếu người dùng có sẵn
-            <div>
-              <label htmlFor="scriptInput" className="block text-sm font-medium text-slate-300 mb-2">
-                Or Paste Your Full Script (Optional)
-              </label>
-              <textarea id="scriptInput" value={script} onChange={(e) => setScript(e.target.value)} className="... min-h-[200px]" rows={8}/>
-            </div>
-            */}
 
             {/* 3. Chọn Style Video */}
             <div>
