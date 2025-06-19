@@ -7,6 +7,7 @@ import {
   PaymentManagerPage,
   PaymentSuccessPage,
   PlatformConnectionsPage,
+  SocialVideoManagementPage,
   UserManagerPage,
 } from '@/pages';
 import PricingPage from '@/pages/BuyPage';
@@ -65,6 +66,12 @@ export const protectRoutes = [
     path: 'account/platform-connections',
     element: <PlatformConnectionsPage />,
     layout: null, // No layout for platform connections page
+    // requiredRoles: ['user', 'vip', 'admin'],
+  },
+  {
+    path: 'social-video-management',
+    element: <SocialVideoManagementPage />,
+    layout: null, // No layout for social video management page
     // requiredRoles: ['user', 'vip', 'admin'],
   },
 ];
