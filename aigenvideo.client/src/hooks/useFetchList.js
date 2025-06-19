@@ -10,7 +10,9 @@ const useFetchList = (url, queryParams = {}, config = {}) => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const queryString = new URLSearchParams(queryParams).toString();
+        console.log('new query');
+        const cleanedParams = Object.fromEntries(Object.entries(queryParams).filter(([_, v]) => v != null && v !== ''));
+        const queryString = new URLSearchParams(cleanedParams).toString();
         const response = await axiosClient.get(`${url}?${queryString}`, config);
         if (!response.data.success) {
           throw new Error(`HTTP error! status: ${response.status}`);
