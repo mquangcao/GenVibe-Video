@@ -16,7 +16,7 @@ const ContentGeneratorPage = () => {
   // States for view navigation and video creation
   const [currentView, setCurrentView] = useState('generator');
   const [videoPrompt, setVideoPrompt] = useState('');
-  const [videoResult, setVideoResult] = useState('');
+  const [videoResult, setVideoResult] = useState([]);
   // General UI states
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -43,7 +43,6 @@ const ContentGeneratorPage = () => {
 
   const handleCreateFromTopic = () => {
     if (!topic.trim()) {
-      // Optionally, set an error message
       setError('Please enter a topic before creating.');
       return;
     }
@@ -61,9 +60,8 @@ const ContentGeneratorPage = () => {
     try {
       const response = await generateContent({ topic: videoPrompt, context: 'Gemini' });
       if (response.data && response.data.success) {
-        // Assuming the API returns a list, we'll take the first result's summary.
-        // Adjust this based on the actual structure of the Gemini API response.
-        setVideoResult(response.data.data[0]?.summary || 'No content was generated.');
+        // Gemini returns an array of scenes, use the first one for display
+        setVideoResult(response.data.data || []);
       } else {
         throw new Error(response.data?.message || 'Failed to create video content');
       }
@@ -118,14 +116,34 @@ const ContentGeneratorPage = () => {
         </div>
       </div>
 
-      {/* --- NEW: Right Panel now displays the result --- */}
+      {/* --Right Panel now displays the result --- */}
       <div className="hidden md:flex w-2/3 bg-gray-900 items-center justify-center p-10 text-center rounded-r-xl">
         {isLoading ? (
           <div className="text-slate-400">Generating...</div>
-        ) : videoResult ? (
-          <div className="text-left text-slate-200 bg-slate-800 p-6 rounded-lg w-full h-full overflow-y-auto">
-            <h3 className="text-xl font-semibold text-sky-400 mb-4">Generated Content (From Gemini)</h3>
-            <p className="whitespace-pre-wrap leading-relaxed">{videoResult}</p>
+        ) : videoResult.length > 0 ? (
+          <div className="flex-1 flex flex-col w-full h-full overflow-y-auto pr-2 space-y-6">
+            <h3 className="text-2xl font-bold text-sky-400 sticky top-0 bg-gray-900 pb-4">Generated Script</h3>
+            {/* --- THIS IS THE LOOP THAT DISPLAYS EVERY SCENE --- */}
+            {videoResult.map((scene, index) => (
+              <div key={scene.id || index} className="bg-slate-800 p-5 rounded-xl shadow-lg border border-slate-700">
+                <h4 className="text-xl font-bold text-white mb-4">Scene {index + 1}</h4>
+                {/* Image Prompt (Title) */}
+                <div className="mb-4 bg-slate-900/50 p-4 rounded-lg border-l-4 border-sky-400">
+                  <div className="flex items-center gap-3 text-sky-400 mb-2">
+                    <h5 className="text-md font-semibold">Image Prompt</h5>
+                  </div>
+                  <p className="text-slate-300 font-mono text-sm leading-relaxed">{scene.title}</p>
+                </div>
+
+                {/* Narration (Summary) */}
+                <div className="bg-slate-900/50 p-4 rounded-lg border-l-4 border-purple-400">
+                  <div className="flex items-center gap-3 text-purple-400 mb-2">
+                    <h5 className="text-md font-semibold"> Content</h5>
+                  </div>
+                  <p className="text-slate-200 text-base leading-relaxed whitespace-pre-wrap">{scene.summary}</p>
+                </div>
+              </div>
+            ))}
           </div>
         ) : (
           <div className="text-slate-500">
