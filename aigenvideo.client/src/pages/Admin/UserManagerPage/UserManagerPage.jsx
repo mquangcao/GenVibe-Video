@@ -292,57 +292,59 @@ const UserManagerPage = () => {
       <FilterSearchSelect {...{ handleOptionSortChange, handleSearchChange, onFilterAdvanced, query }} />
       {data && <span className="text-sm text-gray-500">Total Users: {data.count}</span>}
 
-      <Table className={' mt-4  '}>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="w-[120px] hidden lg:table-cell text-center">ID</TableHead>
-            <TableHead className="hidden lg:table-cell text-center">Email</TableHead>
-            <TableHead className="text-center">Name</TableHead>
-            <TableHead className="hidden lg:table-cell text-center">Lockout</TableHead>
-            <TableHead className="text-center">Role</TableHead>
-            <TableHead className="text-center">Action</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {items &&
-            items.map((user) => (
-              <TableRow key={user.id}>
-                <TableCell className="hidden lg:table-cell text-center">{user.id}</TableCell>
-                <TableCell className="hidden lg:table-cell text-center">{user.email}</TableCell>
-                <TableCell className="text-center">{user.name}</TableCell>
-                <TableCell className="hidden lg:table-cell text-center">
-                  <Badge
-                    variant="secondary"
-                    className={user.isLocked ? 'bg-red-500 text-white dark:bg-red-600' : 'bg-green-500 text-white dark:bg-green-600'}
-                  >
-                    {user.isLocked ? <SquareX className="size-4" /> : <User className="size-4" />}
-                    {user.isLocked ? 'Locked' : 'Active'}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-center">
-                  <Badge
-                    variant="secondary"
-                    className={
-                      user.role === 'ADMIN'
-                        ? 'bg-blue-500 text-white dark:bg-blue-600'
-                        : user.role === 'VIP'
-                        ? 'bg-purple-500 text-white dark:bg-purple-600'
-                        : 'bg-gray-500 text-white dark:bg-gray-600'
-                    }
-                  >
-                    {user.role === 'ADMIN' ? <ShieldUser /> : user.role === 'VIP' ? <CircleUserRound /> : <BadgeInfoIcon />}
-                    {user.role}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-center">
-                  <Button variant="outline" className="ml-2 bg-amber-300">
-                    <Link to={`/admin/user-manager/${user.id}`}>Edit</Link>
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-        </TableBody>
-      </Table>
+      <div className="border rounded-lg overflow-hidden mt-4">
+        <Table>
+          <TableHeader>
+            <TableRow className={'bg-gray-100 h-8'}>
+              <TableHead className="w-[120px] hidden lg:table-cell text-center">ID</TableHead>
+              <TableHead className="hidden lg:table-cell text-center">Email</TableHead>
+              <TableHead className="text-center">Name</TableHead>
+              <TableHead className="hidden lg:table-cell text-center">Lockout</TableHead>
+              <TableHead className="text-center">Role</TableHead>
+              <TableHead className="text-center">Action</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {items &&
+              items.map((user) => (
+                <TableRow key={user.id}>
+                  <TableCell className="hidden lg:table-cell text-center break-all leading-tight text-xs">{user.id}</TableCell>
+                  <TableCell className="hidden lg:table-cell text-center">{user.email}</TableCell>
+                  <TableCell className="text-center">{user.name}</TableCell>
+                  <TableCell className="hidden lg:table-cell text-center">
+                    <Badge
+                      variant="secondary"
+                      className={user.isLocked ? 'bg-red-500 text-white dark:bg-red-600' : 'bg-green-500 text-white dark:bg-green-600'}
+                    >
+                      {user.isLocked ? <SquareX className="size-4" /> : <User className="size-4" />}
+                      {user.isLocked ? 'Locked' : 'Active'}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <Badge
+                      variant="secondary"
+                      className={
+                        user.role === 'ADMIN'
+                          ? 'bg-blue-500 text-white dark:bg-blue-600'
+                          : user.role === 'VIP'
+                          ? 'bg-purple-500 text-white dark:bg-purple-600'
+                          : 'bg-gray-500 text-white dark:bg-gray-600'
+                      }
+                    >
+                      {user.role === 'ADMIN' ? <ShieldUser /> : user.role === 'VIP' ? <CircleUserRound /> : <BadgeInfoIcon />}
+                      {user.role}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <Button variant="outline" className="ml-2 bg-amber-300">
+                      <Link to={`/admin/user-manager/${user.id}`}>Edit</Link>
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+          </TableBody>
+        </Table>
+      </div>
       {data && (
         <PaginationWrapper
           currentPage={query.page}

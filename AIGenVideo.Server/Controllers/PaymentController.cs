@@ -18,7 +18,8 @@ public class PaymentController : ControllerBase
     private readonly ApplicationDbContext _context;
     private readonly IPaymentService _paymentService;
     private readonly IUserVipService _userVipService;
-    public PaymentController(UserManager<AppUser> userManager, IVipPlansRepository vipPlansRepository, ICurrentUserService currentUserService, ILogger<PaymentController> logger, ApplicationDbContext context, IPaymentGatewayFactory paymentGatewayFactory, IPaymentService paymentService, IUserVipService userVipService)
+    private readonly LinkGenerator _linkGenerator;
+    public PaymentController(UserManager<AppUser> userManager, IVipPlansRepository vipPlansRepository, ICurrentUserService currentUserService, ILogger<PaymentController> logger, ApplicationDbContext context, IPaymentGatewayFactory paymentGatewayFactory, IPaymentService paymentService, IUserVipService userVipService, LinkGenerator linkGenerator)
     {
         _userManager = userManager;
         _vipPlansRepository = vipPlansRepository;
@@ -28,6 +29,7 @@ public class PaymentController : ControllerBase
         _paymentGatewayFactory = paymentGatewayFactory;
         _paymentService = paymentService;
         _userVipService = userVipService;
+        _linkGenerator = linkGenerator;
         // Constructor logic if needed
     }
 
@@ -47,13 +49,17 @@ public class PaymentController : ControllerBase
                 return BadRequest(ApiResponse.FailResponse("Invalid plan duration specified."));
             }
 
+            (string returnUrl, string ipnUrl) =  GetReturnAndIpnUrls(request.GateWay);
+
             var requestPay = new Payment.Models.PaymentRequest()
             {
                 OrderId = Guid.NewGuid().ToString("N"),
                 Amount = Convert.ToInt64(plan.OriginalPrice - plan.Savings),
                 OrderDescription = $"VIP_ACCESS_{plan.Name}",
                 Gateway = request.GateWay,
-                IpAddress = $"{Request?.Scheme}://{Request?.Host}"
+                IpAddress = $"{Request?.Scheme}://{Request?.Host}",
+                ReturnUrl = returnUrl,
+                NotifyUrl = ipnUrl,
             };
 
             var paymentGateway = _paymentGatewayFactory.Create(request.GateWay);
@@ -73,6 +79,54 @@ public class PaymentController : ControllerBase
             _logger.LogError(ex, "Error processing payment request");
             return StatusCode(Constants.SERVER_ERROR_CODE, ApiResponse.FailResponse(Constants.MESSAGE_SERVER_ERROR));
         }
+    }
+
+    private (string returnUrl, string ipnUrl) GetReturnAndIpnUrls(string gateway)
+    {
+        ArgumentNullException.ThrowIfNull(gateway, nameof(gateway));
+        if (gateway == Constants.MOMO_GATEWAY)
+        {
+            return GetMomoUrls();
+        }
+        else if (gateway == Constants.VNPAY_GATEWAY)
+        {
+            return GetVnPayUrls();
+        }
+        else
+        {
+            throw new ArgumentException($"Unsupported payment gateway: {gateway}", nameof(gateway));
+        }
+    }
+
+    private (string returnUrl, string ipnUrl) GetVnPayUrls()
+    {
+        var returnUrl = _linkGenerator.GetUriByAction(
+            HttpContext,
+            action: "VnPayReturn",
+            controller: "Payment"
+        ) ?? string.Empty;
+        var ipnUrl = _linkGenerator.GetUriByAction(
+            HttpContext,
+            action: "VnPayIpn",
+            controller: "Payment"
+        ) ?? string.Empty;
+        return (returnUrl, ipnUrl);
+    }
+
+    private (string returnUrl, string ipnUrl) GetMomoUrls()
+    {
+        var returnUrl = _linkGenerator.GetUriByAction(
+            HttpContext,
+            action: "MomoReturn",
+            controller: "Payment"
+        ) ?? string.Empty;
+        var ipnUrl = _linkGenerator.GetUriByAction(
+            HttpContext,
+            action: "MomoIpn",
+            controller: "Payment"
+        ) ?? string.Empty;
+        return (returnUrl, ipnUrl);
+
     }
 
     [HttpGet("momo-return")]

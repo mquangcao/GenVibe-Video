@@ -391,7 +391,7 @@ const PaymentManagerPage = () => {
       <FilterSearchSelect {...{ handleOptionSortChange, handleSearchChange, onFilterAdvanced, query, resetFilter }} />
       {data && <span className=" text-lg font-semibold mb-8">Total Users: {data.count}</span>}
 
-      <div className="border rounded-lg overflow-hidden mt-4">
+      <div className="border rounded-lg overflow-hidden mt-4 ">
         <Table>
           <TableHeader>
             <TableRow className="bg-gray-100 h-8 ">
