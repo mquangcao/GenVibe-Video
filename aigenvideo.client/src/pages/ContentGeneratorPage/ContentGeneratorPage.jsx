@@ -1,3 +1,5 @@
+import axios from 'axios';
+
 import React, { useState, useEffect } from 'react';
 import { Header } from '@/components/Layouts/Header';
 import { SideBar } from '@/components/Layouts/SideBar';
@@ -5,8 +7,12 @@ import { generateContent } from '@/apis';
 import { FaArrowLeft, FaVolumeUp, FaFileDownload, FaPause } from 'react-icons/fa';
 
 const ContentGeneratorPage = () => {
+    const [googleVoices, setGoogleVoices] = useState([]);
+    const [selectedGoogleVoice, setSelectedGoogleVoice] = useState('en-US-Standard-B');
+    const [isAudioPlaying, setIsAudioPlaying] = useState(false);
+    const [audioElement, setAudioElement] = useState(null);
+
     const getLanguageDisplayName = (langCode) => {
-        // Map of common language codes to their full names
         const languageMap = {
             'en': 'English',
             'es': 'Spanish',
@@ -34,7 +40,6 @@ const ContentGeneratorPage = () => {
             'hu': 'Hungarian',
             'el': 'Greek',
             'he': 'Hebrew'
-            // Add more languages as needed
         };
 
         const countryMap = {
@@ -68,7 +73,6 @@ const ContentGeneratorPage = () => {
             'FI': 'Finland',
             'PL': 'Poland',
             'TR': 'Turkey'
-            // Add more countries as needed
         };
 
         try {
@@ -78,11 +82,10 @@ const ContentGeneratorPage = () => {
 
             return country ? `${language} - ${country}` : language;
         } catch (e) {
-            return langCode; // Fallback to the original code if parsing fails
+            console.error('Error parsing language code:', e);
+            return langCode;
         }
     };
-
-
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
@@ -101,37 +104,88 @@ const ContentGeneratorPage = () => {
 
     // Text-to-speech states
     const [isSpeaking, setIsSpeaking] = useState(false);
-    const [speechSynthesis, setSpeechSynthesis] = useState(null);
-    const [voiceOptions, setVoiceOptions] = useState([]);
-    const [selectedVoice, setSelectedVoice] = useState(null);
     const [speechRate, setSpeechRate] = useState(1);
 
-    const [showAudioTip, setShowAudioTip] = useState(false);
+    const [showAudioTip, _setShowAudioTip] = useState(false);
 
     const availableContexts = ['YouTube', 'Wikipedia', 'Groq'];
 
     useEffect(() => {
-        // Initialize speech synthesis and get available voices
-        if (typeof window !== 'undefined' && window.speechSynthesis) {
-            setSpeechSynthesis(window.speechSynthesis);
+        const audio = new Audio();
+        audio.onended = () => {
+            setIsAudioPlaying(false);
+            setIsSpeaking(false);
+        };
+        audio.onerror = () => {
+            setIsAudioPlaying(false);
+            setIsSpeaking(false);
+            setError('Error playing audio');
+        };
+        setAudioElement(audio);
 
-            // Get available voices and set default
-            const loadVoices = () => {
-                const voices = window.speechSynthesis.getVoices();
-                if (voices.length > 0) {
-                    setVoiceOptions(voices);
-                    setSelectedVoice(voices[0]);
-                }
-            };
-
-            loadVoices();
-
-            // Chrome loads voices asynchronously
-            if (window.speechSynthesis.onvoiceschanged !== undefined) {
-                window.speechSynthesis.onvoiceschanged = loadVoices;
-            }
-        }
+        fetchGoogleVoices();
     }, []);
+
+    const fetchGoogleVoices = async () => {
+        const voices = [
+            // English (US)
+            { name: 'en-US-Standard-A', gender: 'MALE', languageCode: 'en-US' },
+            { name: 'en-US-Standard-B', gender: 'MALE', languageCode: 'en-US' },
+            { name: 'en-US-Standard-C', gender: 'FEMALE', languageCode: 'en-US' },
+            { name: 'en-US-Standard-D', gender: 'MALE', languageCode: 'en-US' },
+            { name: 'en-US-Standard-E', gender: 'FEMALE', languageCode: 'en-US' },
+            { name: 'en-US-Standard-F', gender: 'FEMALE', languageCode: 'en-US' },
+            { name: 'en-US-Standard-G', gender: 'FEMALE', languageCode: 'en-US' },
+            { name: 'en-US-Standard-H', gender: 'FEMALE', languageCode: 'en-US' },
+            { name: 'en-US-Standard-I', gender: 'MALE', languageCode: 'en-US' },
+            { name: 'en-US-Standard-J', gender: 'MALE', languageCode: 'en-US' },
+
+            // English (UK)
+            { name: 'en-GB-Standard-A', gender: 'FEMALE', languageCode: 'en-GB' },
+            { name: 'en-GB-Standard-B', gender: 'MALE', languageCode: 'en-GB' },
+            { name: 'en-GB-Standard-C', gender: 'FEMALE', languageCode: 'en-GB' },
+            { name: 'en-GB-Standard-D', gender: 'MALE', languageCode: 'en-GB' },
+
+            // French
+            { name: 'fr-FR-Standard-A', gender: 'FEMALE', languageCode: 'fr-FR' },
+            { name: 'fr-FR-Standard-B', gender: 'MALE', languageCode: 'fr-FR' },
+
+            // German
+            { name: 'de-DE-Standard-A', gender: 'FEMALE', languageCode: 'de-DE' },
+            { name: 'de-DE-Standard-B', gender: 'MALE', languageCode: 'de-DE' },
+
+            // Italian
+            { name: 'it-IT-Standard-A', gender: 'FEMALE', languageCode: 'it-IT' },
+
+            // Japanese
+            { name: 'ja-JP-Standard-A', gender: 'FEMALE', languageCode: 'ja-JP' },
+
+            // Spanish
+            { name: 'es-ES-Standard-A', gender: 'FEMALE', languageCode: 'es-ES' },
+
+            // Vietnamese
+            { name: 'vi-VN-Standard-A', gender: 'FEMALE', languageCode: 'vi-VN' },
+            { name: 'vi-VN-Standard-B', gender: 'MALE', languageCode: 'vi-VN' },
+            { name: 'vi-VN-Standard-C', gender: 'FEMALE', languageCode: 'vi-VN' },
+            { name: 'vi-VN-Standard-D', gender: 'MALE', languageCode: 'vi-VN' },
+
+            // Thai
+            { name: 'th-TH-Standard-A', gender: 'FEMALE', languageCode: 'th-TH' },
+
+            // Chinese (Mandarin, Simplified)
+            { name: 'cmn-CN-Standard-A', gender: 'FEMALE', languageCode: 'cmn-CN' },
+
+            // Chinese (Traditional, Taiwan)
+            { name: 'cmn-TW-Standard-A', gender: 'FEMALE', languageCode: 'cmn-TW' },
+
+            // Chinese (Cantonese, Hong Kong)
+            { name: 'yue-HK-Standard-A', gender: 'FEMALE', languageCode: 'yue-HK' },
+
+        ];
+
+        setGoogleVoices(voices);
+        setSelectedGoogleVoice(voices[0].name);
+    };
 
     const handleGenerateSuggestions = async () => {
         setIsLoading(true);
@@ -167,11 +221,18 @@ const ContentGeneratorPage = () => {
         }
         setIsLoading(true);
         setError(null);
-        setVideoResult(''); // Clear previous results
+
+        if (audioElement && isAudioPlaying) {
+            audioElement.pause();
+            audioElement.src = '';
+            setIsAudioPlaying(false);
+        }
+
+        setVideoResult([]);
+
         try {
             const response = await generateContent({ topic: videoPrompt, context: 'Gemini' });
             if (response.data && response.data.success) {
-                // Gemini returns an array of scenes, use the first one for display
                 setVideoResult(response.data.data || []);
             } else {
                 throw new Error(response.data?.message || 'Failed to create video content');
@@ -191,7 +252,6 @@ const ContentGeneratorPage = () => {
     };
 
     const handleBackToGenerator = () => {
-        // Stop any ongoing speech
         if (speechSynthesis && isSpeaking) {
             speechSynthesis.cancel();
             setIsSpeaking(false);
@@ -199,39 +259,162 @@ const ContentGeneratorPage = () => {
         setCurrentView('generator');
     };
 
-    // Text-to-speech functionality
-    const speakText = (text) => {
-        if (!speechSynthesis) return;
+    const speakText = async (text) => {
+        try {
+            if (audioElement && isAudioPlaying) {
+                audioElement.pause();
+                audioElement.src = '';
+                setIsAudioPlaying(false);
+            }
 
-        // Cancel any ongoing speech
-        speechSynthesis.cancel();
+            setIsLoading(true);
 
-        const utterance = new SpeechSynthesisUtterance(text);
-        if (selectedVoice) utterance.voice = selectedVoice;
-        utterance.rate = speechRate;
+            await new Promise(resolve => setTimeout(resolve, 100));
 
-        utterance.onend = () => setIsSpeaking(false);
-        utterance.onerror = () => setIsSpeaking(false);
+            const languageCode = selectedGoogleVoice.split('-').slice(0, 2).join('-');
 
-        setIsSpeaking(true);
-        speechSynthesis.speak(utterance);
-    };
+            const response = await axios({
+                method: 'post',
+                url: '/api/texttospeech/synthesize',
+                data: {
+                    text: text,
+                    voiceName: selectedGoogleVoice,
+                    languageCode: languageCode,
+                    speechRate: speechRate
+                },
+                responseType: 'blob'
+            });
 
-    const stopSpeaking = () => {
-        if (speechSynthesis) {
-            speechSynthesis.cancel();
+            const url = URL.createObjectURL(response.data);
+
+            if (audioElement) {
+                audioElement.src = url;
+                setIsSpeaking(true);
+
+                await audioElement.play().catch(err => {
+                    console.error('Error playing audio:', err);
+                    setError('Error playing audio');
+                    setIsSpeaking(false);
+                    setIsAudioPlaying(false);
+                });
+
+                setIsAudioPlaying(true);
+            }
+        } catch (err) {
+            console.error('Error with text-to-speech:', err);
+            setError('Failed to synthesize speech: ' + (err.response?.data?.message || err.message));
             setIsSpeaking(false);
+            setIsAudioPlaying(false);
+        } finally {
+            setIsLoading(false);
         }
     };
 
-    // Generate SRT subtitle file
-    const generateSRT = (text) => {
+    const stopSpeaking = () => {
+        if (audioElement && isAudioPlaying) {
+            audioElement.pause();
+            audioElement.src = '';
+            setIsSpeaking(false);
+            setIsAudioPlaying(false);
+        }
+    };
+
+    const generateSRTWithAudioDuration = async (text, audioBlob) => {
+        return new Promise((resolve, reject) => {
+            try {
+                const audio = new Audio();
+                const url = URL.createObjectURL(audioBlob);
+
+                audio.onloadedmetadata = () => {
+                    const audioDuration = audio.duration;
+                    URL.revokeObjectURL(url);
+
+                    const srt = generateSRTWithSentenceTiming(text, audioDuration);
+                    resolve(srt);
+                };
+
+                audio.onerror = (err) => {
+                    console.error('Error loading audio metadata:', err);
+                    URL.revokeObjectURL(url);
+                    reject(new Error("Failed to load audio metadata"));
+                };
+
+                audio.src = url;
+            } catch (err) {
+                reject(err);
+            }
+        });
+    };
+
+    const generateSRTWithSentenceTiming = (text, totalDuration) => {
+        const sentences = text.split(/(?<=[.!?])\s+/).filter(sentence => sentence.trim().length > 0);
+
+        if (sentences.length === 0) return "";
+
+        const totalChars = text.length;
+        const totalWords = text.trim().split(/\s+/).length;
+
+        let srtContent = '';
+        let index = 1;
+        let currentStartTime = 0;
+
+        sentences.forEach(sentence => {
+            const sentenceChars = sentence.length;
+            const sentenceWords = sentence.trim().split(/\s+/).length;
+
+            const charRatio = sentenceChars / totalChars;
+            const wordRatio = sentenceWords / totalWords;
+
+            const timeRatio = (charRatio + wordRatio) / 2;
+
+            const duration = totalDuration * timeRatio;
+
+            const endTime = currentStartTime + duration;
+
+            const formatTime = (seconds) => {
+                const date = new Date(seconds * 1000);
+                const hours = date.getUTCHours().toString().padStart(2, '0');
+                const minutes = date.getUTCMinutes().toString().padStart(2, '0');
+                const secs = date.getUTCSeconds().toString().padStart(2, '0');
+                const ms = date.getUTCMilliseconds().toString().padStart(3, '0');
+                return `${hours}:${minutes}:${secs},${ms}`;
+            };
+
+            srtContent += `${index}\n`;
+            srtContent += `${formatTime(currentStartTime)} --> ${formatTime(endTime)}\n`;
+            srtContent += `${sentence.trim()}\n\n`;
+
+            currentStartTime = endTime;
+            index++;
+        });
+
+        return srtContent;
+    };
+
+    /*
+    const _generateSRT = (text) => {
         const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
         let srtContent = '';
         let index = 1;
 
-        // Approximate 15 words per subtitle (about 5 seconds at normal speech rate)
-        const wordsPerSubtitle = 15;
+        const wpmForRate = {
+            0.5: 75,  // Slow
+            0.75: 110, // Below normal
+            1.0: 150,  // Normal speech
+            1.25: 190, // Above normal
+            1.5: 225,  // Fast
+            1.75: 260, // Very fast
+            2.0: 300   // Maximum
+        };
+
+        const closestRate = Object.keys(wpmForRate).reduce((prev, curr) => {
+            return Math.abs(curr - speechRate) < Math.abs(prev - speechRate) ? curr : prev;
+        }, 1.0);
+
+        const wordsPerMinute = wpmForRate[closestRate];
+        const secondsPerWord = 60 / wordsPerMinute;
+
+        const wordsPerSubtitle = 15; // This creates reasonable subtitle chunks
         let currentStartTime = 0; // Start at 0 seconds
 
         for (let i = 0; i < lines.length; i++) {
@@ -241,28 +424,23 @@ const ContentGeneratorPage = () => {
                 const subtitleWords = words.slice(j, j + wordsPerSubtitle);
                 const subtitleText = subtitleWords.join(' ');
 
-                // Calculate duration based on text properties
+                // Calculate more accurate audio duration based on word count and speech rate
                 const wordCount = subtitleWords.length;
-                const charCount = subtitleText.length;
+                let audioDuration = wordCount * secondsPerWord;
 
-                // Base duration: 0.3 seconds per word
-                let duration = wordCount * 0.3;
+                // Factor in pauses for punctuation
+                const punctuationCount = (subtitleText.match(/[,.!?;:]|\.{3}/g) || []).length;
+                audioDuration += punctuationCount * 0.2; // Add 0.2s per punctuation mark
 
-                // Minimum reading time: ~15 chars per second is comfortable reading speed
-                const minReadingTime = charCount / 15;
+                // Apply custom timing requirements
+                audioDuration = Math.max(audioDuration, 5.0); // Minimum 5 seconds
 
-                // Ensure subtitle stays visible long enough (at least 1.5 seconds or reading time)
-                const minDuration = Math.max(1.5, minReadingTime);
-
-                // Use the longer of speech duration or minimum reading duration
-                duration = Math.max(duration, minDuration);
-
-                // Add a small pause between sentences if this is the end of a sentence
-                if (subtitleText.match(/[.!?]$/)) {
-                    duration += 0.5; // Add half a second pause at end of sentences
+                // For longer segments (> 10 seconds), add 4 more seconds
+                if (audioDuration > 10.0) {
+                    audioDuration += 4.0;
                 }
 
-                const endTime = currentStartTime + duration;
+                const endTime = currentStartTime + audioDuration;
 
                 // Format times as SRT timestamps (HH:MM:SS,mmm)
                 const formatTime = (seconds) => {
@@ -285,26 +463,256 @@ const ContentGeneratorPage = () => {
 
         return srtContent;
     };
+    */
 
-    const downloadSRT = (text, filename) => {
-        const srtContent = generateSRT(text);
-        const blob = new Blob([srtContent], { type: 'text/plain' });
-        const url = URL.createObjectURL(blob);
+    /* First version of SRT generation based on text properties 
+    const generateSRT = (text) => {
+        const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
+        let srtContent = '';
+        let index = 1;
 
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${filename}.srt`;
-        document.body.appendChild(a);
-        a.click();
+        const wordsPerSubtitle = 15;
+        let currentStartTime = 0;
 
-        setTimeout(() => {
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        }, 100);
+        for (let i = 0; i < lines.length; i++) {
+            const words = lines[i].split(' ');
+
+            for (let j = 0; j < words.length; j += wordsPerSubtitle) {
+                const subtitleWords = words.slice(j, j + wordsPerSubtitle);
+                const subtitleText = subtitleWords.join(' ');
+
+                const wordCount = subtitleWords.length;
+                const charCount = subtitleText.length;
+
+                let duration = wordCount * 0.3;
+
+                const minReadingTime = charCount / 15;
+
+                const minDuration = Math.max(1.5, minReadingTime);
+
+                duration = Math.max(duration, minDuration);
+
+                if (subtitleText.match(/[.!?]$/)) {
+                    duration += 0.5;
+                }
+
+                const endTime = currentStartTime + duration;
+
+                const formatTime = (seconds) => {
+                    const date = new Date(seconds * 1000);
+                    const hours = date.getUTCHours().toString().padStart(2, '0');
+                    const minutes = date.getUTCMinutes().toString().padStart(2, '0');
+                    const secs = date.getUTCSeconds().toString().padStart(2, '0');
+                    const ms = date.getUTCMilliseconds().toString().padStart(3, '0');
+                    return `${hours}:${minutes}:${secs},${ms}`;
+                };
+
+                srtContent += `${index}\n`;
+                srtContent += `${formatTime(currentStartTime)} --> ${formatTime(endTime)}\n`;
+                srtContent += `${subtitleText}\n\n`;
+
+                currentStartTime = endTime;
+                index++;
+            }
+        }
+
+        return srtContent;
+    };
+    */
+
+    /* Second version of SRT generation based on videoResult structure */
+    /*
+    // Generate SRT subtitle file with specified timing requirements
+const generateSRT = (text) => {
+    const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
+    let srtContent = '';
+    let index = 1;
+
+    // Approximate 15 words per subtitle (about 5 seconds at normal speech rate)
+    const wordsPerSubtitle = 15;
+    let currentStartTime = 0; // Start at 0 seconds
+
+    for (let i = 0; i < lines.length; i++) {
+        const words = lines[i].split(' ');
+
+        for (let j = 0; j < words.length; j += wordsPerSubtitle) {
+            const subtitleWords = words.slice(j, j + wordsPerSubtitle);
+            const subtitleText = subtitleWords.join(' ');
+
+            // Calculate duration based on text properties
+            const wordCount = subtitleWords.length;
+            const charCount = subtitleText.length;
+
+            // Base duration: 0.3 seconds per word
+            let duration = wordCount * 0.3;
+
+            // Minimum reading time: ~15 chars per second is comfortable reading speed
+            const minReadingTime = charCount / 15;
+
+            // First apply the larger of speech duration or reading time
+            duration = Math.max(duration, minReadingTime);
+
+            // Add a small pause between sentences if this is the end of a sentence
+            if (subtitleText.match(/[.!?]$/)) {
+                duration += 0.5; // Add half a second pause at end of sentences
+            }
+
+            // Apply the minimum duration requirement of 5 seconds
+            duration = Math.max(duration, 5.0);
+            
+            // For longer durations (> 10 seconds), add 4 more seconds
+            if (duration > 10.0) {
+                duration += 4.0;
+            }
+
+            const endTime = currentStartTime + duration;
+
+            // Format times as SRT timestamps (HH:MM:SS,mmm)
+            const formatTime = (seconds) => {
+                const date = new Date(seconds * 1000);
+                const hours = date.getUTCHours().toString().padStart(2, '0');
+                const minutes = date.getUTCMinutes().toString().padStart(2, '0');
+                const secs = date.getUTCSeconds().toString().padStart(2, '0');
+                const ms = date.getUTCMilliseconds().toString().padStart(3, '0');
+                return `${hours}:${minutes}:${secs},${ms}`;
+            };
+
+            srtContent += `${index}\n`;
+            srtContent += `${formatTime(currentStartTime)} --> ${formatTime(endTime)}\n`;
+            srtContent += `${subtitleText}\n\n`;
+
+            currentStartTime = endTime;
+            index++;
+        }
+    }
+    return srtContent;
+};
+    */
+
+    const downloadGoogleTTS = async (text, filename) => {
+        try {
+            setIsLoading(true);
+
+            const languageCode = selectedGoogleVoice.split('-').slice(0, 2).join('-');
+
+            const response = await axios({
+                method: 'post',
+                url: '/api/texttospeech/synthesize',
+                data: {
+                    text: text,
+                    voiceName: selectedGoogleVoice,
+                    languageCode: languageCode,
+                    speechRate: speechRate
+                },
+                responseType: 'blob'
+            });
+
+            const url = URL.createObjectURL(response.data);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${filename}.mp3`;
+            document.body.appendChild(a);
+            a.click();
+
+            setTimeout(() => {
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }, 100);
+
+        } catch (err) {
+            console.error('Error downloading TTS:', err);
+            setError('Failed to generate audio file: ' + (err.response?.data?.message || err.message));
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const downloadSRT = async (text, filename) => {
+        try {
+            setIsLoading(true);
+            const languageCode = selectedGoogleVoice.split('-').slice(0, 2).join('-');
+
+            const response = await axios({
+                method: 'post',
+                url: '/api/texttospeech/synthesize',
+                data: {
+                    text: text,
+                    voiceName: selectedGoogleVoice,
+                    languageCode: languageCode,
+                    speechRate: speechRate
+                },
+                responseType: 'blob'
+            });
+
+            const srtContent = await generateSRTWithAudioDuration(text, response.data);
+
+            const blob = new Blob([srtContent], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${filename}.srt`;
+            document.body.appendChild(a);
+            a.click();
+
+            setTimeout(() => {
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }, 100);
+        } catch (err) {
+            console.error('Error creating SRT:', err);
+            setError('Failed to generate SRT file: ' + err.message);
+
+            const fallbackSRT = generateSimpleSRT(text);
+            const blob = new Blob([fallbackSRT], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${filename}.srt`;
+            document.body.appendChild(a);
+            a.click();
+
+            setTimeout(() => {
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }, 100);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const generateSimpleSRT = (text) => {
+        const sentences = text.split(/(?<=[.!?])\s+/).filter(sentence => sentence.trim().length > 0);
+        let srtContent = '';
+        let index = 1;
+        let currentTime = 0;
+
+        sentences.forEach(sentence => {
+            const words = sentence.trim().split(/\s+/).length;
+            const duration = words * 0.3;
+
+            const formatTime = (seconds) => {
+                const date = new Date(seconds * 1000);
+                const hours = date.getUTCHours().toString().padStart(2, '0');
+                const minutes = date.getUTCMinutes().toString().padStart(2, '0');
+                const secs = date.getUTCSeconds().toString().padStart(2, '0');
+                const ms = date.getUTCMilliseconds().toString().padStart(3, '0');
+                return `${hours}:${minutes}:${secs},${ms}`;
+            };
+
+            srtContent += `${index}\n`;
+            srtContent += `${formatTime(currentTime)} --> ${formatTime(currentTime + duration)}\n`;
+            srtContent += `${sentence.trim()}\n\n`;
+
+            currentTime += duration;
+            index++;
+        });
+
+        return srtContent;
     };
 
     const downloadFullScript = (text, filename) => {
-        // Create a plain text file with the script content
         const blob = new Blob([text], { type: 'text/plain' });
         const url = URL.createObjectURL(blob);
 
@@ -321,15 +729,8 @@ const ContentGeneratorPage = () => {
     };
 
     const handleAudioDownloadRequest = () => {
-        // Show a tooltip explaining the limitation
-        setShowAudioTip(true);
-        setTimeout(() => setShowAudioTip(false), 5000); // Hide after 5 seconds
-
-        // For now, use the browser's speech synthesis and inform user
         const fullText = videoResult.map(scene => scene.summary).join(' ');
-
-        // This starts the audio for listening while explaining the limitation
-        speakText(fullText);
+        downloadGoogleTTS(fullText, 'full-script');
     };
 
     const renderVideoEditorView = () => (
@@ -358,22 +759,18 @@ const ContentGeneratorPage = () => {
                         <label className="block text-sm font-medium text-slate-300 mb-2">Voice Settings</label>
                         <select
                             className="w-4/5 p-2 bg-slate-700 text-slate-100 rounded-lg border border-slate-600 mb-2"
-                            onChange={(e) => setSelectedVoice(voiceOptions.find(voice => voice.name === e.target.value))}
-                            value={selectedVoice?.name || ''}
+                            onChange={(e) => setSelectedGoogleVoice(e.target.value)}
+                            value={selectedGoogleVoice}
                         >
-                            {voiceOptions.map((voice) => {
-                                // Extract just the name part, removing provider names
-                                const cleanName = voice.name
-                                    .replace(/^(Microsoft|Google|Amazon|Apple)\s+/i, '')
-                                    .split('-')[0]
-                                    .trim();
-
-                                // Get full language name from the language code
-                                const languageDisplay = getLanguageDisplayName(voice.lang);
+                            {googleVoices.map((voice) => {
+                                // Extract just the language and voice variant
+                                const [langCode, region, _type, variant] = voice.name.split('-');
+                                const gender = voice.gender === 'MALE' ? '(M)' : '(F)';
+                                const displayName = `${langCode.toUpperCase()}-${region} ${variant} ${gender}`;
 
                                 return (
                                     <option key={voice.name} value={voice.name}>
-                                        {cleanName} - {languageDisplay}
+                                        {displayName} - {getLanguageDisplayName(voice.languageCode)}
                                     </option>
                                 );
                             })}
@@ -434,7 +831,7 @@ const ContentGeneratorPage = () => {
 
                                     {/* Audio and Subtitle controls */}
                                     <div className="flex mt-4 justify-end gap-3">
-                                        {isSpeaking && scene.id === scene.id ? (
+                                        {isAudioPlaying ? (
                                             <button
                                                 onClick={stopSpeaking}
                                                 className="p-2 bg-red-600 hover:bg-red-700 text-white rounded-full"
@@ -473,7 +870,7 @@ const ContentGeneratorPage = () => {
                                         speakText(fullText);
                                     }}
                                     className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg flex items-center gap-2"
-                                    disabled={isSpeaking}
+                                    disabled={isAudioPlaying} // Use isAudioPlaying instead of isSpeaking
                                 >
                                     <FaVolumeUp /> Listen to Full Script
                                 </button>
@@ -497,9 +894,19 @@ const ContentGeneratorPage = () => {
                                 </button>
                                 <button
                                     onClick={handleAudioDownloadRequest}
+                                    disabled={isLoading || isAudioPlaying}
                                     className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg flex items-center gap-2"
                                 >
-                                    <FaVolumeUp /> Download Audio
+                                    {isLoading ? (
+                                        <>
+                                            <div className="animate-spin h-4 w-4 border-2 border-white rounded-full border-t-transparent"></div>
+                                            <span className="ml-2">Generating...</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <FaFileDownload /> Download Audio
+                                        </>
+                                    )}
                                 </button>
                             </div>
                             {showAudioTip && (
