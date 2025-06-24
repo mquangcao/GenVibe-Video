@@ -1,5 +1,5 @@
-@import "tailwindcss";
-@import "tw-animate-css";
+@import 'tailwindcss';
+@import 'tw-animate-css';
 
 @custom-variant dark (&:is(.dark *));
 
@@ -116,5 +116,34 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+@keyframes slowZoomInEffect {
+  0% {
+    transform: scale(1.02); /* Bắt đầu hơi zoom một chút */
+  }
+  100% {
+    transform: scale(1.11); /* Zoom to hơn nữa */
+  }
+}
+
+.animate-custom-slow-zoom-in {
+  animation: slowZoomInEffect 10s ease-in-out infinite alternate;
+  /* - slowZoomInEffect: Tên của keyframes.
+    - 25s: Thời gian thực hiện một lượt animation.
+    - ease-in-out: Kiểu timing function.
+    - infinite: Lặp lại vô hạn.
+    - alternate: Đảo chiều animation sau mỗi lượt.
+  */
+}
+
+@layer components {
+  .sidebar.collapsed .sidebar-item-text {
+    display: none;
+  }
+
+  .sidebar.collapsed a {
+    justify-content: center;
   }
 }

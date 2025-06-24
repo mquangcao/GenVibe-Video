@@ -1,14 +1,22 @@
-import { Button } from "./components/ui/button"
-
-
+import { BrowserRouter } from 'react-router-dom';
+import AppRoutes from '@/routes';
+import AuthProvider from './providers/authProvider';
+import { ToastProvider } from './providers';
+import { GoogleOAuthProvider } from '@react-oauth/google';
 
 function App() {
+  console.log('Google Client ID:', import.meta.env);
   return (
-    <div>
-     <Button>Click me</Button>
-
-    </div>
-  )
+    <AuthProvider>
+      <ToastProvider>
+        <GoogleOAuthProvider clientId={`${import.meta.env.VITE_GOOGLE_CLIENT_ID}`}>
+          <BrowserRouter>
+            <AppRoutes />
+          </BrowserRouter>
+        </GoogleOAuthProvider>
+      </ToastProvider>
+    </AuthProvider>
+  );
 }
 
-export default App
+export default App;

@@ -1,4 +1,15 @@
-﻿namespace AIGenVideo.Server.Bootstraping;
+﻿using AIGenVideo.Server.Models.Configurations;
+using AIGenVideo.Server.Repository;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.IdentityModel.Tokens;
+using Payment.Abstractions;
+using Payment.Gateway;
+using Payment.Gateway.Momo;
+using Payment.Gateway.Momo.Config;
+using Payment.Gateway.VnPay;
+using Payment.Gateway.VnPay.Config;
+
+namespace AIGenVideo.Server.Bootstraping;
 
 public static class ApplicationServiceExtensions
 {
@@ -8,11 +19,24 @@ public static class ApplicationServiceExtensions
 
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen();
-
+        builder.Services.AddHttpClient();
 
         // Add application services here
-        // Example: builder.Services.AddScoped<IMyService, MyService>();
-        builder.Services.AddSingleton<IEmailSender, DefaultEmailSender>();
+        builder.Services.AddSingleton<IEmailSender, MailKitEmailSender>();
+        builder.Services.AddScoped<ITokenService, JwtTokenService>();
+        builder.Services.AddScoped<IAuthService, AuthService>();
+        builder.Services.AddScoped<IRoleRepository, RoleRepository>();
+        builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
+        builder.Services.AddScoped<IVipPlansRepository, VipPlansRepository>();
+        builder.Services.AddScoped<IPaymentService, PaymentService>();
+        builder.Services.AddScoped<IUserVipService, UserVipService>();
+        builder.Services.AddScoped<IUserVipSubscriptionRepository, UserVipSubscriptionRepository>();
+
+        // payment
+        builder.Services.AddScoped<VnPayPaymentGateway>();
+        builder.Services.AddScoped<MomoPaymentGateway>();
+        builder.Services.AddScoped<IPaymentGatewayFactory, PaymentGatewayFactory>();
+
 
         return builder;
     }
@@ -67,6 +91,12 @@ public static class ApplicationServiceExtensions
             .AddEntityFrameworkStores<ApplicationDbContext>()
             .AddDefaultTokenProviders();
 
+        // password reset token life time
+        builder.Services.Configure<DataProtectionTokenProviderOptions>(opt =>
+        {
+            opt.TokenLifespan = TimeSpan.FromMinutes(builder.Configuration.GetValue<int>("PasswordToken:LifeTimeInMinutes", 5)); 
+        });
+
         return builder;
     }
 
@@ -76,7 +106,55 @@ public static class ApplicationServiceExtensions
         {
             options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
             options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-        }).AddJwtBearer();
+            options.DefaultForbidScheme = JwtBearerDefaults.AuthenticationScheme;
+            options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+            options.DefaultSignInScheme = JwtBearerDefaults.AuthenticationScheme;
+            options.DefaultSignOutScheme = JwtBearerDefaults.AuthenticationScheme;
+
+        }).AddJwtBearer(options =>
+        {
+            var jwtOptions = builder.Configuration.GetSection("JWT").Get<JwtOptions>() ?? throw new InvalidOperationException("JWT configuration not found.");
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuer = jwtOptions.ValidateIssuer,
+                ValidIssuer = jwtOptions.Issuer,
+                ValidateAudience = jwtOptions.ValidateAudience,
+                ValidAudience = jwtOptions.Audience,
+                ValidateIssuerSigningKey = jwtOptions.ValidateIssuerSigningKey,
+                IssuerSigningKey = new SymmetricSecurityKey(
+                    System.Text.Encoding.UTF8.GetBytes(jwtOptions.SigningKey)
+                ),
+                ValidateLifetime = jwtOptions.ValidateLifetime,
+                ClockSkew = TimeSpan.Zero
+            };
+        });
+        return builder;
+    }
+
+    public static IHostApplicationBuilder AddOptionPattern(this IHostApplicationBuilder builder)
+    {
+        builder.Services.Configure<JwtOptions>(builder.Configuration.GetRequiredSection("JWT"));
+        builder.Services.Configure<EmailOptions>(builder.Configuration.GetSection("EmailSettings"));
+        builder.Services.Configure<LoginGoogleOptions>(builder.Configuration.GetSection("Authentication:Google"));
+        builder.Services.Configure<MomoConfig>(builder.Configuration.GetSection("Payment:Momo"));
+        builder.Services.Configure<VnpayConfig>(builder.Configuration.GetSection("Payment:VnPay"));
+
+        return builder;
+    }
+
+    public static IHostApplicationBuilder AddCors(this IHostApplicationBuilder builder)
+    {
+        builder.Services.AddCors(options =>
+        {
+            options.AddPolicy("AllowAll", policy =>
+            {
+                policy
+                    .WithOrigins("https://localhost:50464")      
+                    .AllowAnyMethod()
+                    .AllowAnyHeader()
+                    .AllowCredentials();     // nếu có dùng cookie / auth
+            });
+        });
         return builder;
     }
 }

@@ -11,3 +11,6 @@ global using AIGenVideo.Server.Data;
 global using AIGenVideo.Server.Services;
 global using Microsoft.AspNetCore.Authentication.JwtBearer;
 global using Microsoft.OpenApi.Models;
+global using AIGenVideo.Server.Models.RequestModels.Auth;
+global using AIGenVideo.Server.Common;
+global using AIGenVideo.Server.Extensions;

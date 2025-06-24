@@ -1,6 +1,9 @@
-﻿namespace AIGenVideo.Server.Abstractions;
+﻿using AIGenVideo.Server.Models.DomainModels;
+
+namespace AIGenVideo.Server.Abstractions;
 
 public interface IEmailSender
 {
-    public Task SendEmailAsync(string email, string subject, string htmlMessage);
+    public Task<SendEmailResult> SendEmailAsync(string toEmail, string subject, string htmlBody);
+    public Task<SendEmailResult> SendResetPasswordEmailAsync(string toEmail, string resetLink);
 }
