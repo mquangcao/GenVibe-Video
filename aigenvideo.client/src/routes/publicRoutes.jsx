@@ -1,4 +1,4 @@
-import { ForgotPasswordPage, LoginPage, SignUpPage, VoiceGeneratorPage, ContentGeneratorPage } from '@/pages';
+import { ForgotPasswordPage, LoginPage, SignUpPage, VoiceGeneratorPage, ContentGeneratorPage, ImageGeneratorPage } from '@/pages';
 import ChangePasswordPage from '@/pages/ChangePasswordPage';
 
 // Các route ai cũng truy cập được, không cần đăng nhập.
@@ -31,6 +31,11 @@ export const publicRoutes = [
   {
     path: '/content-generator',
     element: <ContentGeneratorPage />,
+    layout: null,
+  },
+  {
+    path: '/image-generator',
+    element: <ImageGeneratorPage />,
     layout: null,
   },
 ];

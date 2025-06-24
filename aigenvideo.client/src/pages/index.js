@@ -9,3 +9,4 @@ export { default as ResetPasswordPage } from './ChangePasswordPage';
 export { default as ForgotPasswordPage } from './ForgotPasswordPage';
 export { default as VoiceGeneratorPage } from './VoiceGeneratorPage';
 export { default as ContentGeneratorPage } from './ContentGeneratorPage';
+export { default as ImageGeneratorPage } from './ImageGeneratorPage';

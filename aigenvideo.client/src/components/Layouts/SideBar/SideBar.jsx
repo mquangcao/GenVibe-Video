@@ -1,5 +1,5 @@
 import React from 'react';
-import { FaHome, FaCreditCard, FaRobot, FaKeyboard, FaFileAlt, FaUserPlus, FaCog, FaSignOutAlt } from 'react-icons/fa';
+import { FaHome, FaCreditCard, FaRobot, FaKeyboard, FaFileAlt, FaUserPlus, FaCog, FaSignOutAlt, FaImages } from 'react-icons/fa';
 import { ChevronsLeft, ChevronsRight } from 'lucide-react';
 
 const SideBar = ({ isOpen, toggleSideBar }) => {
@@ -48,6 +48,13 @@ const SideBar = ({ isOpen, toggleSideBar }) => {
         >
           <FaFileAlt size={20} />
           {isOpen && <span>Content Generate</span>}
+        </a>
+        <a
+          href="/image-generator"
+          className={`flex items-center space-x-2 p-2 rounded-md hover:bg-slate-600 ${!isOpen && 'justify-center'}`}
+        >
+          <FaImages size={20} />
+          {isOpen && <span>Image Generate</span>}
         </a>
       </nav>
 
