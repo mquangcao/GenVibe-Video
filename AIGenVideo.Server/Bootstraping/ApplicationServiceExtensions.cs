@@ -1,6 +1,7 @@
 ﻿using AIGenVideo.Server.Models.Configurations;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.IdentityModel.Tokens;
+using AIGenVideo.Server.Bootstraping.VideoGenerate;
 
 namespace AIGenVideo.Server.Bootstraping;
 
@@ -19,6 +20,9 @@ public static class ApplicationServiceExtensions
         builder.Services.AddSingleton<IEmailSender, MailKitEmailSender>();
         builder.Services.AddScoped<ITokenService, JwtTokenService>();
         builder.Services.AddScoped<IAuthService, AuthService>();
+
+        // Add video generation services
+        builder.Services.AddVideoGenerateServices(builder.Configuration);
 
         return builder;
     }
@@ -76,7 +80,7 @@ public static class ApplicationServiceExtensions
         // password reset token life time
         builder.Services.Configure<DataProtectionTokenProviderOptions>(opt =>
         {
-            opt.TokenLifespan = TimeSpan.FromMinutes(builder.Configuration.GetValue<int>("PasswordToken:LifeTimeInMinutes", 5)); 
+            opt.TokenLifespan = TimeSpan.FromMinutes(builder.Configuration.GetValue<int>("PasswordToken:LifeTimeInMinutes", 5));
         });
 
         return builder;

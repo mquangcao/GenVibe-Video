@@ -2,6 +2,7 @@
 
 public class ApplicationDbContext : IdentityDbContext<AppUser, AppRole, string>
 {
+    public DbSet<VideoData> VideoData { get; set; } = default!;
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
     {
     }
