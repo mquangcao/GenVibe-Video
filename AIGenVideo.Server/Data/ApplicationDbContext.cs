@@ -1,11 +1,16 @@
-﻿namespace AIGenVideo.Server.Data;
+﻿using Microsoft.EntityFrameworkCore;
+
+namespace AIGenVideo.Server.Data;
 
 public class ApplicationDbContext : IdentityDbContext<AppUser, AppRole, string>
 {
     public DbSet<Entities.Payment> Payments { get; set; }
     public DbSet<UserVipSubscription> UserVipSubscriptions { get; set; }
     public DbSet<VipPlan> VipPlans { get; set; }
-    
+    public DbSet<Platform> Platforms { get; set; }
+    public DbSet<UploadLog> UploadLogs { get; set; }
+    public DbSet<UserSocialAccount> UserSocialAccounts { get; set; }
+
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
     {
     }
@@ -21,5 +26,9 @@ public class ApplicationDbContext : IdentityDbContext<AppUser, AppRole, string>
                 entityType.SetTableName(tableName.Substring(6));
             }
         }
+
+        builder.Entity<Platform>()
+            .HasIndex(p => p.Code)
+            .IsUnique(); 
     }
 }

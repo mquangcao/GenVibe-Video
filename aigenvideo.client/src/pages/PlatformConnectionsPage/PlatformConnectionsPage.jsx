@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Icons } from '@/common';
 import { Users, Eye, Play, Settings, Unlink, Plus, CheckCircle, AlertTriangle, Clock, Link, Loader2 } from 'lucide-react';
+import { connectPlatform } from '@/apis/connectPlatformService';
 
 export default function PlatformConnectionsPage() {
   const [platformSlots, setPlatformSlots] = useState([
@@ -100,7 +101,17 @@ export default function PlatformConnectionsPage() {
     loadConnectedAccounts();
   }, []);
 
-  const handleConnect = (platform) => {
+  const handleConnect = async (platform) => {
+    try {
+      // var response = await connectPlatform();
+      window.open('https://localhost:7073/api/connections/connect-youtube', '_blank', 'width=500,height=600');
+      // window.location.href = 'https://localhost:7073/api/connections/connect-youtube';
+
+      console.log('Connect Platform Response:', response);
+    } catch (error) {
+      console.error('Error connecting platform:', error);
+      return;
+    }
     setPlatformSlots((prev) =>
       prev.map((slot) =>
         slot.platform === platform

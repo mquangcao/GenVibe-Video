@@ -6,6 +6,7 @@ builder.AddApplicationServices();
 builder.AddSwaggerUIService();
 builder.AddIdentityServices();
 builder.AddAuthenticationScheme();
+builder.AddSocialPlatformServices();
 builder.Services.AddContentGenerateServices(builder.Configuration);
 builder.AddOptionPattern();
 builder.AddCors();

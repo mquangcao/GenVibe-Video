@@ -32,6 +32,8 @@ public static class ApplicationServiceExtensions
         builder.Services.AddScoped<IUserVipService, UserVipService>();
         builder.Services.AddScoped<IUserVipSubscriptionRepository, UserVipSubscriptionRepository>();
 
+        builder.Services.AddScoped<ISocialPlatformService, SocialPlatformService>();
+
         // payment
         builder.Services.AddScoped<VnPayPaymentGateway>();
         builder.Services.AddScoped<MomoPaymentGateway>();
@@ -107,9 +109,9 @@ public static class ApplicationServiceExtensions
             options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
             options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
             options.DefaultForbidScheme = JwtBearerDefaults.AuthenticationScheme;
-            options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
-            options.DefaultSignInScheme = JwtBearerDefaults.AuthenticationScheme;
-            options.DefaultSignOutScheme = JwtBearerDefaults.AuthenticationScheme;
+            //options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+            //options.DefaultSignInScheme = JwtBearerDefaults.AuthenticationScheme;
+            //options.DefaultSignOutScheme = JwtBearerDefaults.AuthenticationScheme;
 
         }).AddJwtBearer(options =>
         {
