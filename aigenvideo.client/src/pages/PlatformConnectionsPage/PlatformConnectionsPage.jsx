@@ -10,7 +10,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Icons } from '@/common';
 import { Users, Eye, Play, Settings, Unlink, Plus, CheckCircle, AlertTriangle, Clock, Link, Loader2 } from 'lucide-react';
-import { connectPlatform } from '@/apis/connectPlatformService';
+import { connectPlatform, getUrlConnection } from '@/apis/connectPlatformService';
+import { useToast } from '@/hooks';
 
 export default function PlatformConnectionsPage() {
   const [platformSlots, setPlatformSlots] = useState([
@@ -101,11 +102,21 @@ export default function PlatformConnectionsPage() {
     loadConnectedAccounts();
   }, []);
 
+  const { ToastSuccess, ToastError } = useToast();
+
   const handleConnect = async (platform) => {
     try {
-      // var response = await connectPlatform();
-      window.open('https://localhost:7073/api/connections/connect-youtube', '_blank', 'width=500,height=600');
-      // window.location.href = 'https://localhost:7073/api/connections/connect-youtube';
+      var response = await getUrlConnection();
+      const popup = window.open(response.data.data.url, '_blank', 'width=500,height=600');
+
+      window.addEventListener('message', (event) => {
+        if (event.origin !== 'https://localhost:7073') return;
+        if (event.data.success) {
+          ToastSuccess('Kết nối thành công!');
+        } else {
+          ToastError('Kết nối thất bại!');
+        }
+      });
 
       console.log('Connect Platform Response:', response);
     } catch (error) {

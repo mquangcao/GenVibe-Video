@@ -39,6 +39,15 @@ public static class ApplicationServiceExtensions
         builder.Services.AddScoped<MomoPaymentGateway>();
         builder.Services.AddScoped<IPaymentGatewayFactory, PaymentGatewayFactory>();
 
+        //redis
+        builder.Services.AddStackExchangeRedisCache(options =>
+        {
+            options.Configuration = builder.Configuration.GetConnectionString("Redis");
+            options.InstanceName = "AIGenVideo:";
+        });
+
+        builder.Services.AddScoped<IOAuthStateService, OAuthStateService>();
+
 
         return builder;
     }
@@ -140,6 +149,7 @@ public static class ApplicationServiceExtensions
         builder.Services.Configure<LoginGoogleOptions>(builder.Configuration.GetSection("Authentication:Google"));
         builder.Services.Configure<MomoConfig>(builder.Configuration.GetSection("Payment:Momo"));
         builder.Services.Configure<VnpayConfig>(builder.Configuration.GetSection("Payment:VnPay"));
+        builder.Services.Configure<TikTokOptions>(builder.Configuration.GetSection("Authentication:TikTok"));
 
         return builder;
     }
