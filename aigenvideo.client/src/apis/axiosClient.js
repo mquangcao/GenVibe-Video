@@ -2,7 +2,7 @@ import { clearAuthTokens, getAccessToken, getRefreshToken, getUsername } from '@
 import axios from 'axios';
 
 const axiosClient = axios.create({
-  baseURL: '/',
+  baseURL: import.meta.env.VITE_SERVER_PROXY,
   timeout: 30000, // Set a timeout of 30 seconds
   headers: {
     'Content-Type': 'application/json',
