@@ -60,49 +60,91 @@ export const useContentGeneration = (setActiveTab) => {
             setIsLoading(false);
         }
     };
+    
+    const handleGenerateAndUpload = async () => {
+    if (!videoResult || videoResult.length === 0) {
+        setError("Please generate a script first.");
+        return;
+    }
 
-    const handleGenVideoSequence = async () => {
-        try {
-            setIsLoading(true);
+    setIsLoading(true);
+    setError(null);
+    setImages([]);
+    console.log("STARTING: Full Generate & Upload Sequence...");
 
-            // Generate images for all scenes
-            const imageGenerationPromises = videoResult.map((scene) =>
-                imageService.generateImage({ Prompt: scene.title })
-            );
-
-            const responses = await Promise.all(imageGenerationPromises);
-
-            // Process generated images
-            const generatedImages = responses
-                .map((response, index) => {
-                    if (response?.data?.imageUrl) {
-                        return {
-                            id: videoResult[index].id || `scene-${index}`,
-                            name: `Scene ${index + 1}`,
-                            url: response.data.imageUrl,
-                        };
-                    }
-                    return null;
-                })
-                .filter(Boolean);
-
-            if (generatedImages.length > 0) {
-                setImages(generatedImages);
-                if (setActiveTab) {
-                    setActiveTab('images');
+    try {
+        // --- STAGE 1: GENERATE IMAGES FROM YOUR AI (GEMINI) ---
+        console.log("Stage 1: Calling Gemini to generate temporary images...");
+        const scenesToGenerate = videoResult.slice(0, 2); // Only take the first 2 scenes
+        const imageGenerationPromises = scenesToGenerate.map((scene) =>
+            imageService.generateImage({ Prompt: scene.title })
+        );
+        const generationResponses = await Promise.all(imageGenerationPromises);
+        // We create the array of temporary images here. Let's name it clearly.
+        const aiGeneratedImages = generationResponses
+            .map((response, index) => {
+                if (response?.data?.imageUrl) {
+                    return {
+                        id: scenesToGenerate[index].id || `scene-${index}`,
+                        name: `Scene ${index + 1}`,
+                        url: response.data.imageUrl,
+                    };
                 }
-            } else {
-                throw new Error('Image generation failed for all scenes.');
-            }
+                return null;
+            })
+            .filter(Boolean);
 
-        } catch (err) {
-            const errorMessage = err.response?.data?.message || err.message || 'An unexpected error occurred.';
-            setError(errorMessage);
-        } finally {
-            setIsLoading(false);
+        if (aiGeneratedImages.length === 0) {
+            throw new Error('AI Image generation failed for all scenes.');
         }
-    };
+        console.log("...Stage 1 Complete. Got temporary images.");
+        // --- STAGE 2: UPLOAD THOSE IMAGES TO CLOUDINARY ---
+        const CLOUD_NAME = "dj88dmrqe";
+        const UPLOAD_PRESET = "GenVideoProject";
+        const FOLDER_NAME = "ai-generated-images";
 
+        // We use the 'aiGeneratedImages' variable we just created
+        const cloudinaryUploadPromises = aiGeneratedImages.map(tempImage => {
+            const body = {
+                file: tempImage.url,
+                upload_preset: UPLOAD_PRESET,
+                folder: FOLDER_NAME,
+            };
+            return fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
+                method: "POST",
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+            }).then(response => response.json());
+        });
+
+        const cloudinaryResults = await Promise.all(cloudinaryUploadPromises);
+        console.log("...Stage 2 Complete. Images saved on Cloudinary.");
+
+
+        // --- STAGE 3: UPDATE THE UI WITH FINAL, PERMANENT URLS ---
+        console.log("Stage 3: Updating UI with permanent Cloudinary URLs...");
+        const finalImagesFromCloudinary = cloudinaryResults.map((result, index) => ({
+            id: result.public_id,
+            name: aiGeneratedImages[index].name, // Use the name from the temporary images
+            url: result.secure_url,
+        }));
+
+        setImages(finalImagesFromCloudinary);
+        if (setActiveTab) {
+            setActiveTab('images');
+        }
+
+    } catch (err) {
+        const errorMessage = err.response?.data?.message || err.message || 'An unexpected error occurred.';
+        setError(errorMessage);
+        console.error("Error during full sequence:", err);
+    } finally {
+        setIsLoading(false);
+        console.log("SEQUENCE FINISHED.");
+    }
+};
+
+   
     const handleRejectImage = (idToReject) => {
         setImages((prevImages) => prevImages.filter((img) => img.id !== idToReject));
     };
@@ -137,7 +179,7 @@ export const useContentGeneration = (setActiveTab) => {
         availableContexts,
         handleGenerateSuggestions,
         handleCreateVideo,
-        handleGenVideoSequence,
+        handleGenerateAndUpload,
         handleRejectImage,
         handleCreateFromTopic,
         handleUseSuggestion

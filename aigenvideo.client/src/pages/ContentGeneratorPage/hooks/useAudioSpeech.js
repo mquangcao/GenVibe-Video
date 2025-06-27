@@ -9,6 +9,8 @@ export const useAudioSpeech = () => {
     const [isSpeaking, setIsSpeaking] = useState(false);
     const [error, setError] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
+    const [isProcessing, setIsProcessing] = useState(false);
+    const [uploadedAudioUrl, setUploadedAudioUrl] = useState(null);
 
     useEffect(() => {
         const audio = new Audio();
@@ -147,6 +149,64 @@ export const useAudioSpeech = () => {
             }
         });
     };
+      const generateAndUploadAudio = async (text, selectedGoogleVoice, speechRate) => {
+        if (!text) {
+            setError("Cannot generate audio from empty text.");
+            return;
+        }
+
+        setIsProcessing(true);
+        setError(null);
+        setUploadedAudioUrl(null);
+        console.log("Hook called: Starting audio generation and upload...");
+
+        try {
+            // --- 1. Generate the Audio Blob from your backend ---
+            console.log("Generating audio data...");
+            const response = await generateAudio({ text, selectedGoogleVoice, speechRate });
+            const audioBlob = response.data;
+
+            if (!audioBlob || audioBlob.size === 0) {
+                throw new Error("Backend did not return valid audio data.");
+            }
+            console.log("...Audio blob received, size:", audioBlob.size);
+
+            // --- 2. Upload that Audio Blob to Cloudinary ---
+            console.log("Uploading audio to Cloudinary...");
+            const CLOUD_NAME = "dj88dmrqe";
+            const UPLOAD_PRESET = "GenVideoProject";
+            const FOLDER_NAME = "generated-audio";
+
+            const formData = new FormData();
+            formData.append("file", audioBlob, "generated-audio.mp3");
+            formData.append("upload_preset", UPLOAD_PRESET);
+            formData.append("folder", FOLDER_NAME);
+            formData.append("resource_type", "video");
+
+            const cloudinaryResponse = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/video/upload`, {
+                method: "POST",
+                body: formData,
+            }).then(res => res.json());
+
+            if (!cloudinaryResponse.secure_url) {
+                throw new Error(cloudinaryResponse.error?.message || "Cloudinary upload failed.");
+            }
+            console.log("...Audio uploaded! URL:", cloudinaryResponse.secure_url);
+
+            // --- 3. Update state with the final, permanent URL ---
+            setUploadedAudioUrl(cloudinaryResponse.secure_url);
+            
+            // Optionally, return the URL for immediate use
+            return cloudinaryResponse.secure_url;
+
+        } catch (err) {
+            console.error("Error in useAudioSpeech hook:", err);
+            setError(err.message || "An unknown error occurred while processing audio.");
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
 
     return {
         isAudioPlaying,
