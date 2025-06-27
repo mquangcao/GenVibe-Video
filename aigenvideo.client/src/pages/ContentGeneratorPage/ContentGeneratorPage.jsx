@@ -129,6 +129,8 @@ const ContentGeneratorPage = () => {
                             speakText={speakText}
                             stopSpeaking={stopSpeaking}
                             downloadSRT={downloadSRT}
+                            downloadGoogleTTS={downloadGoogleTTS}    // Added this prop
+                            downloadFullScript={downloadFullScript}  // Added this prop
                             images={images}
                             handleRejectImage={handleRejectImage}
                             videoResult={videoResult}

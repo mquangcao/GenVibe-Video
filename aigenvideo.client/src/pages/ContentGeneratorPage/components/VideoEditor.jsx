@@ -1,5 +1,5 @@
-import React from 'react';
-import { FaTrash, FaArrowLeft, FaVolumeUp, FaFileDownload, FaPlusCircle, FaPlus, FaPause, FaMinusCircle, FaQuoteRight, FaImages, FaVideo, FaCogs } from 'react-icons/fa';
+import React, { useState } from 'react';
+import { FaTrash, FaArrowLeft, FaVolumeUp, FaFileDownload, FaPlusCircle, FaPlus, FaPause, FaMinusCircle, FaQuoteRight, FaImages, FaVideo, FaCogs, FaMicrophone, FaFileAudio, FaEdit } from 'react-icons/fa';
 
 const VideoEditor = ({
     videoPrompt,
@@ -16,6 +16,8 @@ const VideoEditor = ({
     speakText,
     stopSpeaking,
     downloadSRT,
+    downloadGoogleTTS,
+    downloadFullScript,
     images,
     handleRejectImage,
     videoResult,
@@ -25,6 +27,17 @@ const VideoEditor = ({
     error,
     getLanguageDisplayName
 }) => {
+    const [scriptContent, setScriptContent] = useState('');
+
+    const combineScriptContent = () => {
+        const fullScript = videoResult.map((scene, index) => {
+            return `${scene.summary}\n\n`;
+        }).join('');
+
+        setScriptContent(fullScript);  // Set the combined script as the current prompt
+        setActiveTab('scriptToAudio'); // Switch to Script to Audio tab
+    };
+
     return (
         <div className="flex h-full p-1 md:p-6 lg:p-8">
             {/* Left Panel: Settings */}
@@ -55,6 +68,13 @@ const VideoEditor = ({
                     >
                         Image to Video
                     </button>
+                    <button
+                        onClick={() => setActiveTab('scriptToAudio')}
+                        className={`text-xs font-medium text-white rounded px-2 py-1 transition-all ${activeTab === 'scriptToAudio' ? 'bg-slate-700' : 'bg-slate-800 hover:bg-slate-800'
+                            }`}
+                    >
+                        Script to Audio
+                    </button>
                 </div>
 
                 {activeTab === 'reference' && (
@@ -70,41 +90,6 @@ const VideoEditor = ({
                                     onChange={(e) => setVideoPrompt(e.target.value)}
                                     placeholder="e.g., Create a video about the wonders of the ancient world..."
                                 />
-                            </div>
-
-                            {/* Voice options */}
-                            <div>
-                                <label className="block text-sm font-medium text-slate-300 mb-2">Voice Settings</label>
-                                <select
-                                    className="w-4/5 p-1 bg-slate-700 text-slate-200 rounded-md border border-slate-600 mb-2 text-sm"
-                                    onChange={(e) => setSelectedGoogleVoice(e.target.value)}
-                                    value={selectedGoogleVoice}
-                                >
-                                    {googleVoices.map((voice) => {
-                                        const [langCode, region, _type, variant] = voice.name.split('-');
-                                        const gender = voice.gender === 'MALE' ? '(M)' : '(F)';
-                                        const displayName = `${langCode.toUpperCase()}-${region} ${variant} ${gender}`;
-                                        return (
-                                            <option key={voice.name} value={voice.name}>
-                                                {displayName} - {getLanguageDisplayName(voice.languageCode)}
-                                            </option>
-                                        );
-                                    })}
-                                </select>
-                                <div className="flex items-center">
-                                    <label className="block text-xs font-medium text-slate-300 mr-2">Speed:</label>
-                                    <input
-                                        type="range"
-                                        min="0.5"
-                                        max="2"
-                                        step="0.1"
-                                        value={speechRate}
-                                        onChange={(e) => setSpeechRate(parseFloat(e.target.value))}
-                                        className="w-3/4"
-                                        style={{ height: '5px' }}
-                                    />
-                                    <span className="ml-2 text-white">{speechRate}x</span>
-                                </div>
                             </div>
                         </div>
                     </div>
@@ -189,26 +174,167 @@ const VideoEditor = ({
                     </div>
                 )}
 
+                {activeTab === 'scriptToAudio' && (
+                    <div className="space-y-5 pr-2 mt-2">
+                        <div className="flex-1 flex flex-col space-y-5 overflow-y-auto">
+                            <div>
+                                <label className="block text-sm font-medium text-slate-200 mb-2">
+                                    Enter your script to convert to audio
+                                </label>
+                                <textarea
+                                    className="w-full p-3 bg-slate-700 text-slate-100 rounded-lg border border-slate-600 h-48 resize-none"
+                                    value={scriptContent}
+                                    onChange={(e) => setScriptContent(e.target.value)}
+                                    placeholder="Enter your script content here..."
+                                />
+                            </div>
+
+                            {/* Voice settings for script to audio */}
+                            <div>
+                                <label className="block text-sm font-medium text-slate-300 mb-2">Voice Settings</label>
+                                <select
+                                    className="w-4/5 p-1 bg-slate-700 text-slate-200 rounded-md border border-slate-600 mb-2 text-sm"
+                                    onChange={(e) => setSelectedGoogleVoice(e.target.value)}
+                                    value={selectedGoogleVoice}
+                                >
+                                    {googleVoices.map((voice) => {
+                                        const [langCode, region, _type, variant] = voice.name.split('-');
+                                        const gender = voice.gender === 'MALE' ? '(M)' : '(F)';
+                                        const displayName = `${langCode.toUpperCase()}-${region} ${variant} ${gender}`;
+                                        return (
+                                            <option key={voice.name} value={voice.name}>
+                                                {displayName} - {getLanguageDisplayName(voice.languageCode)}
+                                            </option>
+                                        );
+                                    })}
+                                </select>
+                                <div className="flex items-center">
+                                    <label className="block text-xs font-medium text-slate-300 mr-2">Speed:</label>
+                                    <input
+                                        type="range"
+                                        min="0.5"
+                                        max="2"
+                                        step="0.1"
+                                        value={speechRate}
+                                        onChange={(e) => setSpeechRate(parseFloat(e.target.value))}
+                                        className="w-3/4"
+                                        style={{ height: '5px' }}
+                                    />
+                                    <span className="ml-2 text-white">{speechRate}x</span>
+                                </div>
+                            </div>
+
+                            {/* Audio generation controls - Enhanced for Script to Audio tab */}
+                            <div className="flex flex-wrap justify-center gap-6 mt-0">
+                                <div className="tooltip-container relative">
+                                    <button
+                                        onClick={() => speakText(scriptContent, selectedGoogleVoice, speechRate)}
+                                        disabled={!scriptContent || isLoading}
+                                        className="p-2.5 bg-green-600 hover:bg-green-700 text-white rounded-full disabled:bg-slate-600 disabled:cursor-not-allowed transition-colors"
+                                        title="Preview Audio"
+                                    >
+                                        <FaVolumeUp size={16} />
+                                        <span className="tooltip absolute -top-8 left-1/2 transform -translate-x-1/2 bg-slate-900 text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 whitespace-nowrap">
+                                            {isAudioPlaying ? 'Playing...' : 'Preview Audio'}
+                                        </span>
+                                    </button>
+                                </div>
+
+                                {isAudioPlaying && (
+                                    <div className="tooltip-container relative">
+                                        <button
+                                            onClick={stopSpeaking}
+                                            className="p-2.5 bg-red-600 hover:bg-red-700 text-white rounded-full transition-colors"
+                                            title="Stop Audio"
+                                        >
+                                            <FaPause size={16} />
+                                            <span className="tooltip absolute -top-8 left-1/2 transform -translate-x-1/2 bg-slate-900 text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 whitespace-nowrap">
+                                                Stop Audio
+                                            </span>
+                                        </button>
+                                    </div>
+                                )}
+
+                                <div className="tooltip-container relative">
+                                    <button
+                                        onClick={() => downloadGoogleTTS(scriptContent, 'script-audio', selectedGoogleVoice, speechRate)}
+                                        disabled={!scriptContent || isLoading}
+                                        className="p-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-full disabled:bg-slate-600 disabled:cursor-not-allowed transition-colors"
+                                        title="Download MP3"
+                                    >
+                                        <FaFileAudio size={16} />
+                                        <span className="tooltip absolute -top-8 left-1/2 transform -translate-x-1/2 bg-slate-900 text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 whitespace-nowrap">
+                                            Download MP3
+                                        </span>
+                                    </button>
+                                </div>
+
+                                <div className="tooltip-container relative">
+                                    <button
+                                        onClick={() => downloadSRT(scriptContent, 'script-subtitles', selectedGoogleVoice, speechRate)}
+                                        disabled={!scriptContent || isLoading}
+                                        className="p-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-full disabled:bg-slate-600 disabled:cursor-not-allowed transition-colors"
+                                        title="Download SRT"
+                                    >
+                                        <FaFileDownload size={16} />
+                                        <span className="tooltip absolute -top-8 left-1/2 transform -translate-x-1/2 bg-slate-900 text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 whitespace-nowrap">
+                                            Download SRT
+                                        </span>
+                                    </button>
+                                </div>
+
+                                <div className="tooltip-container relative">
+                                    <button
+                                        onClick={() => downloadFullScript(scriptContent, 'full-script')}
+                                        disabled={!scriptContent || isLoading}
+                                        className="p-2.5 bg-yellow-600 hover:bg-yellow-700 text-white rounded-full disabled:bg-slate-600 disabled:cursor-not-allowed transition-colors"
+                                        title="Download Script"
+                                    >
+                                        <FaQuoteRight size={16} />
+                                        <span className="tooltip absolute -top-8 left-1/2 transform -translate-x-1/2 bg-slate-900 text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 whitespace-nowrap">
+                                            Download Script
+                                        </span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {error && <div className="text-red-400 text-sm">{error}</div>}
 
-                <div className="flex-none pt-4">
-                    <button
-                        onClick={handleCreateVideo}
-                        disabled={isLoading}
-                        className="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-lg transition-all disabled:bg-slate-600 disabled:cursor-wait"
-                    >
-                        {isLoading ? 'Creating...' : 'Create'}
-                    </button>
-                </div>
+                {activeTab !== 'scriptToAudio' && (
+                    <div className="flex-none pt-4">
+                        <button
+                            onClick={handleCreateVideo}
+                            disabled={isLoading}
+                            className="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-lg transition-all disabled:bg-slate-600 disabled:cursor-wait"
+                        >
+                            {isLoading ? 'Creating...' : 'Create'}
+                        </button>
+                    </div>
+                )}
             </div>
 
             {/* Right Panel - Results */}
-            <div className="hidden md:flex w-2/3 bg-gray-900 items-center justify-center p-5 text-center rounded-r-xl">
+            <div className="hidden md:flex w-1/2 bg-gray-900 items-center justify-center p-5 text-center rounded-r-xl">
                 {isLoading ? (
                     <div className="text-slate-400">Generating...</div>
                 ) : videoResult.length > 0 ? (
                     <div className="flex-1 flex flex-col w-full h-full overflow-y-auto pr-2 space-y-2">
-                        <h3 className="text-xl font-bold text-sky-400 sticky top-0 bg-gray-900 pb-1">Generated Script</h3>
+                        <div className="flex justify-between items-center sticky top-0 p-2 bg-gray-900 pb-1">
+                            <h3 className="text-xl font-bold text-sky-400">Generated Script</h3>
+
+                            {/* Add this button to convert to full script */}
+                            <button
+                                onClick={combineScriptContent}
+                                className="flex items-center gap-2 px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white text-sm rounded-md"
+                                title="Use as Script for Audio"
+                            >
+                                <FaEdit size={12} />
+                                <span>Use as Script</span>
+                            </button>
+                        </div>
 
                         {/* Results loop */}
                         {videoResult.map((scene, index) => (
@@ -231,45 +357,70 @@ const VideoEditor = ({
                                     <p className="text-slate-100 font-mono text-sm leading-relaxed whitespace-pre-wrap">{scene.summary}</p>
 
                                     {/* Audio and Subtitle controls */}
-                                    <div className="flex mt-4 justify-end gap-3">
-                                        {isAudioPlaying ? (
+                                    {activeTab === 'scriptToAudioo' && (
+                                        <div className="flex mt-4 justify-end gap-3">
+                                            {isAudioPlaying ? (
+                                                <button
+                                                    onClick={stopSpeaking}
+                                                    className="p-1 bg-red-600 hover:bg-red-700 text-white rounded-full"
+                                                    title="Stop Speaking"
+                                                >
+                                                    <FaPause />
+                                                </button>
+                                            ) : (
+                                                <button
+                                                    onClick={() => speakText(scene.summary)}
+                                                    className="p-0.5 bg-green-600 hover:bg-green-700 text-white rounded-full"
+                                                    title="Listen"
+                                                >
+                                                    <FaVolumeUp />
+                                                </button>
+                                            )}
                                             <button
-                                                onClick={stopSpeaking}
-                                                className="p-1 bg-red-600 hover:bg-red-700 text-white rounded-full"
-                                                title="Stop Speaking"
+                                                onClick={() => downloadGoogleTTS(scene.summary, `scene-${index + 1}`, selectedGoogleVoice, speechRate)}
+                                                className="p-0.5 bg-blue-600 hover:bg-blue-700 text-white rounded-full"
+                                                title="Download SRT"
                                             >
-                                                <FaPause />
+                                                <FaFileAudio />
                                             </button>
-                                        ) : (
                                             <button
-                                                onClick={() => speakText(scene.summary)}
-                                                className="p-0.5 bg-green-600 hover:bg-green-700 text-white rounded-full"
-                                                title="Listen"
+                                                onClick={() => downloadSRT(scene.summary, `scene-${index + 1}`)}
+                                                className="p-0.5 bg-yellow-600 hover:bg-yellow-700 text-white rounded-full"
+                                                title="Download SRT"
                                             >
-                                                <FaVolumeUp />
+                                                <FaFileDownload />
                                             </button>
-                                        )}
-                                        <button
-                                            onClick={() => downloadSRT(scene.summary, `scene-${index + 1}`)}
-                                            className="p-0.5 bg-blue-600 hover:bg-blue-700 text-white rounded-full"
-                                            title="Download SRT"
-                                        >
-                                            <FaFileDownload />
-                                        </button>
-                                    </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         ))}
 
-                        {/* Sequence button */}
-                        <div className="sticky bottom-0 bg-slate-800 rounded-lg shadow-lg border border-slate-700 mt-6 flex justify-end">
+                        {/* Sequence/action button with dynamic text and behavior */}
+                        <div className="sticky bottom-0 p-2 bg-slate-800 rounded-lg shadow-lg border border-slate-700 mt-6 flex justify-end">
                             <button
-                                onClick={handleGenVideoSequence}
-                                disabled={isLoading || isAudioPlaying || activeTab === 'images'}
+                                onClick={() => {
+                                    if (activeTab === 'reference') {
+                                        // In reference tab, go to images tab
+                                        handleGenVideoSequence();
+                                        setActiveTab('images');
+                                    } else if (activeTab === 'images') {
+                                        // In images tab, go to script to audio tab
+                                        combineScriptContent();
+                                        setActiveTab('scriptToAudio');
+                                    } else if (activeTab === 'scriptToAudio') {
+                                        // Default behavior in other tabs
+
+                                        handleGenVideoSequence();
+                                    } else {
+
+                                    }
+                                }}
+                                disabled={isLoading || isAudioPlaying}
                                 className="px-3 py-1 text-xs font-semibold text-white rounded-lg transition-all transform hover:scale-105
-                  bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700
-                  disabled:from-slate-600 disabled:to-slate-700 disabled:cursor-not-allowed disabled:transform-none
-                  flex items-center justify-center gap-1 shadow"
+            bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700
+            disabled:from-slate-600 disabled:to-slate-700 disabled:cursor-not-allowed disabled:transform-none
+            flex items-center justify-center gap-1 shadow"
                             >
                                 {isLoading ? (
                                     <>
@@ -278,8 +429,27 @@ const VideoEditor = ({
                                     </>
                                 ) : (
                                     <>
-                                        <FaCogs size={14} />
-                                        <span>Reference</span>
+                                        {activeTab === 'reference' ? (
+                                            <>
+                                                <FaImages size={14} />
+                                                <span>Generate Images</span>
+                                            </>
+                                        ) : activeTab === 'images' ? (
+                                            <>
+                                                <FaFileAudio size={14} />
+                                                <span>Generate Audio</span>
+                                            </>
+                                        ) : activeTab === 'scriptToAudio' ? (
+                                            <>
+                                                <FaFileAudio size={14} />
+                                                <span>Make Video</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <FaCogs size={14} />
+                                                <span>Generate Video</span>
+                                            </>
+                                        )}
                                     </>
                                 )}
                             </button>
