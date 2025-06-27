@@ -1,23 +1,29 @@
-﻿import axiosClient from './axiosClient';
+﻿import axios from 'axios';
 
 /**
- * Gửi yêu cầu đến backend để tạo âm thanh dựa trên văn bản.
- * @param {string} text - Văn bản người dùng nhập vào.
- * @param {string} selectedGoogleVoice - Giọng nói được chọn (e.g., 'en-US-Wavenet-D').
- * @param {string} languageCode - Mã ngôn ngữ (e.g., 'en-US').
- * @param {number} speechRate - Tốc độ đọc (e.g., 1.0).
- * @returns {Promise<object>} Promise trả về phản hồi từ API với dạng blob.
+ * Generates audio from text using the text-to-speech API
+ * @param {Object} options - The options for generating audio
+ * @param {string} options.text - The text to convert to speech
+ * @param {string} options.selectedGoogleVoice - The Google voice name to use
+ * @param {string} [options.languageCode] - The language code (if not provided, will be extracted from voice name)
+ * @param {number} [options.speechRate=1] - The speech rate (1 is normal speed)
+ * @returns {Promise<Object>} - The axios response with audio blob data
  */
-export const generateAudio = async (text, selectedGoogleVoice, languageCode, speechRate) => {
-    return await axiosClient({
+export const generateAudio = async ({ text, selectedGoogleVoice, languageCode, speechRate = 1 }) => {
+    // If languageCode not provided, extract it from the voice name (e.g., en-US-Standard-B → en-US)
+    if (!languageCode) {
+        languageCode = selectedGoogleVoice.split('-').slice(0, 2).join('-');
+    }
+
+    return axios({
         method: 'post',
         url: '/api/texttospeech/synthesize',
         data: {
-            text: text,
+            text,
             voiceName: selectedGoogleVoice,
-            languageCode: languageCode,
-            speechRate: speechRate,
+            languageCode,
+            speechRate
         },
-        responseType: 'blob',
+        responseType: 'blob'
     });
 };
