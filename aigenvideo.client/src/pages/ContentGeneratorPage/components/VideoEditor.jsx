@@ -15,10 +15,10 @@ import {
     FaMicrophone,
     FaFileAudio,
     FaEdit,
+    FaPlay,
 } from 'react-icons/fa';
-import { generateAudio } from '@/apis/audioService';
 import { useFFmpeg } from '@/hooks/useFFmpeg';
-import { createVideoFromImagesAndAudio } from '@/utils/videoCreationUtils';
+import { createVideoFromImagesAndIndividualAudios } from '@/utils/videoCreationUtils';
 
 const VideoEditor = ({
     videoPrompt,
@@ -33,10 +33,6 @@ const VideoEditor = ({
     handleBackToGenerator,
     handleCreateVideo,
     speakText,
-    stopSpeaking,
-    downloadSRT,
-    downloadGoogleTTS,
-    downloadFullScript,
     images,
     handleRejectImage,
     videoResult,
@@ -45,75 +41,80 @@ const VideoEditor = ({
     isLoading,
     error,
     getLanguageDisplayName,
+    generateAudioBlob,
 }) => {
-    const [scriptContent, setScriptContent] = useState('');
-    const [uploadedAudioUrl, setUploadedAudioUrl] = useState(null);
     const [isProcessingVideo, setIsProcessingVideo] = useState(false);
     const [videoUrl, setVideoUrl] = useState(null);
+    const [isReviewingAudio, setIsReviewingAudio] = useState(false);
     const { ffmpeg, loaded: ffmpegLoaded, error: ffmpegError, progress } = useFFmpeg();
 
-    const combineScriptContent = async () => {
+    // New function to review audio voice with selected voice settings
+    const reviewAudioVoice = async () => {
         if (!videoResult || videoResult.length === 0) {
-            console.error('No script available to process.');
+            console.error('No script available to review.');
             return;
         }
-        console.log('Starting: Combine script, generate audio, and upload to Cloudinary...');
+
+        setIsReviewingAudio(true);
         try {
-            // --- 1. Combine the script text from the scenes ---
-            const fullScript = videoResult.map((scene) => scene.summary).join(' ');
-            console.log('Script combined.');
-            // --- 2. Generate the audio Blob from your backend ---
-            console.log('Generating audio blob...');
-            const response = await generateAudio({ text: fullScript, selectedGoogleVoice, speechRate });
-            const audioBlob = response.data;
-            if (!audioBlob || audioBlob.size === 0) {
-                throw new Error('Audio generation from backend failed.');
-            }
-            console.log('...Audio blob received.');
-            // --- 3. Upload that Audio Blob to Cloudinary ---
-            console.log('Uploading audio to Cloudinary...');
-            const CLOUD_NAME = 'dj88dmrqe';
-            const UPLOAD_PRESET = 'GenVideoProject';
-            const FOLDER_NAME = 'generated-audio';
+            // Use the first scene's summary as a sample for voice review
+            const sampleText = videoResult[0].summary;
+            console.log('Reviewing audio voice with sample text:', sampleText.substring(0, 50) + '...');
 
-            const formData = new FormData();
-            formData.append('file', audioBlob, 'full-script-audio.mp3');
-            formData.append('upload_preset', UPLOAD_PRESET);
-            formData.append('folder', FOLDER_NAME);
-            formData.append('resource_type', 'video');
+            // Play the sample audio using the selected voice and speech rate
+            await speakText(sampleText, selectedGoogleVoice, speechRate);
 
-            const cloudinaryResponse = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/video/upload`, {
-                method: 'POST',
-                body: formData,
-            }).then((res) => res.json());
-
-            if (!cloudinaryResponse.secure_url) {
-                throw new Error(cloudinaryResponse.error?.message || 'Cloudinary upload failed.');
-            }
-            console.log('...Audio uploaded successfully. URL:', cloudinaryResponse.secure_url);
-
-            // --- 4. Update all necessary states and switch tabs ---
-            setUploadedAudioUrl(cloudinaryResponse.secure_url); // Save the permanent URL
-            setScriptContent(fullScript); // Set the script for the next tab's textarea
-            setActiveTab('scriptToAudio'); // Switch tabs only after everything is successful
-        } catch (err) {
-            console.error('Error during script and audio processing:', err);
-            console.error('Failed to process script and audio: ' + err.message);
+            console.log('Audio review completed');
+        } catch (error) {
+            console.error('Error reviewing audio voice:', error);
+        } finally {
+            setIsReviewingAudio(false);
         }
     };
 
-    // Function to create video from images and audio
-    const createVideo = async () => {
-        if (!ffmpegLoaded || !uploadedAudioUrl || images.length === 0) {
-            console.error('Cannot create video: FFmpeg not loaded, no audio URL, or no images');
+    // New function to create video with individual audio files for each scene
+    const createVideoWithIndividualAudios = async () => {
+        if (!ffmpegLoaded || !videoResult || videoResult.length === 0 || images.length === 0) {
+            console.error('Cannot create video: FFmpeg not loaded, no scenes, or no images');
             return;
         }
 
+        // Ensure we have the same number of images and scenes
+        const minCount = Math.min(images.length, videoResult.length);
+        const usedImages = images.slice(0, minCount);
+        const usedScenes = videoResult.slice(0, minCount);
+
         setIsProcessingVideo(true);
         try {
-            const videoURL = await createVideoFromImagesAndAudio(ffmpeg, images, uploadedAudioUrl);
+            console.log('Generating individual audio files for each scene...');
+
+            // Generate audio for each scene's summary
+            const audioUrls = [];
+            for (let i = 0; i < usedScenes.length; i++) {
+                console.log(`Generating audio for scene ${i + 1}: ${usedScenes[i].summary.substring(0, 50)}...`);
+                try {
+                    const audioUrl = await generateAudioBlob(usedScenes[i].summary, selectedGoogleVoice, speechRate);
+                    audioUrls.push(audioUrl);
+                    console.log(`Audio generated for scene ${i + 1}`);
+                } catch (audioError) {
+                    console.error(`Failed to generate audio for scene ${i + 1}:`, audioError);
+                    throw new Error(`Failed to generate audio for scene ${i + 1}: ${audioError.message}`);
+                }
+            }
+
+            console.log('All audio files generated, creating video...');
+
+            // Create video with individual audio files
+            const videoURL = await createVideoFromImagesAndIndividualAudios(ffmpeg, usedImages, audioUrls);
             setVideoUrl(videoURL);
             console.log('Video created successfully:', videoURL);
+
+            // Clean up audio URLs
+            audioUrls.forEach(url => URL.revokeObjectURL(url));
+
+            // Automatically switch to video review tab
+            setActiveTab('videoReview');
+
         } catch (error) {
             console.error('Error in video creation process:', error);
         } finally {
@@ -121,14 +122,6 @@ const VideoEditor = ({
         }
     };
 
-    // Updated button click handler to generate video with FFmpeg
-    const handleGenerateVideoClick = async () => {
-        if (activeTab === 'scriptToAudio' && uploadedAudioUrl) {
-            await createVideo();
-        } else {
-            handleGenerateAndUpload();
-        }
-    };
 
     return (
         <div className="flex h-full p-1 md:p-6 lg:p-8">
@@ -145,28 +138,29 @@ const VideoEditor = ({
                 </div>
 
                 {/* Tab bar */}
-                <div className="flex items-center gap-5 bg-slate-800 rounded-xl mb-7">
+                <div className="flex items-center gap-3 bg-slate-800 rounded-xl mb-7 overflow-x-auto">
                     <button
                         onClick={() => setActiveTab('reference')}
-                        className={`text-xs font-medium text-white rounded px-2 py-1 transition-all ${activeTab === 'reference' ? 'bg-slate-700' : 'bg-slate-800 hover:bg-slate-800'
+                        className={`text-xs font-medium text-white rounded px-2 py-1 transition-all whitespace-nowrap ${activeTab === 'reference' ? 'bg-slate-700' : 'bg-slate-800 hover:bg-slate-700'
                             }`}
                     >
                         Reference to Video
                     </button>
                     <button
                         onClick={() => setActiveTab('images')}
-                        className={`text-xs font-medium text-white rounded px-2 py-1 transition-all ${activeTab === 'images' ? 'bg-slate-700' : 'bg-slate-800 hover:bg-slate-800'
+                        className={`text-xs font-medium text-white rounded px-2 py-1 transition-all whitespace-nowrap ${activeTab === 'images' ? 'bg-slate-700' : 'bg-slate-800 hover:bg-slate-700'
                             }`}
                     >
                         Image to Video
                     </button>
                     <button
-                        onClick={() => setActiveTab('scriptToAudio')}
-                        className={`text-xs font-medium text-white rounded px-2 py-1 transition-all ${activeTab === 'scriptToAudio' ? 'bg-slate-700' : 'bg-slate-800 hover:bg-slate-800'
+                        onClick={() => setActiveTab('videoReview')}
+                        className={`text-xs font-medium text-white rounded px-2 py-1 transition-all whitespace-nowrap ${activeTab === 'videoReview' ? 'bg-slate-700' : 'bg-slate-800 hover:bg-slate-700'
                             }`}
                     >
-                        Script to Audio
+                        Video Review
                     </button>
+
                 </div>
 
                 {activeTab === 'reference' && (
@@ -189,6 +183,44 @@ const VideoEditor = ({
 
                 {activeTab === 'images' && (
                     <div className="flex-1 flex flex-col space-y-4 overflow-y-auto pr-2">
+                        {/* Voice Selection for Video Creation */}
+                        <div className="bg-slate-700/50 p-4 rounded-lg border border-slate-600">
+                            <h3 className="text-sm font-semibold text-slate-300 mb-3">Voice Settings for Video</h3>
+                            <div className="space-y-3">
+                                <div>
+                                    <label className="block text-xs font-medium text-slate-300 mb-2">Select Voice</label>
+                                    <select
+                                        className="w-full p-2 bg-slate-700 text-slate-200 rounded-md border border-slate-600 text-sm"
+                                        onChange={(e) => setSelectedGoogleVoice(e.target.value)}
+                                        value={selectedGoogleVoice}
+                                    >
+                                        {googleVoices.map((voice) => {
+                                            const [langCode, region, _type, variant] = voice.name.split('-');
+                                            const gender = voice.gender === 'MALE' ? '(M)' : '(F)';
+                                            const displayName = `${langCode.toUpperCase()}-${region} ${variant} ${gender}`;
+                                            return (
+                                                <option key={voice.name} value={voice.name}>
+                                                    {displayName} - {getLanguageDisplayName(voice.languageCode)}
+                                                </option>
+                                            );
+                                        })}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium text-slate-300 mb-2">Speech Rate: {speechRate}x</label>
+                                    <input
+                                        type="range"
+                                        min="0.5"
+                                        max="2"
+                                        step="0.1"
+                                        value={speechRate}
+                                        onChange={(e) => setSpeechRate(parseFloat(e.target.value))}
+                                        className="w-full"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
                         {/* Image Storyboard Grid */}
                         <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
                             {images.map((img) => (
@@ -231,196 +263,41 @@ const VideoEditor = ({
                             </button>
                         </div>
 
-                        {/* Decorative Form */}
-                        <div className="mt-4 pt-4 border-t border-slate-700/50">
-                            <h3 className="text-sm font-semibold text-slate-300 mb-3">Storyboard Settings</h3>
-                            <div className="space-y-3">
-                                <div className="flex items-center">
-                                    <label className="w-1/4 text-xs font-medium text-slate-400">Style</label>
-                                    <select
-                                        disabled
-                                        className="w-3/4 p-1.5 bg-slate-700/50 text-slate-400 rounded-md border border-slate-600 text-xs cursor-not-allowed"
-                                    >
-                                        <option>Cinematic</option>
-                                    </select>
-                                </div>
-                                <div className="flex items-center">
-                                    <label className="w-1/4 text-xs font-medium text-slate-400">Pacing</label>
-                                    <select
-                                        disabled
-                                        className="w-3/4 p-1.5 bg-slate-700/50 text-slate-400 rounded-md border border-slate-600 text-xs cursor-not-allowed"
-                                    >
-                                        <option>Dynamic</option>
-                                    </select>
-                                </div>
-                                <div className="flex items-center">
-                                    <label className="w-1/4 text-xs font-medium text-slate-400">Resolution</label>
-                                    <select
-                                        disabled
-                                        className="w-3/4 p-1.5 bg-slate-700/50 text-slate-400 rounded-md border border-slate-600 text-xs cursor-not-allowed"
-                                    >
-                                        <option>1080p</option>
-                                    </select>
-                                </div>
-                            </div>
+                        {/* Review Audio Voice Button */}
+                        <div className="mt-4 pt-4 border-t border-slate-700/50 space-y-3">
+                            <button
+                                onClick={reviewAudioVoice}
+                                disabled={!videoResult || videoResult.length === 0 || isReviewingAudio || isAudioPlaying}
+                                className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-all disabled:bg-slate-600 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            >
+                                {isReviewingAudio || isAudioPlaying ? (
+                                    <>
+                                        <div className="animate-spin h-4 w-4 border-2 border-white rounded-full border-t-transparent"></div>
+                                        <span>Playing Audio Preview...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <FaVolumeUp size={16} />
+                                        <span>Review Audio Voice</span>
+                                    </>
+                                )}
+                            </button>
+                            <p className="text-xs text-slate-400 text-center">
+                                Preview how the selected voice sounds with your content
+                            </p>
                         </div>
                     </div>
                 )}
 
-                {activeTab === 'scriptToAudio' && (
-                    <div className="space-y-5 pr-2 mt-2">
-                        <div className="flex-1 flex flex-col space-y-5 overflow-y-auto">
-                            <div>
-                                <label className="block text-sm font-medium text-slate-200 mb-2">Enter your script to convert to audio</label>
-                                <textarea
-                                    className="w-full p-3 bg-slate-700 text-slate-100 rounded-lg border border-slate-600 h-48 resize-none"
-                                    value={scriptContent}
-                                    onChange={(e) => setScriptContent(e.target.value)}
-                                    placeholder="Enter your script content here..."
-                                />
-                            </div>
+                {activeTab === 'videoReview' && (
+                    <div className="flex-1 flex flex-col space-y-4 overflow-y-auto pr-2">
+                        {/* Video Review Content */}
+                        {videoUrl ? (
+                            <div className="space-y-4">
+                                <h3 className="text-lg font-medium text-slate-200">Generated Video</h3>
 
-                            {/* Voice settings for script to audio */}
-                            <div>
-                                <label className="block text-sm font-medium text-slate-300 mb-2">Voice Settings</label>
-                                <select
-                                    className="w-4/5 p-1 bg-slate-700 text-slate-200 rounded-md border border-slate-600 mb-2 text-sm"
-                                    onChange={(e) => setSelectedGoogleVoice(e.target.value)}
-                                    value={selectedGoogleVoice}
-                                >
-                                    {googleVoices.map((voice) => {
-                                        const [langCode, region, _type, variant] = voice.name.split('-');
-                                        const gender = voice.gender === 'MALE' ? '(M)' : '(F)';
-                                        const displayName = `${langCode.toUpperCase()}-${region} ${variant} ${gender}`;
-                                        return (
-                                            <option key={voice.name} value={voice.name}>
-                                                {displayName} - {getLanguageDisplayName(voice.languageCode)}
-                                            </option>
-                                        );
-                                    })}
-                                </select>
-                                <div className="flex items-center">
-                                    <label className="block text-xs font-medium text-slate-300 mr-2">Speed:</label>
-                                    <input
-                                        type="range"
-                                        min="0.5"
-                                        max="2"
-                                        step="0.1"
-                                        value={speechRate}
-                                        onChange={(e) => setSpeechRate(parseFloat(e.target.value))}
-                                        className="w-3/4"
-                                        style={{ height: '5px' }}
-                                    />
-                                    <span className="ml-2 text-white">{speechRate}x</span>
-                                </div>
-                            </div>
-
-                            {/* Audio generation controls - Enhanced for Script to Audio tab */}
-                            <div className="flex flex-wrap justify-center gap-6 mt-0">
-                                <div className="tooltip-container relative">
-                                    <button
-                                        onClick={() => speakText(scriptContent, selectedGoogleVoice, speechRate)}
-                                        disabled={!scriptContent || isLoading}
-                                        className="p-2.5 bg-green-600 hover:bg-green-700 text-white rounded-full disabled:bg-slate-600 disabled:cursor-not-allowed transition-colors"
-                                        title="Preview Audio"
-                                    >
-                                        <FaVolumeUp size={16} />
-                                        <span className="tooltip absolute -top-8 left-1/2 transform -translate-x-1/2 bg-slate-900 text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 whitespace-nowrap">
-                                            {isAudioPlaying ? 'Playing...' : 'Preview Audio'}
-                                        </span>
-                                    </button>
-                                </div>
-
-                                {isAudioPlaying && (
-                                    <div className="tooltip-container relative">
-                                        <button
-                                            onClick={stopSpeaking}
-                                            className="p-2.5 bg-red-600 hover:bg-red-700 text-white rounded-full transition-colors"
-                                            title="Stop Audio"
-                                        >
-                                            <FaPause size={16} />
-                                            <span className="tooltip absolute -top-8 left-1/2 transform -translate-x-1/2 bg-slate-900 text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 whitespace-nowrap">
-                                                Stop Audio
-                                            </span>
-                                        </button>
-                                    </div>
-                                )}
-
-                                <div className="tooltip-container relative">
-                                    <button
-                                        onClick={() => downloadGoogleTTS(scriptContent, 'script-audio', selectedGoogleVoice, speechRate)}
-                                        disabled={!scriptContent || isLoading}
-                                        className="p-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-full disabled:bg-slate-600 disabled:cursor-not-allowed transition-colors"
-                                        title="Download MP3"
-                                    >
-                                        <FaFileAudio size={16} />
-                                        <span className="tooltip absolute -top-8 left-1/2 transform -translate-x-1/2 bg-slate-900 text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 whitespace-nowrap">
-                                            Download MP3
-                                        </span>
-                                    </button>
-                                </div>
-
-                                <div className="tooltip-container relative">
-                                    <button
-                                        onClick={() => downloadSRT(scriptContent, 'script-subtitles', selectedGoogleVoice, speechRate)}
-                                        disabled={!scriptContent || isLoading}
-                                        className="p-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-full disabled:bg-slate-600 disabled:cursor-not-allowed transition-colors"
-                                        title="Download SRT"
-                                    >
-                                        <FaFileDownload size={16} />
-                                        <span className="tooltip absolute -top-8 left-1/2 transform -translate-x-1/2 bg-slate-900 text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 whitespace-nowrap">
-                                            Download SRT
-                                        </span>
-                                    </button>
-                                </div>
-
-                                <div className="tooltip-container relative">
-                                    <button
-                                        onClick={() => downloadFullScript(scriptContent, 'full-script')}
-                                        disabled={!scriptContent || isLoading}
-                                        className="p-2.5 bg-yellow-600 hover:bg-yellow-700 text-white rounded-full disabled:bg-slate-600 disabled:cursor-not-allowed transition-colors"
-                                        title="Download Script"
-                                    >
-                                        <FaQuoteRight size={16} />
-                                        <span className="tooltip absolute -top-8 left-1/2 transform -translate-x-1/2 bg-slate-900 text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 whitespace-nowrap">
-                                            Download Script
-                                        </span>
-                                    </button>
-                                </div>
-
-                                {/* Add Create Video button in the audio tab */}
-                                <div className="tooltip-container relative">
-                                    <button
-                                        onClick={createVideo}
-                                        disabled={!uploadedAudioUrl || images.length === 0 || isProcessingVideo || !ffmpegLoaded}
-                                        className="p-2.5 bg-green-600 hover:bg-green-700 text-white rounded-full disabled:bg-slate-600 disabled:cursor-not-allowed transition-colors"
-                                        title="Create Video"
-                                    >
-                                        <FaVideo size={16} />
-                                        <span className="tooltip absolute -top-8 left-1/2 transform -translate-x-1/2 bg-slate-900 text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 whitespace-nowrap">
-                                            Create Video
-                                        </span>
-                                    </button>
-                                </div>
-                            </div>
-
-                            {/* Show FFmpeg progress */}
-                            {isProcessingVideo && (
-                                <div className="mt-4">
-                                    <label className="block text-sm font-medium text-slate-300 mb-2">Processing Video: {progress}%</label>
-                                    <div className="w-full bg-slate-700 rounded-full h-2.5">
-                                        <div
-                                            className="bg-blue-600 h-2.5 rounded-full"
-                                            style={{ width: `${progress}%` }}
-                                        ></div>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Display video if created */}
-                            {videoUrl && (
-                                <div className="mt-4">
-                                    <h3 className="text-lg font-medium text-slate-200 mb-2">Generated Video</h3>
+                                {/* Video Player */}
+                                <div className="bg-slate-700 p-4 rounded-lg">
                                     <video
                                         controls
                                         className="w-full rounded-lg border border-slate-600"
@@ -428,28 +305,89 @@ const VideoEditor = ({
                                     >
                                         Your browser does not support the video tag.
                                     </video>
-                                    <div className="mt-2">
-                                        <a
-                                            href={videoUrl}
-                                            download="generated-video.mp4"
-                                            className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-                                        >
-                                            <FaFileDownload className="mr-2" /> Download Video
-                                        </a>
+                                </div>
+
+                                {/* Video Actions */}
+                                <div className="flex flex-wrap gap-3 justify-center">
+                                    <a
+                                        href={videoUrl}
+                                        download="generated-video.mp4"
+                                        className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                                    >
+                                        <FaFileDownload className="mr-2" /> Download Video
+                                    </a>
+
+                                    <button
+                                        onClick={() => {
+                                            if (navigator.share) {
+                                                navigator.share({
+                                                    title: 'Generated Video',
+                                                    url: videoUrl
+                                                });
+                                            }
+                                        }}
+                                        className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                                    >
+                                        <FaVideo className="mr-2" /> Share Video
+                                    </button>
+                                </div>
+
+                                {/* Video Information */}
+                                <div className="bg-slate-700/50 p-4 rounded-lg border border-slate-600">
+                                    <h4 className="text-sm font-semibold text-slate-300 mb-2">Video Details</h4>
+                                    <div className="text-xs text-slate-400 space-y-1">
+                                        <p>Images: {images.length}</p>
+                                        <p>Scenes: {videoResult.length}</p>
+                                        <p>Voice: {selectedGoogleVoice}</p>
+                                        <p>Speech Rate: {speechRate}x</p>
                                     </div>
                                 </div>
-                            )}
 
-                            {ffmpegError && (
-                                <div className="text-red-400 text-sm">FFmpeg error: {ffmpegError.message}</div>
-                            )}
-                        </div>
+                                {/* Regenerate Video */}
+                                <button
+                                    onClick={() => {
+                                        setVideoUrl(null);
+                                        setActiveTab('reference');
+                                    }}
+                                    className="w-full py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
+                                >
+                                    Create New Video
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="flex-1 flex items-center justify-center">
+                                <div className="text-center text-slate-400">
+                                    <FaVideo size={48} className="mx-auto mb-4 opacity-50" />
+                                    <h3 className="text-lg font-medium text-slate-300 mb-2">No Video Generated</h3>
+                                    <p>Create a video from the Images tab to review it here.</p>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Show FFmpeg progress if processing */}
+                        {isProcessingVideo && (
+                            <div className="mt-4">
+                                <label className="block text-sm font-medium text-slate-300 mb-2">Processing Video: {progress}%</label>
+                                <div className="w-full bg-slate-700 rounded-full h-2.5">
+                                    <div
+                                        className="bg-blue-600 h-2.5 rounded-full transition-all duration-300"
+                                        style={{ width: `${progress}%` }}
+                                    ></div>
+                                </div>
+                            </div>
+                        )}
+
+                        {ffmpegError && (
+                            <div className="text-red-400 text-sm bg-red-900/20 p-3 rounded-lg border border-red-600/30">
+                                FFmpeg error: {ffmpegError.message}
+                            </div>
+                        )}
                     </div>
                 )}
 
                 {error && <div className="text-red-400 text-sm">{error}</div>}
 
-                {activeTab !== 'scriptToAudio' && (
+                {activeTab !== 'images' && activeTab !== 'videoReview' && (
                     <div className="flex-none pt-4">
                         <button
                             onClick={handleCreateVideo}
@@ -470,16 +408,6 @@ const VideoEditor = ({
                     <div className="flex-1 flex flex-col w-full h-full overflow-y-auto pr-2 space-y-2">
                         <div className="flex justify-between items-center sticky top-0 p-2 bg-gray-900 pb-1">
                             <h3 className="text-xl font-bold text-sky-400">Generated Script</h3>
-
-                            {/* Add this button to convert to full script */}
-                            <button
-                                onClick={combineScriptContent}
-                                className="flex items-center gap-2 px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white text-sm rounded-md"
-                                title="Use as Script for Audio"
-                            >
-                                <FaEdit size={12} />
-                                <span>Use as Script</span>
-                            </button>
                         </div>
 
                         {/* Results loop */}
@@ -501,43 +429,6 @@ const VideoEditor = ({
                                         <h5 className="text-sm font-semibold">Content</h5>
                                     </div>
                                     <p className="text-slate-100 font-mono text-sm leading-relaxed whitespace-pre-wrap">{scene.summary}</p>
-
-                                    {/* Audio and Subtitle controls */}
-                                    {activeTab === 'scriptToAudioo' && (
-                                        <div className="flex mt-4 justify-end gap-3">
-                                            {isAudioPlaying ? (
-                                                <button
-                                                    onClick={stopSpeaking}
-                                                    className="p-1 bg-red-600 hover:bg-red-700 text-white rounded-full"
-                                                    title="Stop Speaking"
-                                                >
-                                                    <FaPause />
-                                                </button>
-                                            ) : (
-                                                <button
-                                                    onClick={() => speakText(scene.summary)}
-                                                    className="p-0.5 bg-green-600 hover:bg-green-700 text-white rounded-full"
-                                                    title="Listen"
-                                                >
-                                                    <FaVolumeUp />
-                                                </button>
-                                            )}
-                                            <button
-                                                onClick={() => downloadGoogleTTS(scene.summary, `scene-${index + 1}`, selectedGoogleVoice, speechRate)}
-                                                className="p-0.5 bg-blue-600 hover:bg-blue-700 text-white rounded-full"
-                                                title="Download SRT"
-                                            >
-                                                <FaFileAudio />
-                                            </button>
-                                            <button
-                                                onClick={() => downloadSRT(scene.summary, `scene-${index + 1}`)}
-                                                className="p-0.5 bg-yellow-600 hover:bg-yellow-700 text-white rounded-full"
-                                                title="Download SRT"
-                                            >
-                                                <FaFileDownload />
-                                            </button>
-                                        </div>
-                                    )}
                                 </div>
                             </div>
                         ))}
@@ -551,26 +442,29 @@ const VideoEditor = ({
                                         handleGenerateAndUpload();
                                         setActiveTab('images');
                                     } else if (activeTab === 'images') {
-                                        // In images tab, go to script to audio tab
-                                        combineScriptContent();
-                                        setActiveTab('scriptToAudio');
-                                    } else if (activeTab === 'scriptToAudio') {
+                                        // In images tab, review audio voice first
+
+                                        createVideoWithIndividualAudios();
+                                    } else if (activeTab === 'videoReview') {
                                         // In script to audio tab, create video with FFmpeg
-                                        createVideo();
+                                        setActiveTab('reference');
                                     } else {
-                                        handleGenerateAndUpload();
+
                                     }
                                 }}
-                                disabled={isLoading || isAudioPlaying || isProcessingVideo}
+                                disabled={isLoading || isAudioPlaying || isProcessingVideo || isReviewingAudio}
                                 className="px-3 py-1 text-xs font-semibold text-white rounded-lg transition-all transform hover:scale-105
             bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700
             disabled:from-slate-600 disabled:to-slate-700 disabled:cursor-not-allowed disabled:transform-none
             flex items-center justify-center gap-1 shadow"
                             >
-                                {isLoading || isProcessingVideo ? (
+                                {isLoading || isProcessingVideo || isReviewingAudio ? (
                                     <>
                                         <div className="animate-spin h-3 w-3 border-2 border-white rounded-full border-t-transparent"></div>
-                                        <span>{isProcessingVideo ? 'Creating Video...' : 'Processing...'}</span>
+                                        <span>
+                                            {isProcessingVideo ? 'Creating Video...' :
+                                                isReviewingAudio ? 'Reviewing Audio...' : 'Processing...'}
+                                        </span>
                                     </>
                                 ) : (
                                     <>
@@ -581,13 +475,13 @@ const VideoEditor = ({
                                             </>
                                         ) : activeTab === 'images' ? (
                                             <>
-                                                <FaFileAudio size={14} />
-                                                <span>Generate Audio</span>
+                                                <FaVolumeUp size={14} />
+                                                <span>Create Video</span>
                                             </>
-                                        ) : activeTab === 'scriptToAudio' ? (
+                                        ) : activeTab === 'videoReview' ? (
                                             <>
                                                 <FaVideo size={14} />
-                                                <span>Create Video</span>
+                                                <span>Create New Video</span>
                                             </>
                                         ) : (
                                             <>
@@ -607,7 +501,7 @@ const VideoEditor = ({
                     </div>
                 )}
             </div>
-        </div>
+        </div >
     );
 };
 

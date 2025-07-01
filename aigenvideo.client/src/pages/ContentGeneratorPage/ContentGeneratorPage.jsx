@@ -35,6 +35,7 @@ const ContentGeneratorPage = () => {
         downloadGoogleTTS,
         downloadSRT: handleDownloadSRT,
         downloadFullScript,
+        generateAudioBlob,
     } = useAudioSpeech();
 
     const {
@@ -123,8 +124,8 @@ const ContentGeneratorPage = () => {
                             speakText={speakText}
                             stopSpeaking={stopSpeaking}
                             downloadSRT={downloadSRT}
-                            downloadGoogleTTS={downloadGoogleTTS} // Added this prop
-                            downloadFullScript={downloadFullScript} // Added this prop
+                            downloadGoogleTTS={downloadGoogleTTS}
+                            downloadFullScript={downloadFullScript}
                             images={images}
                             handleRejectImage={handleRejectImage}
                             videoResult={videoResult}
@@ -133,6 +134,7 @@ const ContentGeneratorPage = () => {
                             isLoading={isLoading}
                             error={error}
                             getLanguageDisplayName={getLanguageDisplayName}
+                            generateAudioBlob={generateAudioBlob}
                         />
                     )}
                 </main>
