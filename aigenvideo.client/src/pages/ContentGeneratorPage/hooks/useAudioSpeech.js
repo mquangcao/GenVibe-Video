@@ -1,212 +1,220 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { generateAudio } from '@/apis/audioService';
-import { generateSRTWithSentenceTiming, generateSimpleSRT } from '../utils/srtUtils';
-import { downloadFile, downloadBlobAsFile } from '../utils/downloadUtils';
 
 export const useAudioSpeech = () => {
     const [isAudioPlaying, setIsAudioPlaying] = useState(false);
-    const [audioElement, setAudioElement] = useState(null);
     const [isSpeaking, setIsSpeaking] = useState(false);
     const [error, setError] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
-    const [isProcessing, setIsProcessing] = useState(false);
-    const [uploadedAudioUrl, setUploadedAudioUrl] = useState(null);
 
-    useEffect(() => {
-        const audio = new Audio();
-        audio.onended = () => {
-            setIsAudioPlaying(false);
-            setIsSpeaking(false);
-        };
-        audio.onerror = () => {
-            setIsAudioPlaying(false);
-            setIsSpeaking(false);
-            setError('Error playing audio');
-        };
-        setAudioElement(audio);
+    // Stores the current audio context and source
+    let audioContext = null;
+    let audioSource = null;
 
-        return () => {
-            if (audio) {
-                audio.pause();
-                audio.src = '';
-            }
-        };
-    }, []);
+    const speakText = async (text, voice, rate = 1) => {
+        if (!text) return;
 
-    const speakText = async (text, selectedGoogleVoice, speechRate) => {
         try {
-            if (audioElement && isAudioPlaying) {
-                audioElement.pause();
-                audioElement.src = '';
-                setIsAudioPlaying(false);
-            }
-
             setIsLoading(true);
-            await new Promise((resolve) => setTimeout(resolve, 100));
+            setError(null);
+            setIsAudioPlaying(true);
+            setIsSpeaking(true);
 
-            const response = await generateAudio({ text, selectedGoogleVoice, speechRate });
-            const url = URL.createObjectURL(response.data);
+            const response = await generateAudio({ text, selectedGoogleVoice: voice, speechRate: rate });
+            const audioBlob = response.data;
 
-            if (audioElement) {
-                audioElement.src = url;
-                setIsSpeaking(true);
-
-                await audioElement.play().catch((err) => {
-                    console.error('Error playing audio:', err);
-                    setError('Error playing audio');
-                    setIsSpeaking(false);
-                    setIsAudioPlaying(false);
-                });
-
-                setIsAudioPlaying(true);
+            if (!audioBlob) {
+                throw new Error('Failed to generate speech');
             }
+
+            const audioUrl = URL.createObjectURL(audioBlob);
+            const audio = new Audio(audioUrl);
+
+            audio.onended = () => {
+                setIsAudioPlaying(false);
+                setIsSpeaking(false);
+                URL.revokeObjectURL(audioUrl);
+            };
+
+            audio.onerror = (e) => {
+                console.error('Audio playback error:', e);
+                setError('Error playing audio');
+                setIsAudioPlaying(false);
+                setIsSpeaking(false);
+                URL.revokeObjectURL(audioUrl);
+            };
+
+            audio.play();
         } catch (err) {
-            console.error('Error with text-to-speech:', err);
-            setError('Failed to synthesize speech: ' + (err.response?.data?.message || err.message));
-            setIsSpeaking(false);
+            console.error('Error in speech synthesis:', err);
+            setError(err.message || 'Error generating speech');
             setIsAudioPlaying(false);
+            setIsSpeaking(false);
         } finally {
             setIsLoading(false);
         }
     };
 
     const stopSpeaking = () => {
-        if (audioElement && isAudioPlaying) {
-            audioElement.pause();
-            audioElement.src = '';
-            setIsSpeaking(false);
-            setIsAudioPlaying(false);
+        if (audioContext) {
+            audioSource.stop();
+            audioContext.close();
+            audioContext = null;
+            audioSource = null;
         }
+        setIsAudioPlaying(false);
+        setIsSpeaking(false);
     };
 
-    const downloadGoogleTTS = async (text, filename, selectedGoogleVoice, speechRate) => {
+    const downloadGoogleTTS = async (text, filename, voice, rate = 1) => {
+        if (!text) return;
+
         try {
             setIsLoading(true);
-            const response = await generateAudio({ text, selectedGoogleVoice, speechRate });
-            downloadBlobAsFile(response.data, `${filename}.mp3`);
-        } catch (err) {
-            console.error('Error downloading TTS:', err);
-            setError('Failed to generate audio file: ' + (err.response?.data?.message || err.message));
-        } finally {
-            setIsLoading(false);
-        }
-    };
+            setError(null);
 
-    const downloadSRT = async (text, filename, selectedGoogleVoice, speechRate) => {
-        try {
-            setIsLoading(true);
-            const response = await generateAudio({ text, selectedGoogleVoice, speechRate });
+            const response = await generateAudio({ text, selectedGoogleVoice: voice, speechRate: rate });
+            const audioBlob = response.data;
 
-            try {
-                const srtContent = await generateSRTWithAudioDuration(text, response.data);
-                downloadFile(srtContent, `${filename}.srt`);
-            } catch (srtErr) {
-                console.error('Error creating SRT:', srtErr);
-
-                // Fallback to simple SRT generation
-                const fallbackSRT = generateSimpleSRT(text);
-                downloadFile(fallbackSRT, `${filename}.srt`);
+            if (!audioBlob) {
+                throw new Error('Failed to generate speech');
             }
-        } catch (err) {
-            console.error('Error creating SRT:', err);
-            setError('Failed to generate SRT file: ' + err.message);
 
-            // Generate simple SRT as fallback
-            const fallbackSRT = generateSimpleSRT(text);
-            downloadFile(fallbackSRT, `${filename}.srt`);
+            const url = URL.createObjectURL(audioBlob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${filename || 'speech'}.mp3`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        } catch (err) {
+            console.error('Error downloading TTS audio:', err);
+            setError(err.message || 'Error generating audio download');
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    // Enhanced SRT download function that supports image-synchronized subtitles
+    const downloadSRT = async (text, filename, voice, rate = 1, audioDuration = null, imageCount = null) => {
+        if (!text) {
+            setError('No text provided for subtitles');
+            return;
+        }
+
+        try {
+            // If audioDuration isn't provided but we need it, try to estimate it
+            if (!audioDuration) {
+                // Estimate based on text length and speech rate
+                // Average reading speed is about 150 words per minute or 2.5 words per second
+                const wordCount = text.split(/\s+/).length;
+                audioDuration = (wordCount / 2.5) / rate;
+                console.log('Estimated audio duration:', audioDuration);
+            }
+
+            // If imageCount isn't provided, use a reasonable default
+            if (!imageCount) {
+                // Try to guess based on text structure - paragraphs, etc.
+                const paragraphs = text.split(/\n\n+/);
+                imageCount = Math.max(paragraphs.length, 5); // At least 5 segments
+                console.log('Estimated image count:', imageCount);
+            }
+
+            // Split text into segments matching the number of images
+            const segments = splitTextIntoSegments(text, imageCount);
+
+            // Calculate duration per image/segment
+            const segmentDuration = audioDuration / imageCount;
+
+            // Format to SRT
+            let srtContent = '';
+
+            segments.forEach((segment, index) => {
+                // Calculate start and end times for this segment
+                const startTime = index * segmentDuration;
+                const endTime = (index + 1) * segmentDuration;
+
+                // Add subtitle entry
+                srtContent += `${index + 1}\n`;
+                srtContent += `${formatSRTTime(startTime)} --> ${formatSRTTime(endTime)}\n`;
+                srtContent += `${segment.trim()}\n\n`;
+            });
+
+            // Create and download the file
+            const blob = new Blob([srtContent], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${filename || 'subtitles'}.srt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        } catch (err) {
+            console.error('Error creating SRT file:', err);
+            setError(err.message || 'Error creating subtitles');
         }
     };
 
     const downloadFullScript = (text, filename) => {
-        downloadFile(text, `${filename}.txt`);
-    };
-
-    const generateSRTWithAudioDuration = async (text, audioBlob) => {
-        return new Promise((resolve, reject) => {
-            try {
-                const audio = new Audio();
-                const url = URL.createObjectURL(audioBlob);
-
-                audio.onloadedmetadata = () => {
-                    const audioDuration = audio.duration;
-                    URL.revokeObjectURL(url);
-
-                    const srt = generateSRTWithSentenceTiming(text, audioDuration);
-                    resolve(srt);
-                };
-
-                audio.onerror = (err) => {
-                    console.error('Error loading audio metadata:', err);
-                    URL.revokeObjectURL(url);
-                    reject(new Error('Failed to load audio metadata'));
-                };
-
-                audio.src = url;
-            } catch (err) {
-                reject(err);
-            }
-        });
-    };
-      const generateAndUploadAudio = async (text, selectedGoogleVoice, speechRate) => {
-        if (!text) {
-            setError("Cannot generate audio from empty text.");
-            return;
-        }
-
-        setIsProcessing(true);
-        setError(null);
-        setUploadedAudioUrl(null);
-        console.log("Hook called: Starting audio generation and upload...");
+        if (!text) return;
 
         try {
-            // --- 1. Generate the Audio Blob from your backend ---
-            console.log("Generating audio data...");
-            const response = await generateAudio({ text, selectedGoogleVoice, speechRate });
-            const audioBlob = response.data;
-
-            if (!audioBlob || audioBlob.size === 0) {
-                throw new Error("Backend did not return valid audio data.");
-            }
-            console.log("...Audio blob received, size:", audioBlob.size);
-
-            // --- 2. Upload that Audio Blob to Cloudinary ---
-            console.log("Uploading audio to Cloudinary...");
-            const CLOUD_NAME = "dj88dmrqe";
-            const UPLOAD_PRESET = "GenVideoProject";
-            const FOLDER_NAME = "generated-audio";
-
-            const formData = new FormData();
-            formData.append("file", audioBlob, "generated-audio.mp3");
-            formData.append("upload_preset", UPLOAD_PRESET);
-            formData.append("folder", FOLDER_NAME);
-            formData.append("resource_type", "video");
-
-            const cloudinaryResponse = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/video/upload`, {
-                method: "POST",
-                body: formData,
-            }).then(res => res.json());
-
-            if (!cloudinaryResponse.secure_url) {
-                throw new Error(cloudinaryResponse.error?.message || "Cloudinary upload failed.");
-            }
-            console.log("...Audio uploaded! URL:", cloudinaryResponse.secure_url);
-
-            // --- 3. Update state with the final, permanent URL ---
-            setUploadedAudioUrl(cloudinaryResponse.secure_url);
-            
-            // Optionally, return the URL for immediate use
-            return cloudinaryResponse.secure_url;
-
+            const blob = new Blob([text], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${filename || 'script'}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
         } catch (err) {
-            console.error("Error in useAudioSpeech hook:", err);
-            setError(err.message || "An unknown error occurred while processing audio.");
-        } finally {
-            setIsProcessing(false);
+            console.error('Error downloading script:', err);
+            setError(err.message || 'Error downloading script');
         }
     };
 
+    // Helper functions for SRT generation
+    const formatSRTTime = (timeInSeconds) => {
+        const hours = Math.floor(timeInSeconds / 3600);
+        const minutes = Math.floor((timeInSeconds % 3600) / 60);
+        const seconds = Math.floor(timeInSeconds % 60);
+        const milliseconds = Math.floor((timeInSeconds - Math.floor(timeInSeconds)) * 1000);
+
+        return `${padZero(hours)}:${padZero(minutes)}:${padZero(seconds)},${padZero(milliseconds, 3)}`;
+    };
+
+    const padZero = (num, size = 2) => {
+        let s = num.toString();
+        while (s.length < size) s = '0' + s;
+        return s;
+    };
+
+    const splitTextIntoSegments = (text, segmentCount) => {
+        // Split by sentences first for more natural segmentation
+        const sentences = text.replace(/([.!?])\s+/g, "$1|").split("|").filter(s => s.trim().length > 0);
+
+        if (sentences.length <= segmentCount) {
+            // If we have fewer sentences than segments, just return the sentences
+            return sentences;
+        }
+
+        const segments = [];
+        const sentencesPerSegment = Math.ceil(sentences.length / segmentCount);
+
+        for (let i = 0; i < segmentCount; i++) {
+            const start = i * sentencesPerSegment;
+            const end = Math.min(start + sentencesPerSegment, sentences.length);
+
+            if (start < sentences.length) {
+                segments.push(sentences.slice(start, end).join(' '));
+            }
+        }
+
+        return segments;
+    };
 
     return {
         isAudioPlaying,
