@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
     FaTrash,
     FaArrowLeft,
@@ -16,9 +16,10 @@ import {
     FaFileAudio,
     FaEdit,
     FaPlay,
+    FaClosedCaptioning,
 } from 'react-icons/fa';
 import { useFFmpeg } from '@/hooks/useFFmpeg';
-import { createVideoFromImagesAndIndividualAudios } from '@/utils/videoCreationUtils';
+import { createVideoFromImagesAndIndividualAudios, createVideoFromImagesAndIndividualAudiosWithSubtitles } from '@/utils/videoCreationUtils';
 
 const VideoEditor = ({
     videoPrompt,
@@ -45,8 +46,36 @@ const VideoEditor = ({
 }) => {
     const [isProcessingVideo, setIsProcessingVideo] = useState(false);
     const [videoUrl, setVideoUrl] = useState(null);
+    const [subtitleUrl, setSubtitleUrl] = useState(null);
     const [isReviewingAudio, setIsReviewingAudio] = useState(false);
+    const [ccEnabled, setCcEnabled] = useState(true); // CC toggle state
+    const videoRef = useRef(null); // Reference to video element
+    const [subtitleSettings, setSubtitleSettings] = useState({
+        enabled: true,
+        embedInVideo: true,
+        fontSize: 20,
+        fontColor: '#ffffff',
+        backgroundColor: '#000000',
+        position: 'bottom'
+    });
     const { ffmpeg, loaded: ffmpegLoaded, error: ffmpegError, progress } = useFFmpeg();
+
+    // Effect to handle CC toggle for external subtitles
+    useEffect(() => {
+        if (videoRef.current && subtitleUrl && !subtitleSettings.embedInVideo) {
+            const video = videoRef.current;
+            const tracks = video.textTracks;
+
+            if (tracks.length > 0) {
+                tracks[0].mode = ccEnabled ? 'showing' : 'hidden';
+            }
+        }
+    }, [ccEnabled, subtitleUrl, subtitleSettings.embedInVideo]);
+
+    // Toggle CC function
+    const toggleCC = () => {
+        setCcEnabled(!ccEnabled);
+    };
 
     // New function to review audio voice with selected voice settings
     const reviewAudioVoice = async () => {
@@ -72,7 +101,7 @@ const VideoEditor = ({
         }
     };
 
-    // New function to create video with individual audio files for each scene
+    // Updated function to create video with individual audio files and optional subtitles
     const createVideoWithIndividualAudios = async () => {
         if (!ffmpegLoaded || !videoResult || videoResult.length === 0 || images.length === 0) {
             console.error('Cannot create video: FFmpeg not loaded, no scenes, or no images');
@@ -104,10 +133,38 @@ const VideoEditor = ({
 
             console.log('All audio files generated, creating video...');
 
-            // Create video with individual audio files
-            const videoURL = await createVideoFromImagesAndIndividualAudios(ffmpeg, usedImages, audioUrls);
-            setVideoUrl(videoURL);
-            console.log('Video created successfully:', videoURL);
+            if (subtitleSettings.enabled) {
+                // Create video with subtitles
+                const subtitleOptions = {
+                    embedSubtitles: subtitleSettings.embedInVideo,
+                    subtitleStyle: {
+                        fontSize: subtitleSettings.fontSize,
+                        fontColor: subtitleSettings.fontColor,
+                        backgroundColor: subtitleSettings.backgroundColor,
+                        position: subtitleSettings.position
+                    }
+                };
+
+                console.log('Creating video with subtitle options:', subtitleOptions);
+
+                const result = await createVideoFromImagesAndIndividualAudiosWithSubtitles(
+                    ffmpeg,
+                    usedImages,
+                    audioUrls,
+                    usedScenes,
+                    subtitleOptions
+                );
+
+                setVideoUrl(result.videoUrl);
+                setSubtitleUrl(result.subtitleUrl);
+                console.log('Video with subtitles created successfully');
+            } else {
+                // Create video without subtitles
+                const videoURL = await createVideoFromImagesAndIndividualAudios(ffmpeg, usedImages, audioUrls);
+                setVideoUrl(videoURL);
+                setSubtitleUrl(null);
+                console.log('Video created successfully without subtitles');
+            }
 
             // Clean up audio URLs
             audioUrls.forEach(url => URL.revokeObjectURL(url));
@@ -121,7 +178,6 @@ const VideoEditor = ({
             setIsProcessingVideo(false);
         }
     };
-
 
     return (
         <div className="flex h-full p-1 md:p-6 lg:p-8">
@@ -160,7 +216,6 @@ const VideoEditor = ({
                     >
                         Video Review
                     </button>
-
                 </div>
 
                 {activeTab === 'reference' && (
@@ -218,6 +273,104 @@ const VideoEditor = ({
                                         className="w-full"
                                     />
                                 </div>
+                            </div>
+                        </div>
+
+                        {/* Subtitle Settings */}
+                        <div className="bg-slate-700/50 p-4 rounded-lg border border-slate-600">
+                            <h3 className="text-sm font-semibold text-slate-300 mb-3">Subtitle Settings</h3>
+                            <div className="space-y-3">
+                                <div className="flex items-center">
+                                    <input
+                                        type="checkbox"
+                                        id="enableSubtitles"
+                                        checked={subtitleSettings.enabled}
+                                        onChange={(e) => setSubtitleSettings(prev => ({ ...prev, enabled: e.target.checked }))}
+                                        className="mr-2"
+                                    />
+                                    <label htmlFor="enableSubtitles" className="text-xs font-medium text-slate-300">
+                                        Enable Subtitles
+                                    </label>
+                                </div>
+
+                                {subtitleSettings.enabled && (
+                                    <>
+                                        <div className="flex items-center">
+                                            <input
+                                                type="checkbox"
+                                                id="embedSubtitles"
+                                                checked={subtitleSettings.embedInVideo}
+                                                onChange={(e) => setSubtitleSettings(prev => ({ ...prev, embedInVideo: e.target.checked }))}
+                                                className="mr-2"
+                                            />
+                                            <label htmlFor="embedSubtitles" className="text-xs font-medium text-slate-300">
+                                                Embed in Video (Recommended)
+                                            </label>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-xs font-medium text-slate-300 mb-1">Font Size: {subtitleSettings.fontSize}px</label>
+                                            <input
+                                                type="range"
+                                                min="12"
+                                                max="48"
+                                                value={subtitleSettings.fontSize}
+                                                onChange={(e) => setSubtitleSettings(prev => ({ ...prev, fontSize: parseInt(e.target.value) }))}
+                                                className="w-full"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-xs font-medium text-slate-300 mb-1">Position</label>
+                                            <select
+                                                value={subtitleSettings.position}
+                                                onChange={(e) => setSubtitleSettings(prev => ({ ...prev, position: e.target.value }))}
+                                                className="w-full p-1 bg-slate-700 text-slate-200 rounded-md border border-slate-600 text-xs"
+                                            >
+                                                <option value="bottom">Bottom</option>
+                                                <option value="top">Top</option>
+                                                <option value="center">Center</option>
+                                            </select>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <div>
+                                                <label className="block text-xs font-medium text-slate-300 mb-1">Text Color</label>
+                                                <input
+                                                    type="color"
+                                                    value={subtitleSettings.fontColor}
+                                                    onChange={(e) => setSubtitleSettings(prev => ({ ...prev, fontColor: e.target.value }))}
+                                                    className="w-full h-8 rounded border border-slate-600"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-medium text-slate-300 mb-1">Background</label>
+                                                <input
+                                                    type="color"
+                                                    value={subtitleSettings.backgroundColor}
+                                                    onChange={(e) => setSubtitleSettings(prev => ({ ...prev, backgroundColor: e.target.value }))}
+                                                    className="w-full h-8 rounded border border-slate-600"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Preview subtitle styling */}
+                                        <div className="mt-3 p-2 bg-slate-900 rounded border">
+                                            <p className="text-xs text-slate-400 mb-1">Subtitle Preview:</p>
+                                            <div
+                                                className="text-center py-2 px-4 rounded"
+                                                style={{
+                                                    fontSize: `${Math.max(10, subtitleSettings.fontSize * 0.6)}px`,
+                                                    color: subtitleSettings.fontColor,
+                                                    backgroundColor: `${subtitleSettings.backgroundColor}80`, // Add transparency
+                                                    fontWeight: 'bold'
+                                                }}
+                                            >
+                                                Sample subtitle text
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
                             </div>
                         </div>
 
@@ -294,18 +447,93 @@ const VideoEditor = ({
                         {/* Video Review Content */}
                         {videoUrl ? (
                             <div className="space-y-4">
-                                <h3 className="text-lg font-medium text-slate-200">Generated Video</h3>
+                                <div className="flex items-center justify-between">
+                                    <h3 className="text-lg font-medium text-slate-200">Generated Video</h3>
+
+                                    {/* CC Toggle Button */}
+                                    {subtitleSettings.enabled && (
+                                        <button
+                                            onClick={toggleCC}
+                                            className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all ${ccEnabled
+                                                ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                                                : 'bg-slate-600 hover:bg-slate-500 text-slate-300'
+                                                }`}
+                                            title={ccEnabled ? 'Hide Subtitles' : 'Show Subtitles'}
+                                        >
+                                            <FaClosedCaptioning size={16} />
+                                            <span className="text-sm font-medium">
+                                                CC {ccEnabled ? 'ON' : 'OFF'}
+                                            </span>
+                                        </button>
+                                    )}
+                                </div>
 
                                 {/* Video Player */}
-                                <div className="bg-slate-700 p-4 rounded-lg">
+                                <div className="bg-slate-700 p-4 rounded-lg relative">
                                     <video
+                                        ref={videoRef}
                                         controls
                                         className="w-full rounded-lg border border-slate-600"
                                         src={videoUrl}
+                                        onLoadedData={() => {
+                                            // Ensure CC state is applied when video loads
+                                            if (videoRef.current && subtitleUrl && !subtitleSettings.embedInVideo) {
+                                                const tracks = videoRef.current.textTracks;
+                                                if (tracks.length > 0) {
+                                                    tracks[0].mode = ccEnabled ? 'showing' : 'hidden';
+                                                }
+                                            }
+                                        }}
                                     >
+                                        {!subtitleSettings.embedInVideo && subtitleUrl && (
+                                            <track
+                                                kind="subtitles"
+                                                src={subtitleUrl}
+                                                srcLang="en"
+                                                label="English"
+                                                default={ccEnabled}
+                                            />
+                                        )}
                                         Your browser does not support the video tag.
                                     </video>
+
+                                    {/* CC Status Indicator for Embedded Subtitles */}
+                                    {subtitleSettings.enabled && subtitleSettings.embedInVideo && (
+                                        <div className="absolute top-6 right-6 bg-black/70 px-2 py-1 rounded text-white text-xs flex items-center gap-1">
+                                            <FaClosedCaptioning size={12} />
+                                            <span>Subtitles Embedded</span>
+                                        </div>
+                                    )}
+
+                                    {/* CC Status Indicator for External Subtitles */}
+                                    {subtitleSettings.enabled && !subtitleSettings.embedInVideo && subtitleUrl && (
+                                        <div className={`absolute top-6 right-6 px-2 py-1 rounded text-xs flex items-center gap-1 transition-all ${ccEnabled
+                                            ? 'bg-blue-600/90 text-white'
+                                            : 'bg-gray-600/90 text-gray-300'
+                                            }`}>
+                                            <FaClosedCaptioning size={12} />
+                                            <span>CC {ccEnabled ? 'ON' : 'OFF'}</span>
+                                        </div>
+                                    )}
                                 </div>
+
+                                {/* Subtitle Information */}
+                                {subtitleSettings.enabled && (
+                                    <div className="bg-blue-900/20 p-3 rounded-lg border border-blue-600/30">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <FaClosedCaptioning className="text-blue-400" size={14} />
+                                            <h4 className="text-sm font-semibold text-blue-300">Subtitle Information</h4>
+                                        </div>
+                                        <div className="text-xs text-blue-200 space-y-1">
+                                            <p>Type: {subtitleSettings.embedInVideo ? 'Embedded in video' : 'External SRT file'}</p>
+                                            <p>Font Size: {subtitleSettings.fontSize}px</p>
+                                            <p>Position: {subtitleSettings.position}</p>
+                                            {!subtitleSettings.embedInVideo && (
+                                                <p>Toggle: Use CC button to show/hide subtitles</p>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
 
                                 {/* Video Actions */}
                                 <div className="flex flex-wrap gap-3 justify-center">
@@ -316,6 +544,16 @@ const VideoEditor = ({
                                     >
                                         <FaFileDownload className="mr-2" /> Download Video
                                     </a>
+
+                                    {subtitleUrl && (
+                                        <a
+                                            href={subtitleUrl}
+                                            download="subtitles.srt"
+                                            className="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                                        >
+                                            <FaClosedCaptioning className="mr-2" /> Download SRT
+                                        </a>
+                                    )}
 
                                     <button
                                         onClick={() => {
@@ -340,6 +578,13 @@ const VideoEditor = ({
                                         <p>Scenes: {videoResult.length}</p>
                                         <p>Voice: {selectedGoogleVoice}</p>
                                         <p>Speech Rate: {speechRate}x</p>
+                                        <p>Subtitles: {subtitleSettings.enabled ? (subtitleSettings.embedInVideo ? 'Embedded' : 'External SRT') : 'Disabled'}</p>
+                                        {subtitleSettings.enabled && (
+                                            <>
+                                                <p>Font Size: {subtitleSettings.fontSize}px</p>
+                                                <p>Position: {subtitleSettings.position}</p>
+                                            </>
+                                        )}
                                     </div>
                                 </div>
 
@@ -347,6 +592,7 @@ const VideoEditor = ({
                                 <button
                                     onClick={() => {
                                         setVideoUrl(null);
+                                        setSubtitleUrl(null);
                                         setActiveTab('reference');
                                     }}
                                     className="w-full py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
@@ -423,10 +669,13 @@ const VideoEditor = ({
                                     <p className="text-slate-100 font-mono text-sm leading-relaxed">{scene.title}</p>
                                 </div>
 
-                                {/* Narration (Summary) */}
+                                {/* Narration (Summary) - This will be used for subtitles */}
                                 <div className="bg-slate-900/50 p-4 rounded-lg border-l-4 border-purple-400">
                                     <div className="flex items-center gap-3 text-purple-400 mb-2">
-                                        <h5 className="text-sm font-semibold">Content</h5>
+                                        <h5 className="text-sm font-semibold">Content (Audio & Subtitle Text)</h5>
+                                        {subtitleSettings.enabled && (
+                                            <FaClosedCaptioning className="text-purple-400" size={12} title="Will be used as subtitles" />
+                                        )}
                                     </div>
                                     <p className="text-slate-100 font-mono text-sm leading-relaxed whitespace-pre-wrap">{scene.summary}</p>
                                 </div>
@@ -442,14 +691,13 @@ const VideoEditor = ({
                                         handleGenerateAndUpload();
                                         setActiveTab('images');
                                     } else if (activeTab === 'images') {
-                                        // In images tab, review audio voice first
-
+                                        // In images tab, create video with subtitles
                                         createVideoWithIndividualAudios();
                                     } else if (activeTab === 'videoReview') {
-                                        // In script to audio tab, create video with FFmpeg
+                                        // In video review tab, go back to reference
                                         setActiveTab('reference');
                                     } else {
-
+                                        // Default action
                                     }
                                 }}
                                 disabled={isLoading || isAudioPlaying || isProcessingVideo || isReviewingAudio}
@@ -475,8 +723,8 @@ const VideoEditor = ({
                                             </>
                                         ) : activeTab === 'images' ? (
                                             <>
-                                                <FaVolumeUp size={14} />
-                                                <span>Create Video</span>
+                                                <FaVideo size={14} />
+                                                <span>Create Video{subtitleSettings.enabled ? ' with Subtitles' : ''}</span>
                                             </>
                                         ) : activeTab === 'videoReview' ? (
                                             <>
@@ -501,7 +749,7 @@ const VideoEditor = ({
                     </div>
                 )}
             </div>
-        </div >
+        </div>
     );
 };
 
