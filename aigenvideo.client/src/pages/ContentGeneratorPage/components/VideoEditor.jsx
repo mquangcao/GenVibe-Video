@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
     FaTrash,
     FaArrowLeft,
@@ -48,6 +48,8 @@ const VideoEditor = ({
     const [videoUrl, setVideoUrl] = useState(null);
     const [subtitleUrl, setSubtitleUrl] = useState(null);
     const [isReviewingAudio, setIsReviewingAudio] = useState(false);
+    const [ccEnabled, setCcEnabled] = useState(true); // CC toggle state
+    const videoRef = useRef(null); // Reference to video element
     const [subtitleSettings, setSubtitleSettings] = useState({
         enabled: true,
         embedInVideo: true,
@@ -57,6 +59,23 @@ const VideoEditor = ({
         position: 'bottom'
     });
     const { ffmpeg, loaded: ffmpegLoaded, error: ffmpegError, progress } = useFFmpeg();
+
+    // Effect to handle CC toggle for external subtitles
+    useEffect(() => {
+        if (videoRef.current && subtitleUrl && !subtitleSettings.embedInVideo) {
+            const video = videoRef.current;
+            const tracks = video.textTracks;
+
+            if (tracks.length > 0) {
+                tracks[0].mode = ccEnabled ? 'showing' : 'hidden';
+            }
+        }
+    }, [ccEnabled, subtitleUrl, subtitleSettings.embedInVideo]);
+
+    // Toggle CC function
+    const toggleCC = () => {
+        setCcEnabled(!ccEnabled);
+    };
 
     // New function to review audio voice with selected voice settings
     const reviewAudioVoice = async () => {
@@ -428,14 +447,43 @@ const VideoEditor = ({
                         {/* Video Review Content */}
                         {videoUrl ? (
                             <div className="space-y-4">
-                                <h3 className="text-lg font-medium text-slate-200">Generated Video</h3>
+                                <div className="flex items-center justify-between">
+                                    <h3 className="text-lg font-medium text-slate-200">Generated Video</h3>
+
+                                    {/* CC Toggle Button */}
+                                    {subtitleSettings.enabled && (
+                                        <button
+                                            onClick={toggleCC}
+                                            className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all ${ccEnabled
+                                                ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                                                : 'bg-slate-600 hover:bg-slate-500 text-slate-300'
+                                                }`}
+                                            title={ccEnabled ? 'Hide Subtitles' : 'Show Subtitles'}
+                                        >
+                                            <FaClosedCaptioning size={16} />
+                                            <span className="text-sm font-medium">
+                                                CC {ccEnabled ? 'ON' : 'OFF'}
+                                            </span>
+                                        </button>
+                                    )}
+                                </div>
 
                                 {/* Video Player */}
-                                <div className="bg-slate-700 p-4 rounded-lg">
+                                <div className="bg-slate-700 p-4 rounded-lg relative">
                                     <video
+                                        ref={videoRef}
                                         controls
                                         className="w-full rounded-lg border border-slate-600"
                                         src={videoUrl}
+                                        onLoadedData={() => {
+                                            // Ensure CC state is applied when video loads
+                                            if (videoRef.current && subtitleUrl && !subtitleSettings.embedInVideo) {
+                                                const tracks = videoRef.current.textTracks;
+                                                if (tracks.length > 0) {
+                                                    tracks[0].mode = ccEnabled ? 'showing' : 'hidden';
+                                                }
+                                            }
+                                        }}
                                     >
                                         {!subtitleSettings.embedInVideo && subtitleUrl && (
                                             <track
@@ -443,12 +491,49 @@ const VideoEditor = ({
                                                 src={subtitleUrl}
                                                 srcLang="en"
                                                 label="English"
-                                                default
+                                                default={ccEnabled}
                                             />
                                         )}
                                         Your browser does not support the video tag.
                                     </video>
+
+                                    {/* CC Status Indicator for Embedded Subtitles */}
+                                    {subtitleSettings.enabled && subtitleSettings.embedInVideo && (
+                                        <div className="absolute top-6 right-6 bg-black/70 px-2 py-1 rounded text-white text-xs flex items-center gap-1">
+                                            <FaClosedCaptioning size={12} />
+                                            <span>Subtitles Embedded</span>
+                                        </div>
+                                    )}
+
+                                    {/* CC Status Indicator for External Subtitles */}
+                                    {subtitleSettings.enabled && !subtitleSettings.embedInVideo && subtitleUrl && (
+                                        <div className={`absolute top-6 right-6 px-2 py-1 rounded text-xs flex items-center gap-1 transition-all ${ccEnabled
+                                            ? 'bg-blue-600/90 text-white'
+                                            : 'bg-gray-600/90 text-gray-300'
+                                            }`}>
+                                            <FaClosedCaptioning size={12} />
+                                            <span>CC {ccEnabled ? 'ON' : 'OFF'}</span>
+                                        </div>
+                                    )}
                                 </div>
+
+                                {/* Subtitle Information */}
+                                {subtitleSettings.enabled && (
+                                    <div className="bg-blue-900/20 p-3 rounded-lg border border-blue-600/30">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <FaClosedCaptioning className="text-blue-400" size={14} />
+                                            <h4 className="text-sm font-semibold text-blue-300">Subtitle Information</h4>
+                                        </div>
+                                        <div className="text-xs text-blue-200 space-y-1">
+                                            <p>Type: {subtitleSettings.embedInVideo ? 'Embedded in video' : 'External SRT file'}</p>
+                                            <p>Font Size: {subtitleSettings.fontSize}px</p>
+                                            <p>Position: {subtitleSettings.position}</p>
+                                            {!subtitleSettings.embedInVideo && (
+                                                <p>Toggle: Use CC button to show/hide subtitles</p>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
 
                                 {/* Video Actions */}
                                 <div className="flex flex-wrap gap-3 justify-center">

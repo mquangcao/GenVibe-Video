@@ -34,7 +34,7 @@ export function generateSRTSubtitles(scenes, audioDurations) {
 }
 
 /**
- * Creates a video from images and individual audio files with embedded subtitles using FFmpeg
+ * Creates a video from images and individual audio files with subtitles using FFmpeg
  * @param {Object} ffmpeg - FFmpeg instance
  * @param {Array} images - Array of image objects with urls
  * @param {Array} audioUrls - Array of audio URLs, one for each image
@@ -49,7 +49,7 @@ export async function createVideoFromImagesAndIndividualAudiosWithSubtitles(ffmp
     }
 
     const {
-        embedSubtitles = true,
+        embedSubtitles = false, // Change default to false for external subtitles
         subtitleStyle = {
             fontSize: 20,
             fontColor: '#ffffff',
@@ -60,6 +60,7 @@ export async function createVideoFromImagesAndIndividualAudiosWithSubtitles(ffmp
 
     try {
         console.log('Starting video creation with individual audio files and subtitles...');
+        console.log('Subtitle options:', { embedSubtitles, subtitleStyle });
 
         const audioDurations = [];
 
@@ -93,7 +94,9 @@ export async function createVideoFromImagesAndIndividualAudiosWithSubtitles(ffmp
         // Generate SRT subtitles
         console.log('Generating subtitles...');
         const srtContent = generateSRTSubtitles(scenes, audioDurations);
-        console.log('Generated SRT content:', srtContent);
+        console.log('Generated SRT content length:', srtContent.length);
+        console.log('SRT preview:', srtContent.substring(0, 200) + '...');
+
         ffmpeg.FS('writeFile', 'subtitles.srt', new TextEncoder().encode(srtContent));
 
         // Process images
@@ -150,33 +153,36 @@ export async function createVideoFromImagesAndIndividualAudiosWithSubtitles(ffmp
         );
 
         if (embedSubtitles) {
-            console.log('Embedding subtitles into video...');
+            // Embed subtitles as burned-in text (hard subtitles)
+            console.log('Embedding hard subtitles into video...');
 
-            // Use a simplified subtitle embedding approach
             const fontSize = subtitleStyle.fontSize || 20;
 
-            // Create subtitle style string with proper ASS format
-            let subtitleFilter;
-
-            if (subtitleStyle.position === 'top') {
-                subtitleFilter = `subtitles=subtitles.srt:force_style='FontSize=${fontSize},PrimaryColour=&Hffffff,OutlineColour=&H000000,Outline=2,Bold=1,Alignment=8'`;
-            } else if (subtitleStyle.position === 'center') {
-                subtitleFilter = `subtitles=subtitles.srt:force_style='FontSize=${fontSize},PrimaryColour=&Hffffff,OutlineColour=&H000000,Outline=2,Bold=1,Alignment=5'`;
-            } else { // bottom (default)
-                subtitleFilter = `subtitles=subtitles.srt:force_style='FontSize=${fontSize},PrimaryColour=&Hffffff,OutlineColour=&H000000,Outline=2,Bold=1,Alignment=2'`;
-            }
+            // Simplified subtitle filter that should work reliably
+            const subtitleFilter = `subtitles=subtitles.srt:force_style='FontSize=${fontSize},PrimaryColour=&Hffffff,OutlineColour=&H000000,Outline=2,Bold=1'`;
 
             console.log('Using subtitle filter:', subtitleFilter);
 
-            await ffmpeg.run(
-                '-i', 'temp_video.mp4',
-                '-vf', subtitleFilter,
-                '-c:a', 'copy',
-                'output.mp4'
-            );
+            try {
+                await ffmpeg.run(
+                    '-y',
+                    '-i', 'temp_video.mp4',
+                    '-vf', subtitleFilter,
+                    '-c:a', 'copy',
+                    'output.mp4'
+                );
+                console.log('Hard subtitles embedded successfully');
+            } catch (error) {
+                console.error('Error embedding hard subtitles:', error);
+                // Fallback: just copy the video without subtitles
+                await ffmpeg.run('-y', '-i', 'temp_video.mp4', '-c', 'copy', 'output.mp4');
+                console.log('Fallback: Created video without embedded subtitles');
+            }
         } else {
-            // Just rename without embedding subtitles
-            await ffmpeg.run('-i', 'temp_video.mp4', '-c', 'copy', 'output.mp4');
+            // For external subtitles, just copy the video
+            console.log('Creating video with external subtitle support...');
+            await ffmpeg.run('-y', '-i', 'temp_video.mp4', '-c', 'copy', 'output.mp4');
+            console.log('Video created for external subtitles');
         }
 
         console.log('FFmpeg processing completed');
@@ -198,6 +204,9 @@ export async function createVideoFromImagesAndIndividualAudiosWithSubtitles(ffmp
 
         const videoURL = URL.createObjectURL(videoBlob);
         const subtitleURL = URL.createObjectURL(subtitleBlob);
+
+        console.log('Video URL created:', videoURL);
+        console.log('Subtitle URL created:', subtitleURL);
 
         // Clean up
         for (let i = 0; i < images.length; i++) {
