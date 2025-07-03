@@ -11,134 +11,136 @@ import GeneratorView from './components/GeneratorView';
 import VideoEditor from './components/VideoEditor';
 
 const ContentGeneratorPage = () => {
-  // Custom hooks
-  const {
-    isSidebarOpen,
-    currentView,
-    activeTab,
-    toggleSidebar,
-    setActiveTab,
-    handleBackToGenerator: navigateBack,
-    navigateToVideoEditor,
-  } = useNavigation();
+    // Custom hooks
+    const {
+        isSidebarOpen,
+        currentView,
+        activeTab,
+        toggleSidebar,
+        setActiveTab,
+        handleBackToGenerator: navigateBack,
+        navigateToVideoEditor,
+    } = useNavigation();
 
-  const { googleVoices, selectedGoogleVoice, setSelectedGoogleVoice, speechRate, setSpeechRate } = useVoiceSelection();
+    const { googleVoices, selectedGoogleVoice, setSelectedGoogleVoice, speechRate, setSpeechRate } = useVoiceSelection();
 
-  const {
-    isAudioPlaying,
-    isSpeaking,
-    error: audioError,
-    isLoading: audioLoading,
-    setError: setAudioError,
-    speakText: handleSpeakText,
-    stopSpeaking,
-    downloadGoogleTTS,
-    downloadSRT: handleDownloadSRT,
-    downloadFullScript,
-  } = useAudioSpeech();
+    const {
+        isAudioPlaying,
+        isSpeaking,
+        error: audioError,
+        isLoading: audioLoading,
+        setError: setAudioError,
+        speakText: handleSpeakText,
+        stopSpeaking,
+        downloadGoogleTTS,
+        downloadSRT: handleDownloadSRT,
+        downloadFullScript,
+        generateAudioBlob,
+    } = useAudioSpeech();
 
-  const {
-    topic,
-    setTopic,
-    selectedContext,
-    setSelectedContext,
-    generatedSuggestions,
-    videoPrompt,
-    setVideoPrompt,
-    videoResult,
-    images,
-    isLoading: contentLoading,
-    error: contentError,
-    setError: setContentError,
-    availableContexts,
-    handleGenerateSuggestions,
-    handleCreateVideo,
-    handleGenerateAndUpload,
-    handleRejectImage,
-    handleCreateFromTopic: createFromTopic,
-    handleUseSuggestion,
-  } = useContentGeneration(setActiveTab);
+    const {
+        topic,
+        setTopic,
+        selectedContext,
+        setSelectedContext,
+        generatedSuggestions,
+        videoPrompt,
+        setVideoPrompt,
+        videoResult,
+        images,
+        isLoading: contentLoading,
+        error: contentError,
+        setError: setContentError,
+        availableContexts,
+        handleGenerateSuggestions,
+        handleCreateVideo,
+        handleGenerateAndUpload,
+        handleRejectImage,
+        handleCreateFromTopic: createFromTopic,
+        handleUseSuggestion,
+    } = useContentGeneration(setActiveTab);
 
-  // Combined values
-  const isLoading = audioLoading || contentLoading;
-  const error = audioError || contentError;
+    // Combined values
+    const isLoading = audioLoading || contentLoading;
+    const error = audioError || contentError;
 
-  // Combined handlers
-  const handleBackToGenerator = () => {
-    stopSpeaking();
-    navigateBack();
-  };
+    // Combined handlers
+    const handleBackToGenerator = () => {
+        stopSpeaking();
+        navigateBack();
+    };
 
-  const handleCreateFromTopic = () => {
-    createFromTopic();
-    navigateToVideoEditor();
-  };
+    const handleCreateFromTopic = () => {
+        createFromTopic();
+        navigateToVideoEditor();
+    };
 
-  const handleUseSelectedSuggestion = (title) => {
-    handleUseSuggestion(title);
-    navigateToVideoEditor();
-  };
+    const handleUseSelectedSuggestion = (title) => {
+        handleUseSuggestion(title);
+        navigateToVideoEditor();
+    };
 
-  const speakText = (text) => {
-    handleSpeakText(text, selectedGoogleVoice, speechRate);
-  };
+    const speakText = (text) => {
+        handleSpeakText(text, selectedGoogleVoice, speechRate);
+    };
 
-  const downloadSRT = (text, filename) => {
-    handleDownloadSRT(text, filename, selectedGoogleVoice, speechRate);
-  };
+    const downloadSRT = (text, filename) => {
+        handleDownloadSRT(text, filename, selectedGoogleVoice, speechRate);
+    };
 
-  return (
-    <div className="flex h-screen bg-gray-800">
-      <SideBar isOpen={isSidebarOpen} toggleSideBar={toggleSidebar} />
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <Header />
-        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-800">
-          {currentView === 'generator' ? (
-            <GeneratorView
-              topic={topic}
-              setTopic={setTopic}
-              selectedContext={selectedContext}
-              setSelectedContext={setSelectedContext}
-              availableContexts={availableContexts}
-              handleGenerateSuggestions={handleGenerateSuggestions}
-              handleCreateFromTopic={handleCreateFromTopic}
-              handleUseSuggestion={handleUseSelectedSuggestion}
-              generatedSuggestions={generatedSuggestions}
-              isLoading={isLoading}
-              error={error}
-            />
-          ) : (
-            <VideoEditor
-              videoPrompt={videoPrompt}
-              setVideoPrompt={setVideoPrompt}
-              googleVoices={googleVoices}
-              selectedGoogleVoice={selectedGoogleVoice}
-              setSelectedGoogleVoice={setSelectedGoogleVoice}
-              speechRate={speechRate}
-              setSpeechRate={setSpeechRate}
-              activeTab={activeTab}
-              setActiveTab={setActiveTab}
-              handleBackToGenerator={handleBackToGenerator}
-              handleCreateVideo={handleCreateVideo}
-              speakText={speakText}
-              stopSpeaking={stopSpeaking}
-              downloadSRT={downloadSRT}
-              downloadGoogleTTS={downloadGoogleTTS} // Added this prop
-              downloadFullScript={downloadFullScript} // Added this prop
-              images={images}
-              handleRejectImage={handleRejectImage}
-              videoResult={videoResult}
-              isAudioPlaying={isAudioPlaying}
-              handleGenerateAndUpload={handleGenerateAndUpload}
-              isLoading={isLoading}
-              error={error}
-              getLanguageDisplayName={getLanguageDisplayName}
-            />
-          )}
-        </main>
-      </div>
-    </div>
-  );
+    return (
+        <div className="flex h-screen bg-gray-800">
+            <SideBar isOpen={isSidebarOpen} toggleSideBar={toggleSidebar} />
+            <div className="flex-1 flex flex-col overflow-hidden">
+                <Header />
+                <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-800">
+                    {currentView === 'generator' ? (
+                        <GeneratorView
+                            topic={topic}
+                            setTopic={setTopic}
+                            selectedContext={selectedContext}
+                            setSelectedContext={setSelectedContext}
+                            availableContexts={availableContexts}
+                            handleGenerateSuggestions={handleGenerateSuggestions}
+                            handleCreateFromTopic={handleCreateFromTopic}
+                            handleUseSuggestion={handleUseSelectedSuggestion}
+                            generatedSuggestions={generatedSuggestions}
+                            isLoading={isLoading}
+                            error={error}
+                        />
+                    ) : (
+                        <VideoEditor
+                            videoPrompt={videoPrompt}
+                            setVideoPrompt={setVideoPrompt}
+                            googleVoices={googleVoices}
+                            selectedGoogleVoice={selectedGoogleVoice}
+                            setSelectedGoogleVoice={setSelectedGoogleVoice}
+                            speechRate={speechRate}
+                            setSpeechRate={setSpeechRate}
+                            activeTab={activeTab}
+                            setActiveTab={setActiveTab}
+                            handleBackToGenerator={handleBackToGenerator}
+                            handleCreateVideo={handleCreateVideo}
+                            speakText={speakText}
+                            stopSpeaking={stopSpeaking}
+                            downloadSRT={downloadSRT}
+                            downloadGoogleTTS={downloadGoogleTTS}
+                            downloadFullScript={downloadFullScript}
+                            images={images}
+                            handleRejectImage={handleRejectImage}
+                            videoResult={videoResult}
+                            isAudioPlaying={isAudioPlaying}
+                            handleGenerateAndUpload={handleGenerateAndUpload}
+                            isLoading={isLoading}
+                            error={error}
+                            getLanguageDisplayName={getLanguageDisplayName}
+                            generateAudioBlob={generateAudioBlob}
+                        />
+                    )}
+                </main>
+            </div>
+        </div>
+    );
 };
 
 export default ContentGeneratorPage;

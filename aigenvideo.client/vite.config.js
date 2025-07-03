@@ -7,6 +7,7 @@ import path from 'path';
 import child_process from 'child_process';
 import { env } from 'process';
 import tailwindcss from '@tailwindcss/vite'
+import crossOriginIsolation from 'vite-plugin-cross-origin-isolation'
 
 const baseFolder =
   env.APPDATA !== undefined && env.APPDATA !== '' ? `${env.APPDATA}/ASP.NET/https` : `${env.HOME}/.aspnet/https`;
@@ -40,7 +41,7 @@ const target = env.ASPNETCORE_HTTPS_PORT
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [plugin(), tailwindcss()],
+  plugins: [plugin(), tailwindcss(), crossOriginIsolation()],
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),

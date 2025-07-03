@@ -12,6 +12,8 @@
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
+    "@ffmpeg/core": "^0.10.0",
+    "@ffmpeg/ffmpeg": "^0.10.1",
     "@mui/material": "^7.1.0",
     "@radix-ui/react-avatar": "^1.1.10",
     "@radix-ui/react-collapsible": "^1.1.11",
@@ -49,6 +51,7 @@
     "globals": "^16.0.0",
     "sass": "^1.89.0",
     "tw-animate-css": "^1.3.0",
-    "vite": "^6.3.5"
+    "vite": "^6.3.5",
+    "vite-plugin-cross-origin-isolation": "^0.1.6"
   }
 }
