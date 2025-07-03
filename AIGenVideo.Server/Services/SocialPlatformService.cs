@@ -1,7 +1,4 @@
-﻿
-using System;
-
-namespace AIGenVideo.Server.Services;
+﻿namespace AIGenVideo.Server.Services;
 
 public class SocialPlatformService : ISocialPlatformService
 {
@@ -17,6 +14,14 @@ public class SocialPlatformService : ISocialPlatformService
         return await _context.UserSocialAccounts
                 .Include(a => a.Platform)
                 .FirstOrDefaultAsync(a => a.UserId == userId && a.Platform.Code == platformCode && !a.IsRevoked);
+    }
+
+    public async Task<string?> GetAcessTokenAsync(string userId, string platformCode)
+    {
+        return await _context.UserSocialAccounts
+            .Where(a => a.UserId == userId && a.Platform.Code == platformCode && !a.IsRevoked && a.TokenExpiry > DateTime.UtcNow)
+            .Select(a => a.AccessToken)
+            .FirstOrDefaultAsync();
     }
 
     public async Task<List<UserSocialAccount>> GetAllAccountsAsync(string userId)

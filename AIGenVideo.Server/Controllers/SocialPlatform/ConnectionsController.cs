@@ -33,7 +33,7 @@ namespace AIGenVideo.Server.Controllers.SocialPlatform
             _httpClientFactory = httpClientFactory;
             _tiktokOptions = tiktokOptions.Value;
         }
-
+        #region addOauth2
         [HttpGet("connect-youtube")]
         [Authorize]
         public IActionResult ConnectYoutube()
@@ -90,16 +90,16 @@ namespace AIGenVideo.Server.Controllers.SocialPlatform
                 return StatusCode(Constants.SERVER_ERROR_CODE, ApiResponse.FailResponse($"An error occurred while processing the YouTube callback: {ex.Message}"));
             }
         }
-
+        #endregion
 
 
         #region youtube
-        [HttpGet("/api/oauth/google-url")]
+        [HttpGet("/api/oauth/youtube-url")]
         [Authorize]
         public async Task<IActionResult> GetGoogleOAuthUrl([FromQuery] string redirectUri)
         {
-            var state = Guid.NewGuid().ToString(); // hoặc: $"{userId}:{random}"
-            var userId = HttpContext.User.GetUserId(); // tự viết extension hoặc lấy từ JWT
+            var state = Guid.NewGuid().ToString(); 
+            var userId = HttpContext.User.GetUserId(); 
 
             await _oAuthStateService.SetStateAsync(state, new OAuthStateData { UserId = userId });
 
@@ -120,7 +120,7 @@ namespace AIGenVideo.Server.Controllers.SocialPlatform
             }));
         }
 
-        [HttpGet("/oauth/google-callback")]
+        [HttpGet("/oauth/youtube-callback")]
         public async Task<IActionResult> GoogleCallback(string code, string state)
         {
             var stateData = await _oAuthStateService.GetStateAsync(state);
