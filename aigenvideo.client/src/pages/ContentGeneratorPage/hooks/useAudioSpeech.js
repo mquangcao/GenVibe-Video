@@ -79,14 +79,6 @@ export const useAudioSpeech = () => {
         isLoading,
         setError,
         speakText,
-
-        stopSpeaking,
-        downloadGoogleTTS,
-        downloadSRT,
-        downloadFullScript,
-        generateAndUploadAudio
-
         generateAudioBlob
-
     };
 };

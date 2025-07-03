@@ -20,13 +20,13 @@ public class VideoData
 
     [Required]
     [Column("captions", TypeName = "nvarchar(max)")] // sửa lại
-    public string Captions { get; set; } = default!;    
+    public string Captions { get; set; } = default!;
 
     [Column("imageList")]
     public List<string> ImageList { get; set; } = new List<string>();
 
     [Required]
-    [Column("createdBy")]   
+    [Column("createdBy")]
     [MaxLength(255)]
     public string CreatedBy { get; set; } = default!;
 }

@@ -18,12 +18,8 @@ import {
     FaPlay,
     FaClosedCaptioning,
 } from 'react-icons/fa';
-
-import { generateAudio } from '@/apis/audioService';
-import { generateSimpleSRT } from '../utils/srtUtils';
 import { useFFmpeg } from '@/hooks/useFFmpeg';
 import { createVideoFromImagesAndIndividualAudios, createVideoFromImagesAndIndividualAudiosWithSubtitles } from '@/utils/videoCreationUtils';
-
 
 const VideoEditor = ({
     videoPrompt,
@@ -48,85 +44,6 @@ const VideoEditor = ({
     getLanguageDisplayName,
     generateAudioBlob,
 }) => {
-  const [scriptContent, setScriptContent] = useState('');
-  const [uploadedAudioUrl, setUploadedAudioUrl] = useState(null);
-  const [uploadedSrtUrl, setUploadedSrtUrl] = useState(null);
-
-  const combineScriptContent = async () => {
-    if (!videoResult || videoResult.length === 0) {
-      console.error('No script available to process.');
-      return;
-    }
-    console.log('Starting: Combine script, generate audio, and upload to Cloudinary...');
-    try {
-      // --- 1. Combine the script text from the scenes ---
-      const fullScript = videoResult.map((scene) => scene.summary).join(' ');
-      const [audioResponse, srtContent] = await Promise.all([
-        generateAudio({ text: fullScript, selectedGoogleVoice, speechRate }),
-        generateSimpleSRT(fullScript),
-      ]);
-
-      const audioBlob = audioResponse.data;
-      if (!audioBlob || audioBlob.size === 0) throw new Error('Audio generation failed.');
-
-      // --- 3. Upload that Audio Blob to Cloudinary ---
-      const CLOUD_NAME = 'dj88dmrqe';
-      const UPLOAD_PRESET = 'GenVideoProject';
-
-      // Promise for Audio Upload
-      const audioFormData = new FormData();
-      audioFormData.append('file', audioBlob, 'full-script-audio.mp3');
-      audioFormData.append('upload_preset', UPLOAD_PRESET);
-      audioFormData.append('folder', 'generated-audio');
-      audioFormData.append('resource_type', 'video');
-      const audioUploadPromise = fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/video/upload`, {
-        method: 'POST',
-        body: audioFormData,
-      }).then((res) => res.json());
-
-      // Promise for SRT Upload
-      const srtBlob = new Blob([srtContent], { type: 'text/plain' });
-      const srtFormData = new FormData();
-      srtFormData.append('file', srtBlob, 'subtitles.srt');
-      srtFormData.append('upload_preset', UPLOAD_PRESET);
-      srtFormData.append('folder', 'generated-subtitles');
-      srtFormData.append('resource_type', 'raw');
-      const srtUploadPromise = fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/raw/upload`, {
-        method: 'POST',
-        body: srtFormData,
-      }).then((res) => res.json());
-
-      // Wait for both uploads to finish
-      const [cloudinaryAudioResult, cloudinarySrtResult] = await Promise.all([audioUploadPromise, srtUploadPromise]);
-
-      // --- STAGE 3: UPDATE STATE WITH FINAL URLS & SWITCH TAB ---
-      setUploadedAudioUrl(cloudinaryAudioResult.secure_url);
-      setUploadedSrtUrl(cloudinarySrtResult.secure_url);
-
-      console.log('Audio URL:', cloudinaryAudioResult.secure_url);
-      console.log('SRT URL:', cloudinarySrtResult.secure_url);
-
-      setScriptContent(fullScript);
-      setActiveTab('scriptToAudio');
-    } catch (err) {
-      console.error('Error during script and asset processing:', err);
-    }
-  };
-
-  return (
-    <div className="flex h-full p-1 md:p-6 lg:p-8">
-      {/* Left Panel: Settings */}
-      <div className="w-full md:w-1/2 bg-slate-800 p-1 flex flex-col space-y-4 rounded-l-xl">
-        {/* Back to Suggestions button at the top */}
-        <div className="flex-none mb-2">
-          <button
-            onClick={handleBackToGenerator}
-            className="text-sky-400 hover:text-sky-300 font-semibold text-xs px-2 py-1 rounded-md bg-slate-800"
-          >
-            <FaArrowLeft className="inline mr-1" /> Back to Suggestions
-          </button>
-        </div>
-
     const [isProcessingVideo, setIsProcessingVideo] = useState(false);
     const [videoUrl, setVideoUrl] = useState(null);
     const [subtitleUrl, setSubtitleUrl] = useState(null);
@@ -142,7 +59,6 @@ const VideoEditor = ({
         position: 'bottom'
     });
     const { ffmpeg, loaded: ffmpegLoaded, error: ffmpegError, progress } = useFFmpeg();
-
 
     // Effect to handle CC toggle for external subtitles
     useEffect(() => {
