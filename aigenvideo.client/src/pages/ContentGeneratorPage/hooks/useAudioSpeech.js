@@ -218,6 +218,7 @@ export const useAudioSpeech = () => {
         stopSpeaking,
         downloadGoogleTTS,
         downloadSRT,
-        downloadFullScript
+        downloadFullScript,
+        generateAndUploadAudio
     };
 };

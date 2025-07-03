@@ -73,14 +73,12 @@ export const useContentGeneration = (setActiveTab) => {
     console.log("STARTING: Full Generate & Upload Sequence...");
 
     try {
-        // --- STAGE 1: GENERATE IMAGES FROM YOUR AI (GEMINI) ---
-        console.log("Stage 1: Calling Gemini to generate temporary images...");
-        const scenesToGenerate = videoResult.slice(0, 2); // Only take the first 2 scenes
+        const scenesToGenerate = videoResult; 
         const imageGenerationPromises = scenesToGenerate.map((scene) =>
             imageService.generateImage({ Prompt: scene.title })
         );
         const generationResponses = await Promise.all(imageGenerationPromises);
-        // We create the array of temporary images here. Let's name it clearly.
+      
         const aiGeneratedImages = generationResponses
             .map((response, index) => {
                 if (response?.data?.imageUrl) {
@@ -125,7 +123,7 @@ export const useContentGeneration = (setActiveTab) => {
         console.log("Stage 3: Updating UI with permanent Cloudinary URLs...");
         const finalImagesFromCloudinary = cloudinaryResults.map((result, index) => ({
             id: result.public_id,
-            name: aiGeneratedImages[index].name, // Use the name from the temporary images
+            name: aiGeneratedImages[index].name,
             url: result.secure_url,
         }));
 
@@ -154,13 +152,13 @@ export const useContentGeneration = (setActiveTab) => {
             setError('Please enter a topic before creating.');
             return;
         }
-        setVideoPrompt(topic); // Use the current topic as the prompt
+        setVideoPrompt(topic); 
     };
 
     const handleUseSuggestion = (suggestionTitle) => {
         setVideoPrompt(suggestionTitle);
-        setError(null); // Clear any old errors
-        setVideoResult([]); // Clear old results when starting a new edit
+        setError(null); 
+        setVideoResult([]); 
     };
 
     return {
