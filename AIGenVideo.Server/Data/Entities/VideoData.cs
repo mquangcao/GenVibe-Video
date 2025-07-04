@@ -10,10 +10,6 @@ public class VideoData
     public string Id { get; set; } = Guid.NewGuid().ToString();
 
     [Required]
-    [Column("script", TypeName = "nvarchar(max)")] // sửa lại
-    public string Script { get; set; } = default!;
-
-    [Required]
     [Column("audioFileUrl")]
     [MaxLength(255)]
     public string AudioFileUrl { get; set; } = default!;
@@ -22,9 +18,16 @@ public class VideoData
     [Column("captions", TypeName = "nvarchar(max)")] // sửa lại
     public string Captions { get; set; } = default!;
 
-    [Column("imageList")]
-    public List<string> ImageList { get; set; } = new List<string>();
+    [Required]
+    [Column("videoUrl", TypeName = "nvarchar(max)")] // sửa lại
+    public string VideoUrl { get; set; } = default!;
 
+    [Column("imageListUrl")]
+    public List<string> ImageListUrl { get; set; } = new List<string>();
+
+    [Required]
+    [Column("srts", TypeName = "nvarchar(max)")]
+    public string Srts { get; set; } = default!;
     [Required]
     [Column("createdBy")]
     [MaxLength(255)]

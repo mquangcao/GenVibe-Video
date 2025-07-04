@@ -20,6 +20,8 @@ builder.Services.AddVideoGenerateServices(builder.Configuration);
 builder.Services.AddImageGenerationServices();
 var app = builder.Build();
 
+
+
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
