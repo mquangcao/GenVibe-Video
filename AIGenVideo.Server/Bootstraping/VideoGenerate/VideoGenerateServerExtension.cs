@@ -20,6 +20,9 @@ public static class VideoGenerateServerExtension
         // Step 3: Attach our interceptor to the HttpClient's pipeline.
         .AddHttpMessageHandler<AssemblyAiAuthHandler>();
 
+        // Dòng này sẽ đăng ký VideoService để Controller có thể sử dụng.
+        services.AddScoped<IVideoService, VideoService>();
+
         return services;
     }
 }

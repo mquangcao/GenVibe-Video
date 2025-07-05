@@ -7,42 +7,38 @@ namespace AIGenVideo.Server.Controllers.VideoGeneration;
 [Route("api/[controller]")]
 public class VideoGenerationController : ControllerBase
 {
-    private readonly ICaptionService _captionService;
+    private readonly IVideoService _videoService; 
     private readonly ILogger<VideoGenerationController> _logger;
 
-    public VideoGenerationController(ICaptionService captionService, ILogger<VideoGenerationController> logger)
+    public VideoGenerationController(IVideoService videoService, ILogger<VideoGenerationController> logger)
     {
-        _captionService = captionService;
+        _videoService = videoService;
         _logger = logger;
     }
 
-    [HttpPost("generate-captions")]
-    public async Task<IActionResult> GenerateCaptions([FromBody] GenerateCaptionsRequest request)
+    [HttpPost("{videoId}/generate-captions")]
+    public async Task<IActionResult> GenerateCaptions(string videoId)
     {
         try
         {
-            if (string.IsNullOrEmpty(request.audioUrl))
+            _logger.LogInformation("Received request to generate captions for VideoId: {VideoId}", videoId);
+
+            var success = await _videoService.GenerateAndSaveCaptionsAsync(videoId);
+
+            if (!success)
             {
-                return BadRequest(new { success = false, error = "Audio URL is required" });
+                return NotFound(new { success = false, message = $"Video with ID {videoId} not found." });
             }
 
-            _logger.LogInformation("Starting caption generation for URL: {audioUrl}", request.audioUrl);
+            _logger.LogInformation("Caption generation completed successfully for VideoId: {VideoId}", videoId);
 
-            var captions = await _captionService.GenerateCaptionsAsync(request.audioUrl);
-
-            _logger.LogInformation("Caption generation completed successfully");
-
-            return Ok(new { success = true, captions = captions });
+            // Trả về thành công. Client có thể gọi API GetVideoDetails để lấy phụ đề mới.
+            return Ok(new { success = true, message = "Captions generated and saved successfully." });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error generating captions for URL: {audioUrl}", request.audioUrl);
+            _logger.LogError(ex, "Error generating captions for VideoId: {VideoId}", videoId);
             return StatusCode(500, new { success = false, error = ex.Message });
         }
     }
-}
-
-public class GenerateCaptionsRequest
-{
-    public string audioUrl { get; set; } = string.Empty;
 }
