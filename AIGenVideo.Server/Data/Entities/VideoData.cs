@@ -16,7 +16,7 @@ public class VideoData
 
     [Required]
     [Column("captions", TypeName = "nvarchar(max)")] // sửa lại
-    public string Captions { get; set; } = default!;
+    public string? Captions { get; set; } = default!;
 
     [Required]
     [Column("videoUrl", TypeName = "nvarchar(max)")] // sửa lại
@@ -27,7 +27,7 @@ public class VideoData
 
     [Required]
     [Column("srts", TypeName = "nvarchar(max)")]
-    public string Srts { get; set; } = default!;
+    public string? Srts { get; set; } = default!;
     [Required]
     [Column("createdBy")]
     [MaxLength(255)]
