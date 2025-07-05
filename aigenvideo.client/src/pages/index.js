@@ -15,3 +15,4 @@ export { default as PaymentSuccessPage } from './PaymentSuccessPage/PaymentSucce
 export { default as ContentGeneratorPage } from './ContentGeneratorPage';
 export { default as PlatformConnectionsPage } from './PlatformConnectionsPage';
 export { default as SocialVideoManagementPage } from './SocialVideoManagementPage';
+export { default as UploadVideoPage } from './UploadVideoPage';

@@ -14,4 +14,5 @@ public interface IPlatformService
     Task<string?> GetAccessToken();
     Task<string?> GetOAuthUrl(string redirectUrl);
     Task<PlatformRedirectResult> HandlePlatformRedirectAsync(string code, string state, string redirectUrl);
+    Task<string?> UploadVideoAsync(string videoFilePath, string title, string description, List<string> tags, string privacyStatus = "private");
 }

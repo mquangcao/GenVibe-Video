@@ -136,4 +136,9 @@ public class TiktokPlatformService : IPlatformService
     {
         throw new NotImplementedException();
     }
+
+    public Task<string?> UploadVideoAsync(string videoFilePath, string title, string description, List<string> tags, string privacyStatus = "private")
+    {
+        throw new NotImplementedException();
+    }
 }

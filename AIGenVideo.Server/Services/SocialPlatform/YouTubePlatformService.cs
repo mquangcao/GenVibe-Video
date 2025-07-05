@@ -1,5 +1,9 @@
 ﻿using AIGenVideo.Server.Models.Configurations;
 using AIGenVideo.Server.Models.DomainModels;
+using Google.Apis.Auth.OAuth2;
+using Google.Apis.Services;
+using Google.Apis.YouTube.v3.Data;
+using Google.Apis.YouTube.v3;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.WebUtilities;
@@ -8,6 +12,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Google.Apis.Upload;
 
 namespace AIGenVideo.Server.Services.SocialPlatform;
 
@@ -258,7 +263,7 @@ public class YouTubePlatformService : IPlatformService
                 ["client_id"] = _googleOptions.ClientId,
                 ["redirect_uri"] = redirectUrl,
                 ["response_type"] = "code",
-                ["scope"] = "openid email profile https://www.googleapis.com/auth/youtube.readonly",
+                ["scope"] = "openid email profile https://www.googleapis.com/auth/youtube.readonly https://www.googleapis.com/auth/youtube.upload ",
                 ["access_type"] = "offline",
                 ["prompt"] = "consent",
                 ["state"] = state
@@ -344,6 +349,81 @@ public class YouTubePlatformService : IPlatformService
                 IsSuccess = false,
                 StatusCode = (int)HttpStatusCode.InternalServerError
             };
+        }
+    }
+
+    public async Task<string?> UploadVideoAsync(string videoFilePath, string title, string description, List<string> tags, string privacyStatus = "private")
+    {
+        var userId = _httpContextAccessor.HttpContext?.User?.GetUserId() ?? throw new UnauthorizedAccessException("User is not authenticated.");
+        var accessToken = await GetAccessToken();
+
+        if (string.IsNullOrEmpty(accessToken))
+        {
+            _logger.LogError("Access token is missing, cannot upload video.");
+            return null;
+        }
+
+        try
+        {
+            var credential = GoogleCredential.FromAccessToken(accessToken);
+
+            var youtubeService = new YouTubeService(new BaseClientService.Initializer()
+            {
+                HttpClientInitializer = credential,
+                ApplicationName = "AIGenVideo"
+            });
+
+            var video = new Video();
+            video.Snippet = new VideoSnippet();
+            video.Snippet.Title = title;
+            video.Snippet.Description = description;
+            video.Snippet.Tags = tags;
+            video.Snippet.CategoryId = "28";  // https://developers.google.com/youtube/v3/docs/videoCategories/list
+
+            video.Status = new VideoStatus();
+            video.Status.PrivacyStatus = privacyStatus; // "public", "private" or "unlisted"
+
+            // 4. Mở luồng đọc file video
+            using (var fileStream = new FileStream(videoFilePath, FileMode.Open, FileAccess.Read))
+            {
+                var videosInsertRequest = youtubeService.Videos.Insert(video, "snippet,status", fileStream, "video/*");
+
+                videosInsertRequest.ProgressChanged += progress =>
+                {
+                    switch (progress.Status)
+                    {
+                        case UploadStatus.Uploading:
+                            _logger.LogInformation("{BytesSent} bytes sent.", progress.BytesSent);
+                            break;
+                        case UploadStatus.Completed:
+                            _logger.LogInformation("Upload completed.");
+                            break;
+                        case UploadStatus.Failed:
+                            _logger.LogError("Upload failed: {Exception}", progress.Exception);
+                            break;
+                    }
+                };
+
+                // Đăng ký sự kiện khi tải lên hoàn tất hoặc thất bại
+                videosInsertRequest.ResponseReceived += uploadedVideo =>
+                {
+                    if (uploadedVideo != null)
+                    {
+                        _logger.LogInformation("Video id '{0}' was successfully uploaded.", uploadedVideo.Id);
+                    }
+                };
+
+                // Thực hiện tải lên
+                await videosInsertRequest.UploadAsync();
+
+                // Trả về ID của video đã tải lên
+                return videosInsertRequest.ResponseBody?.Id;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("Error uploading video: {Message}", ex.Message);
+            return null;
         }
     }
 

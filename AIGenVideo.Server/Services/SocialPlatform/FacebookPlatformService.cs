@@ -317,4 +317,9 @@ public class FacebookPlatformService : IPlatformService
             };
         }
     }
+
+    public Task<string?> UploadVideoAsync(string videoFilePath, string title, string description, List<string> tags, string privacyStatus = "private")
+    {
+        throw new NotImplementedException();
+    }
 }
