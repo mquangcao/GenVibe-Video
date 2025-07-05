@@ -71,7 +71,7 @@ public class AssemblyAiService : ICaptionService
 
             if (status == "completed")
             {
-                return pollingResponseBody;
+                return transcriptId;
             }
             else if (status == "error")
             {
@@ -83,5 +83,26 @@ public class AssemblyAiService : ICaptionService
                 throw new Exception($"Transcription failed: {errorMessage}");
             }
         }
+    }
+    
+    // THÊM MỚI: Phương thức lấy phụ đề định dạng SRT/VTT
+    public async Task<string> GetSubtitlesAsync(string transcriptId, string format = "srt")
+    {
+        if (format != "srt" && format != "vtt")
+        {
+            throw new ArgumentException("Format must be 'srt' or 'vtt'", nameof(format));
+        }
+
+        // AssemblyAI endpoint: GET /transcript/{id}/srt hoặc /vtt
+        var response = await _httpClient.GetAsync($"transcript/{transcriptId}/{format}");
+
+        if (!response.IsSuccessStatusCode)
+        {
+            _logger.LogError("Failed to retrieve {Format} subtitles for Transcript ID: {TranscriptId}. Status: {StatusCode}", format, transcriptId, response.StatusCode);
+            throw new Exception($"Failed to get {format} subtitles.");
+        }
+
+        // Trả về nội dung file SRT/VTT (dạng string)
+        return await response.Content.ReadAsStringAsync();
     }
 }
