@@ -1,5 +1,3 @@
-'use client';
-
 import React from 'react';
 
 import { useState, useEffect } from 'react';
@@ -10,9 +8,16 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Icons } from '@/common';
 import { Users, Eye, Play, Settings, Unlink, Plus, CheckCircle, AlertTriangle, Clock, Link, Loader2 } from 'lucide-react';
-import { connectPlatform, getChannelName, getUrlConnection } from '@/apis/connectPlatformService';
+import { getAllPlatformConnections, getPlatformInfo, getUrlConnection } from '@/apis/connectPlatformService';
 import { useToast } from '@/hooks';
+import dayjs from 'dayjs';
+import relativeTime from 'dayjs/plugin/relativeTime';
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
 
+dayjs.extend(relativeTime);
+dayjs.extend(utc);
+dayjs.extend(timezone);
 export default function PlatformConnectionsPage() {
   const [platformSlots, setPlatformSlots] = useState([
     {
@@ -43,60 +48,51 @@ export default function PlatformConnectionsPage() {
 
   useEffect(() => {
     const loadConnectedAccounts = async () => {
-      await new Promise((resolve) => setTimeout(resolve, 3000));
+      try {
+        var response = await getAllPlatformConnections();
+        if (response.data.success) {
+          console.log('Connected accounts:', response.data.data);
+          const platformInfos = response.data.data;
 
-      setPlatformSlots((prev) =>
-        prev.map((slot) => {
-          if (slot.platform === 'youtube') {
-            return {
-              ...slot,
-              loading: false,
-              connected: true,
-              account: {
-                name: 'Tech Reviews Vietnam',
-                username: '@techreviewsvn',
-                avatar: '/placeholder.svg?height=48&width=48',
-                verified: true,
-                stats: {
-                  followers: '125K',
-                  views: '2.3M',
-                  videos: '247',
-                },
-              },
-              tokenStatus: 'healthy',
-              lastSync: '2 minutes ago',
-              connectedDate: 'Dec 15, 2024',
-            };
-          } else if (slot.platform === 'facebook') {
-            return {
-              ...slot,
-              loading: false,
-              connected: true,
-              account: {
-                name: 'My Business Page',
-                username: 'mybusiness.vn',
-                avatar: '/placeholder.svg?height=48&width=48',
-                verified: true,
-                stats: {
-                  followers: '45.8K',
-                  views: '892K',
-                  videos: '156',
-                },
-              },
-              tokenStatus: 'error',
-              lastSync: 'Failed 1 hour ago',
-              connectedDate: 'Nov 28, 2024',
-            };
-          } else if (slot.platform === 'tiktok') {
-            return {
-              ...slot,
-              loading: false,
-              connected: false,
-            };
-          }
-          return slot;
-        })
-      );
+          const mergedPlatforms = platformSlots.map((config) => {
+            const info = platformInfos.find((p) => p.platformCode.toLowerCase() === config.platform.toLowerCase());
+            const localDate = dayjs.utc(info.lastSync).local();
+            const fromNow = localDate.fromNow();
+            return info.isConnecting
+              ? {
+                  ...config,
+                  loading: false,
+                  connected: true,
+                  account: {
+                    name: info.channelName,
+                    username: info.channelHandle,
+                    avatar: info.avatarUrl,
+                    verified: false,
+                    stats: {
+                      followers: info.subscriberCount,
+                      views: info.viewCount,
+                      videos: info.videoCount,
+                    },
+                  },
+                  tokenStatus: 'healthy',
+                  lastSync: fromNow,
+                  connectedDate: new Date(info.connectedDate).toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric',
+                  }),
+                }
+              : {
+                  ...config,
+                  loading: false,
+                };
+          });
+
+          setPlatformSlots(mergedPlatforms);
+        }
+      } catch (error) {
+        console.log(error);
+      }
     };
 
     loadConnectedAccounts();
@@ -105,17 +101,46 @@ export default function PlatformConnectionsPage() {
   useEffect(() => {
     const handleMessage = async (event) => {
       if (event.origin !== 'https://localhost:7073') return;
-
-      if (event.data.success) {
-        console.log('first');
+      const { success, platform } = event.data;
+      if (success) {
         try {
-          console.log(' 2');
-          var channelNameResponse = await getChannelName();
-          console.log(' 3');
-          console.log(channelNameResponse);
-          if (channelNameResponse.data.success) {
-            console.log('Channel Name:', channelNameResponse);
-            ToastSuccess('Kết nối thành công! ' + channelNameResponse.data.data.channelName);
+          var platformInfo = await getPlatformInfo(platform);
+          if (platformInfo.data.success) {
+            const { channelName, subscriberCount, videoCount, viewCount, avatarUrl, channelHandle, connectedDate, lastSync } =
+              platformInfo.data.data;
+
+            const localDate = dayjs.utc(lastSync).local();
+            const fromNow = localDate.fromNow();
+            setPlatformSlots((prev) =>
+              prev.map((slot) =>
+                slot.platform === platform
+                  ? {
+                      ...slot,
+                      loading: false,
+                      connected: true,
+                      account: {
+                        name: channelName,
+                        username: channelHandle,
+                        avatar: avatarUrl,
+                        verified: false,
+                        stats: {
+                          followers: subscriberCount,
+                          views: viewCount,
+                          videos: videoCount,
+                        },
+                      },
+                      tokenStatus: 'healthy',
+                      lastSync: fromNow,
+                      connectedDate: new Date(connectedDate).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                      }),
+                    }
+                  : slot
+              )
+            );
+            ToastSuccess(`Kết nối thành công với ${channelName}!`);
           }
         } catch (error) {
           console.error('Error fetching channel name:', error);
@@ -131,93 +156,44 @@ export default function PlatformConnectionsPage() {
     return () => {
       window.removeEventListener('message', handleMessage); // cleanup
     };
-  }, []); // chỉ chạy 1 lần khi component mount
+  }, []);
 
   const { ToastSuccess, ToastError } = useToast();
 
-  // const handleConnect = async (platform) => {
-  //   try {
-  //     var response = await getUrlConnection();
-  //     const popup = window.open(response.data.data.url, '_blank', 'width=500,height=600');
-
-  //     window.addEventListener('message', async (event) => {
-  //       if (event.origin !== 'https://localhost:7073') return;
-  //       if (event.data.success) {
-  //         console.log('first');
-  //         try {
-  //           console.log(' 2');
-  //           var channelNameResponse = await getChannelName();
-  //           console.log(' 3');
-  //           console.log(channelNameResponse);
-  //           if (channelNameResponse.data.success) {
-  //             console.log('Channel Name:', channelNameResponse);
-  //             ToastSuccess('Kết nối thành công!' + channelNameResponse.data.data.channelName);
-  //           }
-  //         } catch (error) {
-  //           console.error('Error fetching channel name:', error);
-  //           ToastError('Kết nối thành công nhưng không thể lấy tên kênh!');
-  //         }
-  //       } else {
-  //         ToastError('Kết nối thất bại!');
-  //       }
-  //     });
-
-  //     console.log('Connect Platform Response:', response);
-  //   } catch (error) {
-  //     console.error('Error connecting platform:', error);
-  //     return;
-  //   }
-  //   setPlatformSlots((prev) =>
-  //     prev.map((slot) =>
-  //       slot.platform === platform
-  //         ? {
-  //             ...slot,
-  //             loading: true,
-  //           }
-  //         : slot
-  //     )
-  //   );
-
-  //   setTimeout(() => {
-  //     setPlatformSlots((prev) =>
-  //       prev.map((slot) =>
-  //         slot.platform === platform
-  //           ? {
-  //               ...slot,
-  //               loading: false,
-  //               connected: true,
-  //               account: {
-  //                 name: `My ${slot.platformName} Account`,
-  //                 username: `@user${Math.floor(Math.random() * 1000)}`,
-  //                 avatar: '/placeholder.svg?height=48&width=48',
-  //                 verified: false,
-  //                 stats: {
-  //                   followers: `${Math.floor(Math.random() * 100)}K`,
-  //                   views: `${Math.floor(Math.random() * 500)}K`,
-  //                   videos: `${Math.floor(Math.random() * 200)}`,
-  //                 },
-  //               },
-  //               tokenStatus: 'healthy',
-  //               lastSync: 'Just now',
-  //               connectedDate: new Date().toLocaleDateString('en-US', {
-  //                 month: 'short',
-  //                 day: 'numeric',
-  //                 year: 'numeric',
-  //               }),
-  //             }
-  //           : slot
-  //       )
-  //     );
-  //   }, 1500);
-  // };
-
   const handleConnect = async (platform) => {
     try {
-      var response = await getUrlConnection();
+      setPlatformSlots((prev) =>
+        prev.map((slot) =>
+          slot.platform === platform
+            ? {
+                ...slot,
+                loading: true,
+              }
+            : slot
+        )
+      );
+      var response = await getUrlConnection(platform);
       const popup = window.open(response.data.data.url, '_blank', 'width=500,height=600');
+      const popupCheckInterval = setInterval(() => {
+        if (!popup || popup.closed) {
+          clearInterval(popupCheckInterval);
+
+          setPlatformSlots((prev) => prev.map((slot) => (slot.platform === platform ? { ...slot, loading: false } : slot)));
+        }
+      }, 2000);
     } catch (err) {
       console.error(err);
       ToastError('Không thể kết nối.');
+      setPlatformSlots((prev) =>
+        prev.map((slot) =>
+          slot.platform === platform
+            ? {
+                ...slot,
+                loading: false,
+              }
+            : slot
+        )
+      );
     }
   };
 
@@ -400,7 +376,9 @@ export default function PlatformConnectionsPage() {
                         <div className="text-center">
                           <div className="flex items-center justify-center space-x-1 text-slate-600">
                             <Eye className="w-3 h-3" />
-                            <span className="text-sm font-semibold">{slot.account.stats.views}</span>
+                            <span className="text-sm font-semibold">
+                              {slot.account.stats.views == -1 ? '..' : slot.account.stats.views}
+                            </span>
                           </div>
                           <p className="text-xs text-slate-500 mt-1">Views</p>
                         </div>

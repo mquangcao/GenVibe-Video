@@ -23,5 +23,6 @@ public interface ISocialPlatformService
     Task<List<UserSocialAccount>> GetAllAccountsAsync(string userId);
     Task<UserSocialAccount?> GetAccountAsync(string userId, string platformCode);
     Task<string?> GetAcessTokenAsync(string userId, string platformCode);
+    Task<string?> GetRefreshTokenAsync(string userId, string platformCode);
 
 }

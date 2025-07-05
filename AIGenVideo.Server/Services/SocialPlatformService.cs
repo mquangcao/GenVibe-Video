@@ -32,6 +32,14 @@ public class SocialPlatformService : ISocialPlatformService
                 .ToListAsync();
     }
 
+    public async Task<string?> GetRefreshTokenAsync(string userId, string platformCode)
+    {
+        return await _context.UserSocialAccounts
+            .Where(a => a.UserId == userId && a.Platform.Code == platformCode && !a.IsRevoked)
+            .Select(a => a.RefreshToken)
+            .FirstOrDefaultAsync();
+    }
+
     public async Task<bool> IsTokenExpiredAsync(string userId, string platformCode)
     {
         var account = await GetAccountAsync(userId, platformCode);

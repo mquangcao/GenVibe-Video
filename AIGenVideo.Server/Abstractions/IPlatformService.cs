@@ -1,4 +1,6 @@
-﻿namespace AIGenVideo.Server.Abstractions;
+﻿using AIGenVideo.Server.Models.DomainModels;
+
+namespace AIGenVideo.Server.Abstractions;
 
 public interface IPlatformService
 {
@@ -7,4 +9,9 @@ public interface IPlatformService
     Task<int> GetVideoCountAsync();
     Task<long> GetViewCountAsync();
     Task<string?> GetChannelHandleAsync();
+    Task<string?> GetAvatarUrlAsync();
+    Task<PlatformInfo> GetPlatFormInfo();
+    Task<string?> GetAccessToken();
+    Task<string?> GetOAuthUrl(string redirectUrl);
+    Task<PlatformRedirectResult> HandlePlatformRedirectAsync(string code, string state, string redirectUrl);
 }

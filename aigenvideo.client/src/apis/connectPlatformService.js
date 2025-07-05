@@ -1,13 +1,15 @@
 import axiosClient from './axiosClient';
 
-export const connectPlatform = async () => {
-  return await axiosClient.get('api/connections/connect-youtube');
+export const getUrlConnection = async (platform) => {
+  return await axiosClient.get(
+    `api/oauth/platform-connect?platform=${platform}&redirectUri=https://localhost:50464/account/platform-connections`
+  );
 };
 
-export const getUrlConnection = async () => {
-  return await axiosClient.get(`api/oauth/youtube-url?redirectUri=https://localhost:50464/account/platform-connections`);
+export const getPlatformInfo = async (platform) => {
+  return await axiosClient.get(`api/social-platform/${platform}/info`);
 };
 
-export const getChannelName = async () => {
-  return await axiosClient.get('api/social-platform/channel-name');
+export const getAllPlatformConnections = async () => {
+  return await axiosClient.get('api/social-platform/connections');
 };

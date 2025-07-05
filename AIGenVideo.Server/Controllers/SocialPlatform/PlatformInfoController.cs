@@ -1,25 +1,51 @@
-﻿namespace AIGenVideo.Server.Controllers.SocialPlatform;
-[Route("api/social-platform")]
+﻿using AIGenVideo.Server.Models.DomainModels;
+using AIGenVideo.Server.Services.SocialPlatform;
+using Microsoft.AspNetCore.Authorization;
 
+namespace AIGenVideo.Server.Controllers.SocialPlatform;
+[Route("api/social-platform")]
+[Authorize]
 public class PlatformInfoController : Controller
 {
-    private readonly IPlatformService _platformService;
-    public PlatformInfoController(IPlatformService platformService)
+    private readonly SocialPlatformFactory _socialPlatformFactory;
+    public PlatformInfoController(SocialPlatformFactory socialPlatformFactory)
     {
-        _platformService = platformService;
+        _socialPlatformFactory = socialPlatformFactory;
     }
-    [HttpGet("channel-name")]
-    public async Task<IActionResult> GetChannelNameAsync()
-    {
-        var channelName = await _platformService.GetChannelNameAsync();
-        var sub = await _platformService.GetSubscriberCountAsync();
-        var videoCount = await _platformService.GetVideoCountAsync();
 
-        return Ok(ApiResponse.SuccessResponse(new
+    [HttpGet("connections")]
+    public async Task<IActionResult> GetAllPlatform()
+    {
+        try
         {
-            ChannelName = channelName,
-            SubscriberCount = sub,
-            VideoCount = videoCount
-        }));
+            var youtubePlatform = _socialPlatformFactory.Create("youtube");
+            var tiktokPlatform = _socialPlatformFactory.Create("tiktok");
+            var facebookPlatform = _socialPlatformFactory.Create("facebook");
+            var youtubeInfo = await youtubePlatform.GetPlatFormInfo();
+            var tiktokInfo = await tiktokPlatform.GetPlatFormInfo();
+            var facebookInfo = await facebookPlatform.GetPlatFormInfo();
+
+            return Ok(ApiResponse<List<PlatformInfo>>.SuccessResponse([youtubeInfo, tiktokInfo, facebookInfo]));
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(ApiResponse.FailResponse(ex.Message));
+        }
+    }
+
+    [HttpGet("{platform}/info")]
+    public async Task<IActionResult> GetPlatFormInfo(string platform)
+    {
+        try
+        {
+            var socialPlatform = _socialPlatformFactory.Create(platform);
+            var platformInfo = await socialPlatform.GetPlatFormInfo();
+
+            return Ok(ApiResponse<PlatformInfo>.SuccessResponse(platformInfo));
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(ApiResponse.FailResponse(ex.Message));
+        }
     }
 }

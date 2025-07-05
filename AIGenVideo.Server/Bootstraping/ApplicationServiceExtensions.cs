@@ -49,7 +49,10 @@ public static class ApplicationServiceExtensions
 
         builder.Services.AddScoped<IOAuthStateService, OAuthStateService>();
 
-        builder.Services.AddScoped<IPlatformService , YouTubePlatformService>();
+        builder.Services.AddScoped<YouTubePlatformService>();
+        builder.Services.AddScoped<TiktokPlatformService>();
+        builder.Services.AddScoped<FacebookPlatformService>();
+        builder.Services.AddScoped<SocialPlatformFactory>();
 
 
         return builder;

@@ -1,13 +1,11 @@
-﻿using AIGenVideo.Server.Models.Configurations;
-using AIGenVideo.Server.Models.DomainModels;
+﻿using AIGenVideo.Server.Data.Entities;
+using AIGenVideo.Server.Models.Configurations;
+using AIGenVideo.Server.Services.SocialPlatform;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Options;
 using System.Net.Http.Headers;
 using System.Security.Claims;
-using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json;
 
 namespace AIGenVideo.Server.Controllers.SocialPlatform
@@ -23,8 +21,11 @@ namespace AIGenVideo.Server.Controllers.SocialPlatform
         private readonly LinkGenerator _linkGenerator;
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly TikTokOptions _tiktokOptions;
+        private readonly ILogger<ConnectionsController> _logger;
+        private readonly SocialPlatformFactory _socialPlatformFactory;
+        private readonly FacebookOptions _facebookOptions;
 
-        public ConnectionsController(ISocialPlatformService socialPlatformService, IOAuthStateService oAuthStateService, IOptions<LoginGoogleOptions> googleOptions, LinkGenerator linkGenerator, IHttpClientFactory httpClientFactory, IOptions<TikTokOptions> tiktokOptions)
+        public ConnectionsController(ISocialPlatformService socialPlatformService, IOAuthStateService oAuthStateService, IOptions<LoginGoogleOptions> googleOptions, LinkGenerator linkGenerator, IHttpClientFactory httpClientFactory, IOptions<TikTokOptions> tiktokOptions, ILogger<ConnectionsController> logger, SocialPlatformFactory socialPlatformFactory, IOptions<FacebookOptions> facebookOptions)
         {
             _socialPlatformService = socialPlatformService;
             _oAuthStateService = oAuthStateService;
@@ -32,6 +33,9 @@ namespace AIGenVideo.Server.Controllers.SocialPlatform
             _linkGenerator = linkGenerator;
             _httpClientFactory = httpClientFactory;
             _tiktokOptions = tiktokOptions.Value;
+            _logger = logger;
+            _socialPlatformFactory = socialPlatformFactory;
+            _facebookOptions = facebookOptions.Value;
         }
         #region addOauth2
         [HttpGet("connect-youtube")]
@@ -55,7 +59,7 @@ namespace AIGenVideo.Server.Controllers.SocialPlatform
         }
 
         [HttpGet("youtube-callback")]
-        public async Task<IActionResult> YouTubeCallback()
+        public async Task<IActionResult> YouTubeCallbackOAuth()
         {
             try
             {
@@ -92,89 +96,59 @@ namespace AIGenVideo.Server.Controllers.SocialPlatform
         }
         #endregion
 
-
-        #region youtube
-        [HttpGet("/api/oauth/youtube-url")]
+        [HttpGet("/api/oauth/platform-connect")]
         [Authorize]
-        public async Task<IActionResult> GetGoogleOAuthUrl([FromQuery] string redirectUri)
+        public async Task<IActionResult> GetOAuthUrl([FromQuery] string redirectUri, [FromQuery] string platform)
         {
-            var state = Guid.NewGuid().ToString(); 
-            var userId = HttpContext.User.GetUserId(); 
-
-            await _oAuthStateService.SetStateAsync(state, new OAuthStateData { UserId = userId });
-
-            var oauthUrl = QueryHelpers.AddQueryString("https://accounts.google.com/o/oauth2/v2/auth", new Dictionary<string, string?>
+            try
             {
-                ["client_id"] = _googleOptions.ClientId,
-                ["redirect_uri"] = _linkGenerator.GetUriByAction(HttpContext, "GoogleCallback"), 
-                ["response_type"] = "code",
-                ["scope"] = "openid email profile https://www.googleapis.com/auth/youtube.readonly",
-                ["access_type"] = "offline",
-                ["prompt"] = "consent",
-                ["state"] = state
-            });
+                var redirectUrl = GetRedirectUrl(platform);
+                var socialPlatform = _socialPlatformFactory.Create(platform);
+                var url = await socialPlatform.GetOAuthUrl(redirectUrl);
 
-            return Ok(ApiResponse.SuccessResponse(new
+                return Ok(ApiResponse.SuccessResponse(new
+                {
+                    Url = url
+                }));
+            } 
+            catch (ArgumentException ex)
             {
-                Url = oauthUrl
-            }));
+                return BadRequest(ApiResponse.FailResponse($"Invalid platform: {ex.Message}"));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(Constants.SERVER_ERROR_CODE, ApiResponse.FailResponse($"An error occurred while generating the OAuth URL: {ex.Message}"));
+            }
         }
 
-        [HttpGet("/oauth/youtube-callback")]
-        public async Task<IActionResult> GoogleCallback(string code, string state)
+        private string GetRedirectUrl(string platform)
         {
-            var stateData = await _oAuthStateService.GetStateAsync(state);
-            if (stateData == null || string.IsNullOrEmpty(stateData.UserId))
+            return platform switch
             {
-                return BadRequest("Invalid state");
+                Constants.YOUTUBE_PLATFORM_CODE => _linkGenerator.GetUriByAction(HttpContext, "YoutubeCallback")!,
+                Constants.FACEBOOK_PLATFORM_CODE => _linkGenerator.GetUriByAction(HttpContext, "FacebookCallback")!,
+                Constants.TIKTOK_PLATFORM_CODE => _linkGenerator.GetUriByAction(HttpContext, "TikTokCallback")!,
+                _ => throw new ArgumentException($"Unknown platform: {platform}", nameof(platform))
+            };
+        }
+
+        #region youtube
+        [HttpGet("/oauth/youtube-callback")]
+        public async Task<IActionResult> YoutubeCallback(string code, string state)
+        {
+            var socialPlatform = _socialPlatformFactory.Create(Constants.YOUTUBE_PLATFORM_CODE);
+            var handleResult = await socialPlatform.HandlePlatformRedirectAsync(code, state, GetRedirectUrl(Constants.YOUTUBE_PLATFORM_CODE));
+
+            if (!handleResult.IsSuccess)
+            {
+                return StatusCode(handleResult.StatusCode, ApiResponse.FailResponse(handleResult.Message));
             }
 
-            var userId = stateData.UserId;
-
-            // Gọi token endpoint
-            var httpClient = _httpClientFactory.CreateClient();
-            var link = _linkGenerator.GetUriByAction(HttpContext, "GoogleCallback");
-            var response = await httpClient.PostAsync("https://oauth2.googleapis.com/token", new FormUrlEncodedContent(new Dictionary<string, string>
-            {
-                ["code"] = code,
-                ["client_id"] = _googleOptions.ClientId,
-                ["client_secret"] = _googleOptions.ClientSecret,
-                ["redirect_uri"] = _linkGenerator.GetUriByAction(HttpContext, "GoogleCallback")!,
-                ["grant_type"] = "authorization_code"
-            }));
-            var content = await response.Content.ReadAsStringAsync();
-
-            if (!response.IsSuccessStatusCode)
-            {
-                // In ra lỗi chi tiết (có thể log hoặc throw exception tuỳ bạn)
-                Console.WriteLine("Token exchange failed:");
-                Console.WriteLine(content);
-
-                return BadRequest($"Google token error: {content}");
-            }
-
-            var payload = await response.Content.ReadFromJsonAsync<JsonElement>();
-            var accessToken = payload.GetProperty("access_token").GetString();
-            var refreshToken = payload.GetProperty("refresh_token").GetString();
-            var expiresIn = payload.GetProperty("expires_in").GetInt32();
-            var expiry = DateTime.UtcNow.AddSeconds(expiresIn);
-
-            // Gọi UserInfo để lấy GoogleId + DisplayName
-            var client = _httpClientFactory.CreateClient();
-            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
-            var userInfo = await client.GetFromJsonAsync<JsonElement>("https://www.googleapis.com/oauth2/v2/userinfo");
-
-            var googleId = userInfo.GetProperty("id").GetString();
-            var name = userInfo.GetProperty("name").GetString();
-
-            await _socialPlatformService.SaveTokenAsync(userId, "youtube", googleId!, name!, accessToken!, refreshToken!, expiry, "youtube.readonly");
-
-            // Trả về HTML dùng postMessage
             var html = """
                 <html>
                 <body>
                 <script>
-                    window.opener.postMessage({ success: true }, "*");
+                    window.opener.postMessage({ success: true , platform : "youtube" }, "*");
                     window.close();
                 </script>
                 </body>
@@ -185,56 +159,6 @@ namespace AIGenVideo.Server.Controllers.SocialPlatform
         }
         #endregion
         #region tiktok
-        [HttpGet("/api/oauth/tiktok-url")]
-        [Authorize]
-        public async Task<IActionResult> GetTikTokOAuthUrl()
-        {
-            var state = Guid.NewGuid().ToString();
-            var userId = HttpContext.User.GetUserId();
-
-            // Tạo code_verifier
-            var codeVerifier = GenerateCodeVerifier();
-            var codeChallenge = GenerateCodeChallenge(codeVerifier);
-
-            // Lưu cả userId và code_verifier vào Redis
-            await _oAuthStateService.SetStateAsync(state, new OAuthStateData
-            {
-                UserId = userId,
-                CodeVerifier = codeVerifier
-            });
-
-            var url = QueryHelpers.AddQueryString("https://www.tiktok.com/v2/auth/authorize", new Dictionary<string, string?>
-            {
-                ["client_key"] = _tiktokOptions.ClientId,
-                ["redirect_uri"] = "https://5db0-14-169-70-31.ngrok-free.app/oauth/tiktok-callback",
-                ["response_type"] = "code",
-                ["scope"] = "user.info.basic,video.list",
-                ["state"] = state,
-                ["code_challenge"] = codeChallenge,
-                ["code_challenge_method"] = "S256"
-            });
-
-            return Ok(ApiResponse.SuccessResponse(new { Url = url }));
-        }
-
-        private string GenerateCodeVerifier()
-        {
-            var bytes = RandomNumberGenerator.GetBytes(64);
-            return Convert.ToBase64String(bytes)
-                .TrimEnd('=').Replace('+', '-').Replace('/', '_');
-        }
-
-        private string GenerateCodeChallenge(string codeVerifier)
-        {
-            var bytes = Encoding.ASCII.GetBytes(codeVerifier);
-            using var sha256 = SHA256.Create();
-            var hash = sha256.ComputeHash(bytes);
-            return Convert.ToBase64String(hash)
-                .TrimEnd('=').Replace('+', '-').Replace('/', '_');
-        }
-
-
-
         [HttpGet("/oauth/tiktok-callback")]
         public async Task<IActionResult> TikTokCallback(string code, string state)
         {
@@ -251,7 +175,7 @@ namespace AIGenVideo.Server.Controllers.SocialPlatform
                 ["client_secret"] = _tiktokOptions.ClientSecret,
                 ["code"] = code,
                 ["grant_type"] = "authorization_code",
-                ["redirect_uri"] = "https://5db0-14-169-70-31.ngrok-free.app/oauth/tiktok-callback",
+                ["redirect_uri"] = GetRedirectUrl(Constants.TIKTOK_PLATFORM_CODE),
                 ["code_verifier"] = stateData.CodeVerifier!,
             }));
 
@@ -282,7 +206,7 @@ namespace AIGenVideo.Server.Controllers.SocialPlatform
 
             var html = """
                 <html><body><script>
-                    window.opener.postMessage({ success: true }, "*");
+                    window.opener.postMessage({ success: true , platform : "tiktok" }, "*");
                     window.close();
                 </script></body></html>
             """;
@@ -290,5 +214,96 @@ namespace AIGenVideo.Server.Controllers.SocialPlatform
         }
 
         #endregion
+
+        #region facebook
+        [HttpGet("/oauth/facebook-callback")]
+        public async Task<IActionResult> FacebookCallback(string code, string state)
+        {
+            try
+            {
+                var stateData = await _oAuthStateService.GetStateAsync(state);
+                if (stateData == null || string.IsNullOrEmpty(stateData.UserId))
+                {
+                    return BadRequest("Invalid state");
+                }
+
+                var userId = stateData.UserId;
+
+                var httpClient = _httpClientFactory.CreateClient();
+                var response = await httpClient.PostAsync("https://graph.facebook.com/v19.0/oauth/access_token", new FormUrlEncodedContent(new Dictionary<string, string>
+                {
+                    ["client_id"] = _facebookOptions.ClientId,
+                    ["redirect_uri"] = GetRedirectUrl(Constants.FACEBOOK_PLATFORM_CODE),
+                    ["client_secret"] = _facebookOptions.ClientSecret,
+                    ["code"] = code
+                }));
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    return BadRequest($"Facebook token error: {await response.Content.ReadAsStringAsync()}");
+                }
+
+                var payload = await response.Content.ReadFromJsonAsync<JsonElement>();
+
+                // Lấy access_token
+                var accessToken = payload.GetProperty("access_token").GetString();
+
+                // Thử lấy expires_in nếu có
+                int? expiresIn = null;
+                if (payload.TryGetProperty("expires_in", out var expiresInElement))
+                {
+                    expiresIn = expiresInElement.GetInt32();
+                }
+
+                // Gán thời điểm hết hạn
+                var expiry = expiresIn.HasValue
+                    ? DateTime.UtcNow.AddSeconds(expiresIn.Value)
+                    : DateTime.UtcNow.AddDays(60); 
+
+                // Lấy thông tin người dùng
+                var userInfoResponse = await httpClient.GetAsync($"https://graph.facebook.com/me?fields=id,name,picture&access_token={accessToken}");
+                if (!userInfoResponse.IsSuccessStatusCode)
+                {
+                    return BadRequest($"Facebook user info error: {await userInfoResponse.Content.ReadAsStringAsync()}");
+                }
+
+                var userInfo = await userInfoResponse.Content.ReadFromJsonAsync<JsonElement>();
+                var facebookId = userInfo.GetProperty("id").GetString();
+                var displayName = userInfo.GetProperty("name").GetString();
+
+                await _socialPlatformService.SaveTokenAsync(
+                    userId,
+                    Constants.FACEBOOK_PLATFORM_CODE,
+                    facebookId!,
+                    displayName!,
+                    accessToken!,
+                    string.Empty,
+                    expiry,
+                    "public_profile,email"
+                );
+
+                var html = """
+                    <html>
+                    <body>
+                    <script>
+                        window.opener.postMessage({ success: true , platform : "facebook" }, "*");
+                        window.close();
+                    </script>
+                    </body>
+                    </html>
+                """;
+
+                return Content(html, "text/html");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "FacebookCallback failed");
+                return StatusCode(Constants.SERVER_ERROR_CODE, ApiResponse.FailResponse($"An error occurred while processing the Facebook callback: {ex.Message}"));
+            }
+        }
+
+        #endregion
+
+
     }
 }
