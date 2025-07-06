@@ -25,6 +25,7 @@ import {
 } from '@/utils/videoCreationUtils';
 import { saveFullVideoData } from '@/apis/saveFullVideoData';
 import { generateAudio } from '@/apis/audioService';
+import { generateCaptionsFromApi } from '@/apis/captionService';
 const VideoEditor = ({
   videoPrompt,
   setVideoPrompt,
@@ -122,7 +123,7 @@ const VideoEditor = ({
     return response.secure_url;
   };
 
-  const createVideoWithIndividualAudios = async () => {
+const createVideoWithIndividualAudios = async () => {
     if (!ffmpegLoaded || !videoResult || images.length === 0) {
       return console.error('Cannot create video: FFmpeg not loaded, no scenes, or no images');
     }
@@ -133,16 +134,35 @@ const VideoEditor = ({
     setIsProcessingVideo(true);
 
     try {
-      const audioUrls = [];
-      for (let i = 0; i < usedScenes.length; i++) {
-        const audioUrl = await generateAudioBlob(usedScenes[i].summary, selectedGoogleVoice, speechRate);
-        audioUrls.push(audioUrl);
-      }
-      // Upload all audio blobs to Cloudinary
-      const fullScript = videoResult.map((scene) => scene.summary).join(' ');
-      const fullAudio = await generateAudio({ text: fullScript, selectedGoogleVoice, speechRate }).then((response) => response.data);
-      const finalAudioUrl = await uploadToCloudinary(fullAudio, 'generated-audio', 'video');
+      // BƯỚC 1: Tạo các audio blob riêng lẻ cho từng cảnh (Giữ nguyên)
+      const audioBlobs = await Promise.all(
+        usedScenes.map(scene => generateAudioBlob(scene.summary, selectedGoogleVoice, speechRate))
+      );
+      const audioUrls = audioBlobs.map(blob => URL.createObjectURL(blob));
 
+      // BƯỚC 2: Tạo audio tổng hợp (Giữ nguyên)
+      const fullScript = videoResult.map((scene) => scene.summary).join(' ');
+      const fullAudioBlob = await generateAudio({ text: fullScript, selectedGoogleVoice, speechRate }).then((response) => response.data);
+      
+      // Upload audio tổng hợp lên Cloudinary (Giữ nguyên)
+      // Chúng ta cần URL này để lưu vào DB
+      const finalAudioUrl = await uploadToCloudinary(fullAudioBlob, 'generated-audio', 'video');
+
+      // BƯỚC 3: LẤY PHỤ ĐỀ TỪ BACKEND (Thay đổi cốt lõi)
+      let backendSrtContent = null;
+      if (subtitleSettings.enabled) {
+        console.log("Requesting captions from Backend API...");
+        try {
+            // Gọi hàm API mới đã tạo
+            backendSrtContent = await generateCaptionsFromApi(fullAudioBlob);
+            console.log("Successfully received captions from Backend.");
+        } catch (apiError) {
+            console.error("Failed to get captions from API, will fallback to client-side generation.", apiError);
+            // Nếu lỗi, `backendSrtContent` sẽ vẫn là null, và hệ thống sẽ tự dùng fallback
+        }
+      }
+
+      // BƯỚC 4: TẠO VIDEO, TRUYỀN PHỤ ĐỀ VÀO (Thay đổi cốt lõi)
       let result;
       if (subtitleSettings.enabled) {
         const subtitleOptions = {
@@ -153,12 +173,17 @@ const VideoEditor = ({
             backgroundColor: subtitleSettings.backgroundColor,
             position: subtitleSettings.position,
           },
+          // <<-- TRUYỀN PHỤ ĐỀ TỪ BACKEND VÀO ĐÂY -->>
+          existingSrtContent: backendSrtContent, 
         };
         result = await createVideoFromImagesAndIndividualAudiosWithSubtitles(ffmpeg, usedImages, audioUrls, usedScenes, subtitleOptions);
       } else {
+        // Nếu không bật phụ đề, vẫn tạo video như cũ
         const videoURL = await createVideoFromImagesAndIndividualAudios(ffmpeg, usedImages, audioUrls);
         result = { videoUrl: videoURL, subtitleUrl: null }; // Standardize the result object
       }
+      
+      // BƯỚC 5: HIỂN THỊ, UPLOAD VÀ LƯU (Giữ nguyên)
       setVideoUrl(result.videoUrl);
       setSubtitleUrl(result.subtitleUrl);
       setActiveTab('videoReview');
@@ -168,32 +193,38 @@ const VideoEditor = ({
 
       const videoUploadPromise = uploadToCloudinary(videoBlob, 'videos', 'video');
 
+      // `result.subtitleUrl` bây giờ là blob của SRT từ backend hoặc từ client (nếu fallback)
       const srtUploadPromise = result.subtitleUrl
         ? fetch(result.subtitleUrl)
             .then((res) => res.blob())
             .then((srtBlob) => uploadToCloudinary(srtBlob, 'subtitles', 'raw'))
         : Promise.resolve(null);
 
-      const [finalVideoUrl, finalSrtUrl] = await Promise.all([videoUploadPromise, srtUploadPromise]);
+      // Chờ upload xong
+      const [finalVideoUrl, finalSrtUploadResult] = await Promise.all([videoUploadPromise, srtUploadPromise]);
+      const finalSrtUrl = finalSrtUploadResult ? finalSrtUploadResult.secure_url : null;
+
       console.log('...Final assets uploaded successfully.');
 
       console.log('Saving all data to database...');
       const videoDataPayload = {
         ImageListUrl: usedImages.map((img) => img.url),
         VideoUrl: finalVideoUrl,
-        Srts: finalSrtUrl || '',
+        Srts: finalSrtUrl || '', // Lưu URL của file SRT trên Cloudinary
         Captions: usedScenes.map((s) => s.summary).join('\n\n'),
         AudioFileUrl: finalAudioUrl,
-        CreatedBy: 'current_user_id',
+        CreatedBy: 'current_user_id', // Cần thay bằng logic lấy user thật
       };
       await saveFullVideoData(videoDataPayload);
 
+      // Dọn dẹp
       audioUrls.forEach((url) => URL.revokeObjectURL(url));
       URL.revokeObjectURL(result.videoUrl);
       if (result.subtitleUrl) {
         URL.revokeObjectURL(result.subtitleUrl);
       }
     } catch (error) {
+        console.error("An error occurred in the video creation process:", error);
     } finally {
       setIsProcessingVideo(false);
     }

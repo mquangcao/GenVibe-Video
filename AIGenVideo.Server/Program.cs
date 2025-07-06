@@ -18,6 +18,7 @@ builder.AddOptionPattern();
 builder.Services.AddContentGenerateServices(builder.Configuration);
 builder.Services.AddVideoGenerateServices(builder.Configuration);
 builder.Services.AddImageGenerationServices();
+builder.Services.AddScoped<CloudinaryService>();
 var app = builder.Build();
 
 

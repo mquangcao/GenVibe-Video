@@ -40,6 +40,7 @@ export function generateSRTSubtitles(scenes, audioDurations) {
  * @param {Array} audioUrls - Array of audio URLs, one for each image
  * @param {Array} scenes - Array of scene objects with summary text for subtitles
  * @param {Object} options - Optional configuration
+ * @param {string} [options.existingSrtContent=null] - Nếu có, dùng chuỗi SRT này thay vì tự tạo.
  * @returns {Promise<{videoUrl: string, subtitleUrl: string}>} - URLs of the created video and subtitle file
  */
 export async function createVideoFromImagesAndIndividualAudiosWithSubtitles(ffmpeg, images, audioUrls, scenes, options = {}) {
@@ -48,6 +49,7 @@ export async function createVideoFromImagesAndIndividualAudiosWithSubtitles(ffmp
         throw new Error('Missing required parameters or mismatched counts for video creation');
     }
 
+    // THÊM MỚI: Đọc option `existingSrtContent`
     const {
         embedSubtitles = false, // Change default to false for external subtitles
         subtitleStyle = {
@@ -55,7 +57,8 @@ export async function createVideoFromImagesAndIndividualAudiosWithSubtitles(ffmp
             fontColor: '#ffffff',
             backgroundColor: '#000000',
             position: 'bottom'
-        }
+        },
+        existingSrtContent = null, // Thêm option này
     } = options;
 
     try {
@@ -91,9 +94,18 @@ export async function createVideoFromImagesAndIndividualAudiosWithSubtitles(ffmp
             console.log(`Audio ${i} duration:`, audioDuration, 'seconds');
         }
 
-        // Generate SRT subtitles
-        console.log('Generating subtitles...');
-        const srtContent = generateSRTSubtitles(scenes, audioDurations);
+        // --- SỬA ĐỔI LOGIC TẠO PHỤ ĐỀ ---
+        let srtContent;
+        if (existingSrtContent && typeof existingSrtContent === 'string' && existingSrtContent.trim() !== '') {
+            console.log('Using existing SRT content provided from backend.');
+            srtContent = existingSrtContent;
+        } else {
+            console.warn('Backend SRT not provided or is empty, falling back to client-side generation.');
+            // Dùng hàm `generateSRTSubtitles` như một phương án dự phòng
+            srtContent = generateSRTSubtitles(scenes, audioDurations);
+        }
+        // ------------------------------------
+
         console.log('Generated SRT content length:', srtContent.length);
         console.log('SRT preview:', srtContent.substring(0, 200) + '...');
 
