@@ -49,4 +49,10 @@
     <Folder Include="wwwroot\" />
   </ItemGroup>
 
+<ItemGroup>
+  <None Update="google-credentials.json">
+    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+  </None>
+</ItemGroup>
+
 </Project>
