@@ -1,4 +1,6 @@
-import { EnhancedExporter } from './enhanced-exporter.js';
+'use client';
+
+import { SyncPerfectExporter } from './sync-perfect-exporter';
 
 export class VideoProcessor {
   static async getVideoDuration(file) {
@@ -48,6 +50,7 @@ export class VideoProcessor {
     });
   }
 
+  // SYNC-PERFECT export - NO LOOPS, PERFECT TIMING
   static async exportVideo(
     mediaItems,
     timelineItems,
@@ -58,29 +61,22 @@ export class VideoProcessor {
     quality = 'medium',
     onProgress
   ) {
-    console.log(`🎬 Starting enhanced ${format.toUpperCase()} export with audio...`);
+    console.log(`🎬 SYNC-PERFECT export - NO LOOPS, LINEAR TIME PROGRESSION`);
 
-    const exporter = new EnhancedExporter(1920, 1080);
+    const exporter = new SyncPerfectExporter(1920, 1080);
 
     try {
-      const videoBlob = await exporter.exportVideo(
-        mediaItems,
-        timelineItems,
-        textElements,
-        stickerElements,
-        duration,
-        format,
-        quality,
-        onProgress
-      );
+      const videoBlob = await exporter.exportVideo(mediaItems, timelineItems, textElements, stickerElements, duration, onProgress);
 
-      const sizeMB = (videoBlob.size / 1024 / 1024).toFixed(2);
-      console.log(`✅ Enhanced export completed! Final size: ${sizeMB} MB`);
+      if (videoBlob.size === 0) {
+        throw new Error('Export failed - empty file');
+      }
 
+      console.log(`✅ SYNC-PERFECT export done! Size: ${(videoBlob.size / 1024 / 1024).toFixed(2)} MB`);
       return videoBlob;
     } catch (error) {
-      console.error('Enhanced export error:', error);
-      throw new Error(`Failed to export video with audio: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error('SYNC-PERFECT export error:', error);
+      throw new Error(`Export failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 }

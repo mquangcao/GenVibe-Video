@@ -9,18 +9,27 @@ import { Slider } from '@/components/ui/slider';
 export function Preview({ editorState, onPlayPause, onUpdateText, onUpdateSticker }) {
   const canvasRef = useRef(null);
   const videoContainerRef = useRef(null);
+  const animationFrameRef = useRef();
   const [videoElements, setVideoElements] = useState(new Map());
   const [currentVideoId, setCurrentVideoId] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
   const [draggedElement, setDraggedElement] = useState(null);
   const [volume, setVolume] = useState([80]);
   const [isMuted, setIsMuted] = useState(false);
-  const [isSeekingRef, setIsSeekingRef] = useState(false);
+  const [debugInfo, setDebugInfo] = useState('');
+
+  // FIXED: Canvas dimensions and scale
+  const CANVAS_WIDTH = 640;
+  const CANVAS_HEIGHT = 360;
+  const EXPORT_WIDTH = 1920;
+  const EXPORT_HEIGHT = 1080;
+  const SCALE_X = CANVAS_WIDTH / EXPORT_WIDTH; // 0.333
+  const SCALE_Y = CANVAS_HEIGHT / EXPORT_HEIGHT; // 0.333
 
   // Check if there's any content to play
   const hasContent = editorState.timelineItems.length > 0 || editorState.textElements.length > 0 || editorState.stickerElements.length > 0;
 
-  // Create and manage video elements
+  // Create video elements - HIDDEN videos are MUTED
   useEffect(() => {
     const newVideoElements = new Map();
 
@@ -31,25 +40,36 @@ export function Preview({ editorState, onPlayPause, onUpdateText, onUpdateSticke
         let video = videoElements.get(item.id);
 
         if (!video) {
-          // Create new video element
+          // Create new HIDDEN video element for timing control
           video = document.createElement('video');
           video.src = media.url;
           video.crossOrigin = 'anonymous';
           video.preload = 'auto';
           video.playsInline = true;
+          video.muted = true; // FIXED: Hidden videos are MUTED to prevent double audio
+          video.loop = false;
           video.style.display = 'none';
+
+          // Event listeners
+          video.addEventListener('loadeddata', () => {
+            console.log('📹 Hidden video loaded:', media.name, 'duration:', video.duration);
+          });
+
+          video.addEventListener('seeked', () => {
+            console.log('📹 Hidden video seeked to:', video.currentTime);
+          });
 
           // Add to container for proper cleanup
           if (videoContainerRef.current) {
             videoContainerRef.current.appendChild(video);
           }
 
-          console.log('📹 Created video element for:', media.name);
+          console.log('📹 Created MUTED hidden video for:', media.name);
         }
 
-        // Configure video settings
-        video.volume = (volume[0] / 100) * (isMuted ? 0 : 1);
-        video.muted = isMuted;
+        // FIXED: Hidden videos stay muted
+        video.muted = true;
+        video.volume = 0;
 
         newVideoElements.set(item.id, video);
       }
@@ -69,14 +89,6 @@ export function Preview({ editorState, onPlayPause, onUpdateText, onUpdateSticke
     setVideoElements(newVideoElements);
   }, [editorState.timelineItems, editorState.mediaItems]);
 
-  // Update volume and mute settings
-  useEffect(() => {
-    videoElements.forEach((video) => {
-      video.volume = (volume[0] / 100) * (isMuted ? 0 : 1);
-      video.muted = isMuted;
-    });
-  }, [volume, isMuted, videoElements]);
-
   // Find current active video
   const getCurrentVideo = useCallback(() => {
     const currentVideoItems = editorState.timelineItems.filter((item) => {
@@ -95,11 +107,11 @@ export function Preview({ editorState, onPlayPause, onUpdateText, onUpdateSticke
     return null;
   }, [editorState.timelineItems, editorState.mediaItems, editorState.currentTime, videoElements]);
 
-  // Smooth video seeking and playback
+  // Video seeking and playback - hidden videos for timing only
   useEffect(() => {
     const currentVideoData = getCurrentVideo();
 
-    // Pause all videos first
+    // Pause all hidden videos first
     videoElements.forEach((video, id) => {
       if (!currentVideoData || id !== currentVideoData.item.id) {
         if (!video.paused) {
@@ -115,66 +127,76 @@ export function Preview({ editorState, onPlayPause, onUpdateText, onUpdateSticke
 
       setCurrentVideoId(item.id);
 
-      // Smooth seeking with debouncing
-      const seekVideo = async () => {
-        if (Math.abs(video.currentTime - targetTime) > 0.1 && !isSeekingRef) {
-          setIsSeekingRef(true);
+      // Seeking for timing reference
+      const timeDiff = Math.abs(video.currentTime - targetTime);
+      if (timeDiff > 0.1) {
+        console.log(`📹 Seeking hidden video from ${video.currentTime.toFixed(2)}s to ${targetTime.toFixed(2)}s`);
+        video.currentTime = targetTime;
+      }
 
-          try {
-            video.currentTime = targetTime;
-
-            // Wait for seek to complete
-            await new Promise((resolve) => {
-              const onSeeked = () => {
-                video.removeEventListener('seeked', onSeeked);
-                resolve();
-              };
-
-              const onTimeUpdate = () => {
-                if (Math.abs(video.currentTime - targetTime) < 0.1) {
-                  video.removeEventListener('timeupdate', onTimeUpdate);
-                  resolve();
-                }
-              };
-
-              video.addEventListener('seeked', onSeeked);
-              video.addEventListener('timeupdate', onTimeUpdate);
-
-              // Timeout fallback
-              setTimeout(resolve, 200);
-            });
-          } catch (error) {
-            console.warn('Seek error:', error);
-          } finally {
-            setIsSeekingRef(false);
-          }
-        }
-
-        // Handle playback state
-        if (editorState.isPlaying && !isSeekingRef) {
-          if (video.paused) {
-            try {
-              await video.play();
-              console.log('▶️ Playing video:', item.id);
-            } catch (error) {
+      // Playback control for timing
+      if (editorState.isPlaying) {
+        if (video.paused) {
+          video
+            .play()
+            .then(() => {
+              console.log('▶️ Playing hidden video for timing:', item.id);
+            })
+            .catch((error) => {
               console.warn('Play error:', error);
-            }
-          }
-        } else {
-          if (!video.paused) {
-            video.pause();
-            console.log('⏸️ Paused video:', item.id);
-          }
+            });
         }
-      };
-
-      seekVideo();
+      } else {
+        if (!video.paused) {
+          video.pause();
+          console.log('⏸️ Paused hidden video:', item.id);
+        }
+      }
     } else {
       setCurrentVideoId(null);
     }
-  }, [getCurrentVideo, editorState.isPlaying, editorState.currentTime, isSeekingRef]);
+  }, [getCurrentVideo, editorState.isPlaying, editorState.currentTime]);
 
-  // Render overlay elements
+  // Continuous video frame updates for smooth preview
+  useEffect(() => {
+    const updateVideoFrame = () => {
+      const currentVideoData = getCurrentVideo();
+
+      if (currentVideoData && currentVideoData.video && editorState.isPlaying) {
+        const { video, item, media } = currentVideoData;
+        const relativeTime = editorState.currentTime - item.startTime + item.trimStart;
+        const targetTime = Math.max(0, Math.min(relativeTime, media.duration));
+
+        // Continuous sync during playback
+        const timeDiff = Math.abs(video.currentTime - targetTime);
+        if (timeDiff > 0.2) {
+          console.log(`📹 Sync correction: ${video.currentTime.toFixed(2)}s -> ${targetTime.toFixed(2)}s`);
+          video.currentTime = targetTime;
+        }
+      }
+
+      // Continue updating if playing
+      if (editorState.isPlaying) {
+        animationFrameRef.current = requestAnimationFrame(updateVideoFrame);
+      }
+    };
+
+    if (editorState.isPlaying) {
+      animationFrameRef.current = requestAnimationFrame(updateVideoFrame);
+    } else {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    }
+
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
+  }, [editorState.isPlaying, getCurrentVideo, editorState.currentTime]);
+
+  // FIXED: Render overlay elements with proper scaling and DEBUG
   const renderOverlay = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -184,65 +206,130 @@ export function Preview({ editorState, onPlayPause, onUpdateText, onUpdateSticke
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Render text elements
-    editorState.textElements
-      .filter((text) => editorState.currentTime >= text.startTime && editorState.currentTime < text.endTime)
-      .forEach((text) => {
-        ctx.save();
-        ctx.globalAlpha = text.opacity;
-        ctx.fillStyle = text.color;
-        ctx.font = `${text.fontSize}px ${text.fontFamily}`;
-        ctx.strokeStyle = '#000';
+    // DEBUG: Count active elements
+    const activeTexts = editorState.textElements.filter(
+      (text) => editorState.currentTime >= text.startTime && editorState.currentTime < text.endTime
+    );
+    const activeStickers = editorState.stickerElements.filter(
+      (sticker) => editorState.currentTime >= sticker.startTime && editorState.currentTime < sticker.endTime
+    );
+
+    let debugText = `Active: ${activeTexts.length} texts, ${activeStickers.length} stickers`;
+
+    // FIXED: Render text elements with proper scaling and DEBUG
+    activeTexts.forEach((text, index) => {
+      ctx.save();
+      ctx.globalAlpha = text.opacity || 1;
+
+      // FIXED: Scale position and size for preview
+      const scaledX = text.x * SCALE_X;
+      const scaledY = text.y * SCALE_Y;
+      const scaledFontSize = Math.max(12, text.fontSize * SCALE_Y); // Minimum font size
+
+      console.log(`📝 Rendering text ${index}:`, {
+        original: { x: text.x, y: text.y, fontSize: text.fontSize },
+        scaled: { x: scaledX, y: scaledY, fontSize: scaledFontSize },
+        text: text.text,
+        color: text.color,
+        visible: scaledX >= 0 && scaledX <= CANVAS_WIDTH && scaledY >= 0 && scaledY <= CANVAS_HEIGHT,
+      });
+
+      ctx.fillStyle = text.color || '#ffffff';
+      ctx.font = `${scaledFontSize}px ${text.fontFamily || 'Arial'}`;
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = Math.max(1, scaledFontSize / 20);
+
+      // Add text outline for better visibility
+      ctx.strokeText(text.text, scaledX, scaledY);
+      ctx.fillText(text.text, scaledX, scaledY);
+
+      // DEBUG: Add red border around text
+      if (process.env.NODE_ENV === 'development') {
+        const textWidth = ctx.measureText(text.text).width;
+        ctx.strokeStyle = '#ff0000';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([2, 2]);
+        ctx.strokeRect(scaledX - 2, scaledY - scaledFontSize - 2, textWidth + 4, scaledFontSize + 4);
+        ctx.setLineDash([]);
+      }
+
+      if (editorState.selectedItem === text.id) {
+        ctx.strokeStyle = '#3b82f6';
         ctx.lineWidth = 2;
+        ctx.setLineDash([3, 3]);
+        const textWidth = ctx.measureText(text.text).width;
+        ctx.strokeRect(scaledX - 3, scaledY - scaledFontSize - 3, textWidth + 6, scaledFontSize + 6);
+        ctx.setLineDash([]);
+      }
 
-        ctx.strokeText(text.text, text.x, text.y);
-        ctx.fillText(text.text, text.x, text.y);
+      ctx.restore();
 
-        if (editorState.selectedItem === text.id) {
-          ctx.strokeStyle = '#3b82f6';
-          ctx.lineWidth = 2;
-          ctx.setLineDash([5, 5]);
-          const textWidth = ctx.measureText(text.text).width;
-          ctx.strokeRect(text.x - 5, text.y - text.fontSize - 5, textWidth + 10, text.fontSize + 10);
-          ctx.setLineDash([]);
-        }
+      debugText += ` | Text${index}: (${scaledX.toFixed(0)},${scaledY.toFixed(0)})`;
+    });
 
-        ctx.restore();
+    // FIXED: Render stickers with proper scaling
+    activeStickers.forEach((sticker, index) => {
+      ctx.save();
+      ctx.globalAlpha = sticker.opacity || 1;
+
+      // FIXED: Scale position and size for preview
+      const scaledX = sticker.x * SCALE_X;
+      const scaledY = sticker.y * SCALE_Y;
+      const scaledSize = Math.max(16, sticker.size * SCALE_Y); // Minimum sticker size
+
+      console.log(`🎭 Rendering sticker ${index}:`, {
+        original: { x: sticker.x, y: sticker.y, size: sticker.size },
+        scaled: { x: scaledX, y: scaledY, size: scaledSize },
+        emoji: sticker.emoji,
       });
 
-    // Render stickers
-    editorState.stickerElements
-      .filter((sticker) => editorState.currentTime >= sticker.startTime && editorState.currentTime < sticker.endTime)
-      .forEach((sticker) => {
-        ctx.save();
-        ctx.globalAlpha = sticker.opacity;
-        ctx.font = `${sticker.size}px Arial`;
-        ctx.fillText(sticker.emoji, sticker.x, sticker.y);
+      ctx.font = `${scaledSize}px Arial`;
+      ctx.fillText(sticker.emoji, scaledX, scaledY);
 
-        if (editorState.selectedItem === sticker.id) {
-          ctx.strokeStyle = '#3b82f6';
-          ctx.lineWidth = 2;
-          ctx.setLineDash([5, 5]);
-          ctx.strokeRect(sticker.x - 5, sticker.y - 5, sticker.size + 10, sticker.size + 10);
-          ctx.setLineDash([]);
-        }
+      if (editorState.selectedItem === sticker.id) {
+        ctx.strokeStyle = '#3b82f6';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([3, 3]);
+        ctx.strokeRect(scaledX - 3, scaledY - 3, scaledSize + 6, scaledSize + 6);
+        ctx.setLineDash([]);
+      }
 
-        ctx.restore();
-      });
-  }, [editorState]);
+      ctx.restore();
+
+      debugText += ` | Sticker${index}: (${scaledX.toFixed(0)},${scaledY.toFixed(0)})`;
+    });
+
+    // DEBUG: Show debug info
+    setDebugInfo(debugText);
+
+    // DEBUG: Draw canvas bounds
+    if (process.env.NODE_ENV === 'development') {
+      ctx.strokeStyle = '#00ff00';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([5, 5]);
+      ctx.strokeRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+      ctx.setLineDash([]);
+    }
+  }, [editorState, SCALE_X, SCALE_Y]);
 
   useEffect(() => {
     renderOverlay();
   }, [renderOverlay]);
 
-  // Mouse handlers for dragging elements
+  // FIXED: Mouse handlers with proper scaling for dragging
   const handleMouseDown = (e) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
     const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    const canvasX = e.clientX - rect.left;
+    const canvasY = e.clientY - rect.top;
+
+    // FIXED: Convert canvas coordinates to export coordinates
+    const exportX = canvasX / SCALE_X;
+    const exportY = canvasY / SCALE_Y;
+
+    console.log(`🖱️ Mouse down at canvas(${canvasX}, ${canvasY}) -> export(${exportX}, ${exportY})`);
 
     // Check text elements
     const currentTexts = editorState.textElements.filter(
@@ -251,11 +338,18 @@ export function Preview({ editorState, onPlayPause, onUpdateText, onUpdateSticke
 
     for (const text of currentTexts) {
       const ctx = canvas.getContext('2d');
-      ctx.font = `${text.fontSize}px ${text.fontFamily}`;
-      const textWidth = ctx.measureText(text.text).width;
+      ctx.font = `${Math.max(12, text.fontSize * SCALE_Y)}px ${text.fontFamily || 'Arial'}`;
+      const scaledTextWidth = ctx.measureText(text.text).width;
+      const actualTextWidth = scaledTextWidth / SCALE_X;
 
-      if (x >= text.x - 5 && x <= text.x + textWidth + 5 && y >= text.y - text.fontSize - 5 && y <= text.y + 5) {
-        setDraggedElement({ type: 'text', id: text.id, offsetX: x - text.x, offsetY: y - text.y });
+      if (
+        exportX >= text.x - 20 &&
+        exportX <= text.x + actualTextWidth + 20 &&
+        exportY >= text.y - text.fontSize - 20 &&
+        exportY <= text.y + 20
+      ) {
+        console.log(`📝 Selected text: ${text.text}`);
+        setDraggedElement({ type: 'text', id: text.id, offsetX: exportX - text.x, offsetY: exportY - text.y });
         setIsDragging(true);
         return;
       }
@@ -267,8 +361,19 @@ export function Preview({ editorState, onPlayPause, onUpdateText, onUpdateSticke
     );
 
     for (const sticker of currentStickers) {
-      if (x >= sticker.x - 5 && x <= sticker.x + sticker.size + 5 && y >= sticker.y - 5 && y <= sticker.y + sticker.size + 5) {
-        setDraggedElement({ type: 'sticker', id: sticker.id, offsetX: x - sticker.x, offsetY: y - sticker.y });
+      if (
+        exportX >= sticker.x - 20 &&
+        exportX <= sticker.x + sticker.size + 20 &&
+        exportY >= sticker.y - 20 &&
+        exportY <= sticker.y + sticker.size + 20
+      ) {
+        console.log(`🎭 Selected sticker: ${sticker.emoji}`);
+        setDraggedElement({
+          type: 'sticker',
+          id: sticker.id,
+          offsetX: exportX - sticker.x,
+          offsetY: exportY - sticker.y,
+        });
         setIsDragging(true);
         return;
       }
@@ -282,13 +387,21 @@ export function Preview({ editorState, onPlayPause, onUpdateText, onUpdateSticke
     if (!canvas) return;
 
     const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left - draggedElement.offsetX;
-    const y = e.clientY - rect.top - draggedElement.offsetY;
+    const canvasX = e.clientX - rect.left;
+    const canvasY = e.clientY - rect.top;
+
+    // FIXED: Convert canvas coordinates to export coordinates
+    const exportX = canvasX / SCALE_X - draggedElement.offsetX;
+    const exportY = canvasY / SCALE_Y - draggedElement.offsetY;
+
+    // FIXED: Constrain to export bounds
+    const constrainedX = Math.max(0, Math.min(exportX, EXPORT_WIDTH - 100));
+    const constrainedY = Math.max(50, Math.min(exportY, EXPORT_HEIGHT - 50));
 
     if (draggedElement.type === 'text') {
-      onUpdateText(draggedElement.id, { x, y });
+      onUpdateText(draggedElement.id, { x: constrainedX, y: constrainedY });
     } else if (draggedElement.type === 'sticker') {
-      onUpdateSticker(draggedElement.id, { x, y });
+      onUpdateSticker(draggedElement.id, { x: constrainedX, y: constrainedY });
     }
   };
 
@@ -315,15 +428,45 @@ export function Preview({ editorState, onPlayPause, onUpdateText, onUpdateSticke
       {/* Preview Area - FIXED HEIGHT */}
       <div className="flex-1 flex items-center justify-center p-6 min-h-0">
         <div className="relative bg-black rounded-lg overflow-hidden shadow-2xl w-[640px] h-[360px] flex-shrink-0">
-          {/* Video Element - VISIBLE when active */}
+          {/* Visible Video Element - WITH AUDIO, synced with hidden video */}
           {currentVideo && (
             <video
-              key={currentVideoId} // Force re-render when video changes
+              key={currentVideoId}
+              ref={(videoRef) => {
+                if (videoRef && currentVideo) {
+                  // Sync the visible video with the hidden one
+                  const syncVideo = () => {
+                    if (Math.abs(videoRef.currentTime - currentVideo.currentTime) > 0.1) {
+                      videoRef.currentTime = currentVideo.currentTime;
+                    }
+
+                    if (currentVideo.paused !== videoRef.paused) {
+                      if (currentVideo.paused) {
+                        videoRef.pause();
+                      } else {
+                        videoRef.play().catch(console.warn);
+                      }
+                    }
+                  };
+
+                  // Sync immediately
+                  syncVideo();
+
+                  // Continue syncing during playback
+                  const syncInterval = setInterval(syncVideo, 100);
+
+                  // Cleanup
+                  return () => clearInterval(syncInterval);
+                }
+              }}
               src={currentVideo.src}
               className="absolute inset-0 w-full h-full object-cover"
               playsInline
               muted={isMuted}
               volume={volume[0] / 100}
+              onLoadedData={() => {
+                console.log('📹 Visible video loaded with audio');
+              }}
             />
           )}
 
@@ -353,11 +496,11 @@ export function Preview({ editorState, onPlayPause, onUpdateText, onUpdateSticke
               </div>
             )}
 
-          {/* Overlay Canvas - ALWAYS SAME SIZE */}
+          {/* FIXED: Overlay Canvas - Proper dimensions */}
           <canvas
             ref={canvasRef}
-            width={640}
-            height={360}
+            width={CANVAS_WIDTH}
+            height={CANVAS_HEIGHT}
             className="absolute inset-0 cursor-pointer z-10"
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
@@ -365,7 +508,7 @@ export function Preview({ editorState, onPlayPause, onUpdateText, onUpdateSticke
             onMouseLeave={handleMouseUp}
           />
 
-          {/* No Content Placeholder - FIXED SIZE */}
+          {/* No Content Placeholder */}
           {!hasContent && (
             <div className="absolute inset-0 flex items-center justify-center bg-gray-800 text-white">
               <div className="text-center">
@@ -401,19 +544,32 @@ export function Preview({ editorState, onPlayPause, onUpdateText, onUpdateSticke
           </div>
 
           {/* Resolution Display */}
-          <div className="absolute top-4 right-4 bg-black/70 text-white px-3 py-1 rounded text-sm z-20">1920×1080</div>
+          <div className="absolute top-4 right-4 bg-black/70 text-white px-3 py-1 rounded text-sm z-20">
+            Preview: {CANVAS_WIDTH}×{CANVAS_HEIGHT}
+            <br />
+            Export: {EXPORT_WIDTH}×{EXPORT_HEIGHT}
+          </div>
 
           {/* Audio Status */}
           {currentVideoId && (
             <div className="absolute top-4 left-4 bg-black/70 text-white px-3 py-1 rounded text-sm flex items-center gap-2 z-20">
               {isMuted ? <VolumeX className="w-3 h-3" /> : <Volume2 className="w-3 h-3" />}
               <span>{isMuted ? 'Muted' : `${volume[0]}%`}</span>
+              <span className="text-green-400">●</span>
+              <span className="text-xs">SINGLE AUDIO</span>
+            </div>
+          )}
+
+          {/* DEBUG: Show debug info */}
+          {debugInfo && (
+            <div className="absolute bottom-4 right-4 bg-red-900/70 text-white px-2 py-1 rounded text-xs font-mono z-20 max-w-xs">
+              {debugInfo}
             </div>
           )}
         </div>
       </div>
 
-      {/* Enhanced Preview Controls - FIXED HEIGHT */}
+      {/* Enhanced Preview Controls */}
       <div className="bg-gray-800 p-4 border-t border-gray-700 flex-shrink-0 h-20">
         <div className="flex items-center justify-center gap-4 h-full">
           <Button variant="ghost" size="sm" className="text-white hover:bg-gray-700">
@@ -435,7 +591,7 @@ export function Preview({ editorState, onPlayPause, onUpdateText, onUpdateSticke
             <SkipForward className="w-4 h-4" />
           </Button>
 
-          {/* Enhanced Volume Controls */}
+          {/* Volume Controls */}
           <div className="flex items-center gap-2 ml-8">
             <Button variant="ghost" size="sm" onClick={() => setIsMuted(!isMuted)} className="text-white hover:bg-gray-700">
               {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
@@ -446,8 +602,16 @@ export function Preview({ editorState, onPlayPause, onUpdateText, onUpdateSticke
             <span className="text-white text-xs w-12">{isMuted ? 'Muted' : `${volume[0]}%`}</span>
           </div>
 
-          {/* Audio Quality Indicator */}
-          {currentVideoId && <div className="ml-4 text-xs text-gray-400">Audio: {isSeekingRef ? 'Seeking...' : 'Ready'}</div>}
+          {/* Status Display */}
+          {currentVideoId && (
+            <div className="ml-4 text-xs text-green-400 flex items-center gap-1">
+              <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
+              Single Audio Track
+            </div>
+          )}
+
+          {/* Scale Info */}
+          <div className="ml-4 text-xs text-gray-400">Scale: {(SCALE_X * 100).toFixed(0)}%</div>
         </div>
       </div>
     </div>
