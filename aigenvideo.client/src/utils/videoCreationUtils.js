@@ -1,3 +1,36 @@
+import { fetchFile } from '@ffmpeg/ffmpeg';
+/**
+ * Converts hex color to FFmpeg ASS/SSA format
+ * FFmpeg ASS uses BGR format instead of RGB, so we need to reverse the color order
+ * @param {string} hexColor - Hex color (e.g., '#ffffff')
+ * @returns {string} - FFmpeg ASS color format (e.g., '&Hffffff')
+ */
+function hexToFFmpegColor(hexColor) {
+    // Remove # if present
+    const cleanHex = hexColor.replace('#', '');
+
+    // Extract RGB components
+    const r = cleanHex.substring(0, 2);
+    const g = cleanHex.substring(2, 4);
+    const b = cleanHex.substring(4, 6);
+
+    // Convert to BGR format for ASS/SSA (Blue-Green-Red instead of Red-Green-Blue)
+    const bgrHex = `${b}${g}${r}`;
+
+    return `&H${bgrHex}`;
+}
+/**
+ * Converts hex color to RGB values for drawtext filter
+ * @param {string} hexColor - Hex color (e.g., '#ffffff')
+ * @returns {string} - RGB color format (e.g., '255,255,255')
+ */
+function hexToRGB(hexColor) {
+    const hex = hexColor.replace('#', '');
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+    return `${r},${g},${b}`;
+}
 /**
  * Creates SRT subtitle content from scene summaries and their durations
  * @param {Array} scenes - Array of scene objects with summary text
@@ -48,19 +81,11 @@ export async function createVideoFromImagesAndIndividualAudiosWithSubtitles(ffmp
         throw new Error('Missing required parameters or mismatched counts for video creation');
     }
 
-    const {
-        embedSubtitles = false, // Change default to false for external subtitles
-        subtitleStyle = {
-            fontSize: 20,
-            fontColor: '#ffffff',
-            backgroundColor: '#000000',
-            position: 'bottom'
-        }
-    } = options;
+
 
     try {
         console.log('Starting video creation with individual audio files and subtitles...');
-        console.log('Subtitle options:', { embedSubtitles, subtitleStyle });
+        console.log('Subtitle options:', { options });
 
         const audioDurations = [];
 
@@ -152,31 +177,52 @@ export async function createVideoFromImagesAndIndividualAudiosWithSubtitles(ffmp
             'temp_video.mp4'
         );
 
-        if (embedSubtitles) {
+        if (options.embedSubtitles) {
             // Embed subtitles as burned-in text (hard subtitles)
             console.log('Embedding hard subtitles into video...');
 
-            const fontSize = subtitleStyle.fontSize || 20;
-
-            // Simplified subtitle filter that should work reliably
-            const subtitleFilter = `subtitles=subtitles.srt:force_style='FontSize=${fontSize},PrimaryColour=&Hffffff,OutlineColour=&H000000,Outline=2,Bold=1'`;
-
-            console.log('Using subtitle filter:', subtitleFilter);
-
+            const fontSize = options.subtitleStyle.fontSize || 24; // Default font size
+            const fontColor = options.subtitleStyle.fontColor || '#ffffff'; // Default font color
+            const backgroundColor = options.subtitleStyle.backgroundColor || '#000000'; // Default background color
+            const position = options.subtitleStyle.position || 'bottom'; // Default position
+            const ffmpegFontColor = hexToFFmpegColor(fontColor);
+            const ffmpegBackgroundColor = hexToFFmpegColor(backgroundColor);
+            console.log('Subtitle style-----:', { ffmpegFontColor, ffmpegBackgroundColor, fontSize, position });
             try {
+                // Load font file for subtitle rendering
+                await ffmpeg.FS('writeFile', 'tmp/Roboto-Regular.ttf', await fetchFile('/fonts/Roboto-Regular.ttf'));
+                const subtitleFilter = `subtitles=subtitles.srt:fontsdir=/tmp:force_style='FontName=Roboto, FontSize=${fontSize}, FontColor=${ffmpegFontColor}, BackgroundColor=${ffmpegBackgroundColor}, Alignment=2, MarginV=20'`;
+                console.log('Using subtitle filter:', subtitleFilter);
+
                 await ffmpeg.run(
-                    '-y',
                     '-i', 'temp_video.mp4',
                     '-vf', subtitleFilter,
-                    '-c:a', 'copy',
+                    '-c:v', 'libx264',
+                    '-pix_fmt', 'yuv420p',
                     'output.mp4'
                 );
                 console.log('Hard subtitles embedded successfully');
             } catch (error) {
                 console.error('Error embedding hard subtitles:', error);
-                // Fallback: just copy the video without subtitles
-                await ffmpeg.run('-y', '-i', 'temp_video.mp4', '-c', 'copy', 'output.mp4');
-                console.log('Fallback: Created video without embedded subtitles');
+                console.log('Trying fallback subtitle approach...');
+
+                try {
+                    // Fallback: Use simple subtitle filter without custom font
+                    const fallbackFilter = `subtitles=subtitles.srt:force_style='FontSize=${fontSize}, FontColor=${ffmpegFontColor}, BackgroundColor=${ffmpegBackgroundColor}, Alignment=2'`;
+                    await ffmpeg.run(
+                        '-i', 'temp_video.mp4',
+                        '-vf', fallbackFilter,
+                        '-c:v', 'libx264',
+                        '-pix_fmt', 'yuv420p',
+                        'output.mp4'
+                    );
+                    console.log('Fallback subtitles embedded successfully');
+                } catch (fallbackError) {
+                    console.error('Fallback subtitle embedding failed:', fallbackError);
+                    // Final fallback: just copy the video without subtitles
+                    await ffmpeg.run('-y', '-i', 'temp_video.mp4', '-c', 'copy', 'output.mp4');
+                    console.log('Final fallback: Created video without embedded subtitles');
+                }
             }
         } else {
             // For external subtitles, just copy the video
@@ -224,6 +270,7 @@ export async function createVideoFromImagesAndIndividualAudiosWithSubtitles(ffmp
             ffmpeg.FS('unlink', 'subtitles.srt');
             ffmpeg.FS('unlink', 'temp_video.mp4');
             ffmpeg.FS('unlink', 'output.mp4');
+            ffmpeg.FS('unlink', 'tmp/Roboto-Regular.ttf');
         } catch (e) {
             console.warn('Failed to unlink some temp files:', e);
         }
