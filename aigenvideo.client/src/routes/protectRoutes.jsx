@@ -2,6 +2,7 @@ import { AdminLayout } from '@/components';
 import {
   BuyPage,
   CreateUserPage,
+  EditorPage,
   EditUserPage,
   HomePage,
   PaymentManagerPage,
@@ -79,6 +80,12 @@ export const protectRoutes = [
     path: 'upload-video',
     element: <UploadVideoPage />,
     layout: null, // No layout for upload video page
+    // requiredRoles: ['user', 'vip', 'admin'],
+  },
+  {
+    path: 'editor',
+    element: <EditorPage />,
+    layout: null, // No layout for editor page
     // requiredRoles: ['user', 'vip', 'admin'],
   },
 ];
