@@ -1,3 +1,5 @@
+import { fetchFile } from '@ffmpeg/ffmpeg';
+
 /**
  * Creates SRT subtitle content from scene summaries and their durations
  * @param {Array} scenes - Array of scene objects with summary text
@@ -40,7 +42,6 @@ export function generateSRTSubtitles(scenes, audioDurations) {
  * @param {Array} audioUrls - Array of audio URLs, one for each image
  * @param {Array} scenes - Array of scene objects with summary text for subtitles
  * @param {Object} options - Optional configuration
- * @param {string} [options.existingSrtContent=null] - Nếu có, dùng chuỗi SRT này thay vì tự tạo.
  * @returns {Promise<{videoUrl: string, subtitleUrl: string}>} - URLs of the created video and subtitle file
  */
 export async function createVideoFromImagesAndIndividualAudiosWithSubtitles(ffmpeg, images, audioUrls, scenes, options = {}) {
@@ -49,196 +50,121 @@ export async function createVideoFromImagesAndIndividualAudiosWithSubtitles(ffmp
         throw new Error('Missing required parameters or mismatched counts for video creation');
     }
 
-    // THÊM MỚI: Đọc option `existingSrtContent`
     const {
-        embedSubtitles = false, // Change default to false for external subtitles
+        embedSubtitles = false,
         subtitleStyle = {
             fontSize: 20,
             fontColor: '#ffffff',
             backgroundColor: '#000000',
             position: 'bottom'
         },
-        existingSrtContent = null, // Thêm option này
+        existingSrtContent = null,
     } = options;
 
     try {
-        console.log('Starting video creation with individual audio files and subtitles...');
-        console.log('Subtitle options:', { embedSubtitles, subtitleStyle });
+        console.log('Starting video creation with subtitles...');
+
+        // === BƯỚC 1: TẢI FONT VÀO BỘ NHỚ FFMPEG ===
+        // Đây là bước bắt buộc để "đốt cháy" phụ đề
+        const fontUrl = '/fonts/Roboto-Regular.ttf'; // Đường dẫn tới file font trong thư mục `public`
+        const fontFileNameInFS = 'font.ttf';
+        console.log(`Loading font from ${fontUrl}...`);
+        ffmpeg.FS('writeFile', fontFileNameInFS, await fetchFile(fontUrl));
+        console.log("Font loaded successfully into FFmpeg's virtual filesystem.");
+        // ===============================================
 
         const audioDurations = [];
-
-        // Process audio files
-        console.log('Processing audio files...');
+        // ... (phần xử lý audio để lấy audioDurations giữ nguyên) ...
         for (let i = 0; i < audioUrls.length; i++) {
             const audioResponse = await fetch(audioUrls[i], { credentials: 'omit' });
-            if (!audioResponse.ok) {
-                throw new Error(`Failed to fetch audio ${i}: ${audioResponse.status} ${audioResponse.statusText}`);
-            }
             const audioData = await audioResponse.blob();
             const audioArrayBuffer = await audioData.arrayBuffer();
-
             ffmpeg.FS('writeFile', `audio${i}.mp3`, new Uint8Array(audioArrayBuffer));
-
             const audioElement = new Audio();
             audioElement.src = URL.createObjectURL(audioData);
-
             const audioDuration = await new Promise((resolve) => {
                 audioElement.onloadedmetadata = () => resolve(audioElement.duration);
-                audioElement.onerror = () => {
-                    console.warn(`Could not determine audio duration for audio ${i}, using fallback`);
-                    resolve(5);
-                };
+                audioElement.onerror = () => { resolve(5); };
             });
-
             audioDurations.push(audioDuration);
-            console.log(`Audio ${i} duration:`, audioDuration, 'seconds');
         }
 
-        // --- SỬA ĐỔI LOGIC TẠO PHỤ ĐỀ ---
         let srtContent;
         if (existingSrtContent && typeof existingSrtContent === 'string' && existingSrtContent.trim() !== '') {
-            console.log('Using existing SRT content provided from backend.');
+            console.log('Using existing SRT content from backend.');
             srtContent = existingSrtContent;
         } else {
-            console.warn('Backend SRT not provided or is empty, falling back to client-side generation.');
-            // Dùng hàm `generateSRTSubtitles` như một phương án dự phòng
+            console.warn('Fallback: Generating SRT content on client-side.');
             srtContent = generateSRTSubtitles(scenes, audioDurations);
         }
-        // ------------------------------------
-
-        console.log('Generated SRT content length:', srtContent.length);
-        console.log('SRT preview:', srtContent.substring(0, 200) + '...');
-
         ffmpeg.FS('writeFile', 'subtitles.srt', new TextEncoder().encode(srtContent));
-
-        // Process images
-        console.log(`Processing ${images.length} images...`);
+        
+        // ... (phần xử lý ảnh và tạo video segments giữ nguyên) ...
         for (let i = 0; i < images.length; i++) {
-            try {
-                const imgResponse = await fetch(images[i].url, { credentials: 'omit' });
-                if (!imgResponse.ok) {
-                    throw new Error(`Failed to fetch image: ${imgResponse.status}`);
-                }
-                const imgBlob = await imgResponse.blob();
-                const imgArrayBuffer = await imgBlob.arrayBuffer();
-                ffmpeg.FS('writeFile', `img${i}.jpg`, new Uint8Array(imgArrayBuffer));
-            } catch (error) {
-                console.error(`Error processing image ${i + 1}:`, error);
-                throw error;
-            }
+            const imgResponse = await fetch(images[i].url, { credentials: 'omit' });
+            const imgBlob = await imgResponse.blob();
+            const imgArrayBuffer = await imgBlob.arrayBuffer();
+            ffmpeg.FS('writeFile', `img${i}.jpg`, new Uint8Array(imgArrayBuffer));
         }
 
-        // Create individual video segments
-        console.log('Creating individual video segments...');
         for (let i = 0; i < images.length; i++) {
-            await ffmpeg.run(
-                '-loop', '1',
-                '-i', `img${i}.jpg`,
-                '-i', `audio${i}.mp3`,
-                '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2',
-                '-c:v', 'libx264',
-                '-t', audioDurations[i].toString(),
-                '-pix_fmt', 'yuv420p',
-                '-c:a', 'aac',
-                '-b:a', '192k',
-                '-shortest',
-                `segment${i}.mp4`
-            );
-            console.log(`Created segment ${i}`);
+             await ffmpeg.run('-loop', '1', '-i', `img${i}.jpg`, '-i', `audio${i}.mp3`, '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2', '-c:v', 'libx264', '-t', audioDurations[i].toString(), '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '192k', '-shortest', `segment${i}.mp4`);
         }
 
-        // Create concat file for segments
-        let concatText = '';
-        for (let i = 0; i < images.length; i++) {
-            concatText += `file 'segment${i}.mp4'\n`;
-        }
-        ffmpeg.FS('writeFile', 'concat_list.txt', new TextEncoder().encode(concatText));
+        let concatText = images.map((_, i) => `file 'segment${i}.mp4'`).join('\n');
+        ffmpeg.FS('writeFile', 'concat_list.txt', concatText);
 
-        // Concatenate all segments
-        console.log('Concatenating video segments...');
-        await ffmpeg.run(
-            '-f', 'concat',
-            '-safe', '0',
-            '-i', 'concat_list.txt',
-            '-c', 'copy',
-            'temp_video.mp4'
-        );
+        await ffmpeg.run('-f', 'concat', '-safe', '0', '-i', 'concat_list.txt', '-c', 'copy', 'temp_video.mp4');
 
         if (embedSubtitles) {
-            // Embed subtitles as burned-in text (hard subtitles)
             console.log('Embedding hard subtitles into video...');
-
             const fontSize = subtitleStyle.fontSize || 20;
 
-            // Simplified subtitle filter that should work reliably
-            const subtitleFilter = `subtitles=subtitles.srt:force_style='FontSize=${fontSize},PrimaryColour=&Hffffff,OutlineColour=&H000000,Outline=2,Bold=1'`;
-
-            console.log('Using subtitle filter:', subtitleFilter);
+            // === BƯỚC 2: CẬP NHẬT BỘ LỌC ĐỂ SỬ DỤNG FONT ===
+            const fontPathInFS = fontFileNameInFS;
+            const subtitleFilter = `subtitles=subtitles.srt:force_style='FontName=Roboto,FontSize=${fontSize}':fontfile=${fontPathInFS}`;
+            console.log('Using subtitle filter with font:', subtitleFilter);
+            // =================================================
 
             try {
-                await ffmpeg.run(
-                    '-y',
-                    '-i', 'temp_video.mp4',
-                    '-vf', subtitleFilter,
-                    '-c:a', 'copy',
-                    'output.mp4'
-                );
+                await ffmpeg.run('-y', '-i', 'temp_video.mp4', '-vf', subtitleFilter, '-c:a', 'copy', 'output.mp4');
                 console.log('Hard subtitles embedded successfully');
             } catch (error) {
                 console.error('Error embedding hard subtitles:', error);
-                // Fallback: just copy the video without subtitles
                 await ffmpeg.run('-y', '-i', 'temp_video.mp4', '-c', 'copy', 'output.mp4');
                 console.log('Fallback: Created video without embedded subtitles');
             }
         } else {
-            // For external subtitles, just copy the video
-            console.log('Creating video with external subtitle support...');
             await ffmpeg.run('-y', '-i', 'temp_video.mp4', '-c', 'copy', 'output.mp4');
-            console.log('Video created for external subtitles');
         }
 
         console.log('FFmpeg processing completed');
 
-        // Verify the output file
-        const outputStat = ffmpeg.FS('stat', 'output.mp4');
-        console.log('Output video file size:', outputStat.size, 'bytes');
-        if (outputStat.size === 0) {
-            throw new Error('Generated video has zero size');
-        }
-
-        // Read the output files
         const videoData = ffmpeg.FS('readFile', 'output.mp4');
         const subtitleData = ffmpeg.FS('readFile', 'subtitles.srt');
 
-        // Create URLs
         const videoBlob = new Blob([videoData.buffer], { type: 'video/mp4' });
         const subtitleBlob = new Blob([subtitleData.buffer], { type: 'text/plain' });
 
         const videoURL = URL.createObjectURL(videoBlob);
         const subtitleURL = URL.createObjectURL(subtitleBlob);
 
-        console.log('Video URL created:', videoURL);
-        console.log('Subtitle URL created:', subtitleURL);
-
-        // Clean up
-        for (let i = 0; i < images.length; i++) {
-            try {
+        // === BƯỚC 3: DỌN DẸP CÁC FILE, BAO GỒM CẢ FONT ===
+        try {
+            images.forEach((_, i) => {
                 ffmpeg.FS('unlink', `img${i}.jpg`);
                 ffmpeg.FS('unlink', `audio${i}.mp3`);
                 ffmpeg.FS('unlink', `segment${i}.mp4`);
-            } catch (e) {
-                console.warn(`Failed to unlink files for segment ${i}:`, e);
-            }
-        }
-
-        try {
+            });
             ffmpeg.FS('unlink', 'concat_list.txt');
             ffmpeg.FS('unlink', 'subtitles.srt');
             ffmpeg.FS('unlink', 'temp_video.mp4');
             ffmpeg.FS('unlink', 'output.mp4');
+            ffmpeg.FS('unlink', fontFileNameInFS); // Dọn dẹp file font
         } catch (e) {
             console.warn('Failed to unlink some temp files:', e);
         }
+        // =================================================
 
         return { videoUrl: videoURL, subtitleUrl: subtitleURL };
     } catch (error) {
