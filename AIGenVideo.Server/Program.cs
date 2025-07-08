@@ -1,17 +1,9 @@
-
-using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.ResponseCompression;
-using Microsoft.Identity.Web;
 using AIGenVideo.Server.Bootstraping.ContentGenerate;
-using AIGenVideo.Server.Bootstraping.VideoGenerate;
 using AIGenVideo.Server.Bootstraping.ImageGenerate;
+using AIGenVideo.Server.Bootstraping.VideoGenerate;
+  
 var builder = WebApplication.CreateBuilder(args);
 
-using AIGenVideo.Server.Bootstraping.ContentGenerate;  
-
-
-var builder = WebApplication.CreateBuilder(args);
 
 builder.AddApplicationServices();
 builder.AddSwaggerUIService();

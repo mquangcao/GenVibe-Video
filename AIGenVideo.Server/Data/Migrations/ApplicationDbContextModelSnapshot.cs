@@ -522,6 +522,7 @@ namespace AIGenVideo.Server.Data.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("VideoData");
+                });
 
             modelBuilder.Entity("AIGenVideo.Server.Data.Entities.Payment", b =>
                 {
