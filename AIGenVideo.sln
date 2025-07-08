@@ -7,6 +7,10 @@ Project("{54A90642-561A-4BB1-A94E-469ADEE60C69}") = "aigenvideo.client", "aigenv
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AIGenVideo.Server", "AIGenVideo.Server\AIGenVideo.Server.csproj", "{5AF6580F-B8AD-4C84-BD29-32BB54755942}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "infras", "infras", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Payment", "infras\Services\Payment.csproj", "{629569E9-51E4-4E82-8E3D-B3E1575C9018}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -23,9 +27,16 @@ Global
 		{5AF6580F-B8AD-4C84-BD29-32BB54755942}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5AF6580F-B8AD-4C84-BD29-32BB54755942}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5AF6580F-B8AD-4C84-BD29-32BB54755942}.Release|Any CPU.Build.0 = Release|Any CPU
+		{629569E9-51E4-4E82-8E3D-B3E1575C9018}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{629569E9-51E4-4E82-8E3D-B3E1575C9018}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{629569E9-51E4-4E82-8E3D-B3E1575C9018}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{629569E9-51E4-4E82-8E3D-B3E1575C9018}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{629569E9-51E4-4E82-8E3D-B3E1575C9018} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {FB1532CA-1C11-4F17-88FB-1839E42CF5DF}

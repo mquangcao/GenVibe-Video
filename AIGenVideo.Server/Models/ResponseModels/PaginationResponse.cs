@@ -1,9 +1,9 @@
 ﻿namespace AIGenVideo.Server.Models.ResponseModels;
 
-public sealed record PaginationResponse<TEntity>(int pageIndex, int pageSize, long count, IEnumerable<TEntity> items) where TEntity : class
+public sealed record PaginationResponse<TEntity> where TEntity : class
 {
-    public int PageIndex => pageIndex;
-    public int PageSize => pageSize;
-    public long Count => count;
-    public IEnumerable<TEntity> Items => items;
+    public int PageIndex { get; set; }
+    public int PageSize { get; set; }
+    public long Count { get; set; }
+    public IEnumerable<TEntity> Items { set; get; } = default!;
 }
