@@ -135,9 +135,37 @@ const createVideoWithIndividualAudios = async () => {
 
     try {
       // BƯỚC 1: Tạo các audio blob riêng lẻ cho từng cảnh (Giữ nguyên)
-      const audioBlobs = await Promise.all(
-        usedScenes.map(scene => generateAudioBlob(scene.summary, selectedGoogleVoice, speechRate))
+      console.log("Generating individual audio blobs for each scene...");
+      const audioGenerationPromises = usedScenes.map(scene =>
+          generateAudioBlob(scene.summary, selectedGoogleVoice, speechRate)
       );
+      const audioResults = await Promise.all(audioGenerationPromises);
+
+      const audioBlobs = await Promise.all(audioResults.map(async (result) => {
+          // Kịch bản 1: Nếu `generateAudioBlob` trả về một chuỗi URL (data:..., http:...)
+          if (typeof result === 'string' && result.startsWith('data:audio')) {
+              // Đây là Data URL (Base64), chúng ta cần chuyển nó thành Blob
+              const response = await fetch(result);
+              return await response.blob();
+          }
+    
+          // Kịch bản 2: Nếu `generateAudioBlob` đã trả về một Blob rồi (trường hợp lý tưởng)
+          if (result instanceof Blob) {
+              return result;
+          }
+
+          // Kịch bản 3: Xử lý các trường hợp không mong muốn khác
+          console.error("Unexpected audio generation result:", result);
+          // Trả về một blob audio im lặng ngắn để không làm hỏng toàn bộ video
+          const silentAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+          const buffer = silentAudioContext.createBuffer(1, silentAudioContext.sampleRate, silentAudioContext.sampleRate);
+          // Logic tạo WAV im lặng (phức tạp hơn một chút, nhưng đây là ý tưởng)
+          // Hiện tại, chúng ta sẽ throw lỗi để biết vấn đề
+          throw new Error(`Invalid audio data received for a scene. Type: ${typeof result}`);
+      }));
+
+      // Bây giờ, `audioBlobs` chắc chắn là một mảng các đối tượng Blob hợp lệ
+      console.log("All audio blobs are now valid Blob objects.");
       const audioUrls = audioBlobs.map(blob => URL.createObjectURL(blob));
 
       // BƯỚC 2: Tạo audio tổng hợp (Giữ nguyên)
