@@ -485,6 +485,44 @@ namespace AIGenVideo.Server.Data.Migrations
                     b.ToTable("UserTokens", (string)null);
                 });
 
+
+            modelBuilder.Entity("VideoData", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)")
+                        .HasColumnName("id");
+
+                    b.Property<string>("AudioFileUrl")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)")
+                        .HasColumnName("audioFileUrl");
+
+                    b.Property<string>("Captions")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("captions");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)")
+                        .HasColumnName("createdBy");
+
+                    b.Property<string>("ImageList")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("imageList");
+
+                    b.Property<string>("Script")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("script");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("VideoData");
+
             modelBuilder.Entity("AIGenVideo.Server.Data.Entities.Payment", b =>
                 {
                     b.HasOne("AIGenVideo.Server.Data.Entities.VipPlan", "Package")
@@ -549,6 +587,7 @@ namespace AIGenVideo.Server.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>

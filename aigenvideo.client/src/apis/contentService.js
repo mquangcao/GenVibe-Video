@@ -8,5 +8,5 @@ import axiosClient from './axiosClient';
  * @returns {Promise<object>} Promise trả về phản hồi từ API.
  */
 export const generateContent = async (body) => {
-  return await axiosClient.post('api/content/generate', body);
+    return await axiosClient.post('api/content/generate', body);
 };

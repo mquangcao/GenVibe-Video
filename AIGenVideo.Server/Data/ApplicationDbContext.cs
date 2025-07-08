@@ -4,12 +4,16 @@ namespace AIGenVideo.Server.Data;
 
 public class ApplicationDbContext : IdentityDbContext<AppUser, AppRole, string>
 {
+
+    public DbSet<VideoData> VideoData { get; set; } = default!;
+
     public DbSet<Entities.Payment> Payments { get; set; }
     public DbSet<UserVipSubscription> UserVipSubscriptions { get; set; }
     public DbSet<VipPlan> VipPlans { get; set; }
     public DbSet<Platform> Platforms { get; set; }
     public DbSet<UploadLog> UploadLogs { get; set; }
     public DbSet<UserSocialAccount> UserSocialAccounts { get; set; }
+
 
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
     {
