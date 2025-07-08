@@ -1,5 +1,17 @@
 import { AdminLayout } from '@/components';
-import { BuyPage, CreateUserPage, EditUserPage, HomePage, PaymentSuccessPage, UserManagerPage } from '@/pages';
+import {
+  BuyPage,
+  CreateUserPage,
+  EditorPage,
+  EditUserPage,
+  HomePage,
+  PaymentManagerPage,
+  PaymentSuccessPage,
+  PlatformConnectionsPage,
+  SocialVideoManagementPage,
+  UploadVideoPage,
+  UserManagerPage,
+} from '@/pages';
 import PricingPage from '@/pages/BuyPage';
 import CheckoutPage from '@/pages/CheckoutPage';
 
@@ -44,6 +56,36 @@ export const protectRoutes = [
     path: 'checkout',
     element: <CheckoutPage />,
     layout: null, // No layout for checkout page
+    // requiredRoles: ['user', 'vip', 'admin'],
+  },
+  {
+    path: 'admin/payment-manager',
+    element: <PaymentManagerPage />,
+    layout: AdminLayout,
+    // requiredRoles: ['user', 'vip', 'admin'],
+  },
+  {
+    path: 'account/platform-connections',
+    element: <PlatformConnectionsPage />,
+    layout: null, // No layout for platform connections page
+    // requiredRoles: ['user', 'vip', 'admin'],
+  },
+  {
+    path: 'social-video-management',
+    element: <SocialVideoManagementPage />,
+    layout: null, // No layout for social video management page
+    // requiredRoles: ['user', 'vip', 'admin'],
+  },
+  {
+    path: 'upload-video',
+    element: <UploadVideoPage />,
+    layout: null, // No layout for upload video page
+    // requiredRoles: ['user', 'vip', 'admin'],
+  },
+  {
+    path: 'editor',
+    element: <EditorPage />,
+    layout: null, // No layout for editor page
     // requiredRoles: ['user', 'vip', 'admin'],
   },
 ];

@@ -31,6 +31,7 @@ public class MomoCollectionLinkRequest
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         };
+        var k = JsonSerializer.Serialize(this, options);
 
         var httpContent = new StringContent(
             JsonSerializer.Serialize(this, options),
@@ -43,10 +44,12 @@ public class MomoCollectionLinkRequest
         if (createPaymentLinkRes.IsSuccessStatusCode)
         {
             var responseContent = await createPaymentLinkRes.Content.ReadAsStringAsync();
-            JsonSerializerOptions optionsResponse = new()
+            
+            JsonSerializerOptions jsonSerializerOptions = new()
             {
                 PropertyNameCaseInsensitive = true
             };
+            JsonSerializerOptions optionsResponse = jsonSerializerOptions;
             var responseData = JsonSerializer.Deserialize<MomoCollectionLinkResponse>(responseContent, optionsResponse);
 
 

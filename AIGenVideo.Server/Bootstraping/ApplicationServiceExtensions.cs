@@ -1,13 +1,18 @@
 ﻿using AIGenVideo.Server.Models.Configurations;
 using AIGenVideo.Server.Repository;
+using AIGenVideo.Server.Services.SocialPlatform;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.IdentityModel.Tokens;
+
+using AIGenVideo.Server.Bootstraping.VideoGenerate;
+
 using Payment.Abstractions;
 using Payment.Gateway;
 using Payment.Gateway.Momo;
 using Payment.Gateway.Momo.Config;
 using Payment.Gateway.VnPay;
 using Payment.Gateway.VnPay.Config;
+
 
 namespace AIGenVideo.Server.Bootstraping;
 
@@ -32,11 +37,30 @@ public static class ApplicationServiceExtensions
         builder.Services.AddScoped<IUserVipService, UserVipService>();
         builder.Services.AddScoped<IUserVipSubscriptionRepository, UserVipSubscriptionRepository>();
 
+        builder.Services.AddScoped<ISocialPlatformService, SocialPlatformService>();
+
         // payment
         builder.Services.AddScoped<VnPayPaymentGateway>();
         builder.Services.AddScoped<MomoPaymentGateway>();
         builder.Services.AddScoped<IPaymentGatewayFactory, PaymentGatewayFactory>();
 
+        //redis
+        builder.Services.AddStackExchangeRedisCache(options =>
+        {
+            options.Configuration = builder.Configuration.GetConnectionString("Redis");
+            options.InstanceName = "AIGenVideo:";
+        });
+
+        builder.Services.AddScoped<IOAuthStateService, OAuthStateService>();
+
+        builder.Services.AddScoped<YouTubePlatformService>();
+        builder.Services.AddScoped<TiktokPlatformService>();
+        builder.Services.AddScoped<FacebookPlatformService>();
+        builder.Services.AddScoped<SocialPlatformFactory>();
+
+
+        // Add video generation services
+        builder.Services.AddVideoGenerateServices(builder.Configuration);
 
         return builder;
     }
@@ -94,7 +118,7 @@ public static class ApplicationServiceExtensions
         // password reset token life time
         builder.Services.Configure<DataProtectionTokenProviderOptions>(opt =>
         {
-            opt.TokenLifespan = TimeSpan.FromMinutes(builder.Configuration.GetValue<int>("PasswordToken:LifeTimeInMinutes", 5)); 
+            opt.TokenLifespan = TimeSpan.FromMinutes(builder.Configuration.GetValue<int>("PasswordToken:LifeTimeInMinutes", 5));
         });
 
         return builder;
@@ -107,9 +131,9 @@ public static class ApplicationServiceExtensions
             options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
             options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
             options.DefaultForbidScheme = JwtBearerDefaults.AuthenticationScheme;
-            options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
-            options.DefaultSignInScheme = JwtBearerDefaults.AuthenticationScheme;
-            options.DefaultSignOutScheme = JwtBearerDefaults.AuthenticationScheme;
+            //options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+            //options.DefaultSignInScheme = JwtBearerDefaults.AuthenticationScheme;
+            //options.DefaultSignOutScheme = JwtBearerDefaults.AuthenticationScheme;
 
         }).AddJwtBearer(options =>
         {
@@ -138,6 +162,8 @@ public static class ApplicationServiceExtensions
         builder.Services.Configure<LoginGoogleOptions>(builder.Configuration.GetSection("Authentication:Google"));
         builder.Services.Configure<MomoConfig>(builder.Configuration.GetSection("Payment:Momo"));
         builder.Services.Configure<VnpayConfig>(builder.Configuration.GetSection("Payment:VnPay"));
+        builder.Services.Configure<TikTokOptions>(builder.Configuration.GetSection("Authentication:TikTok"));
+        builder.Services.Configure<FacebookOptions>(builder.Configuration.GetSection("Authentication:Facebook"));
 
         return builder;
     }

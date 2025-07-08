@@ -1,14 +1,24 @@
-using AIGenVideo.Server.Bootstraping.ContentGenerate;  
-
+using AIGenVideo.Server.Bootstraping.ContentGenerate;
+using AIGenVideo.Server.Bootstraping.ImageGenerate;
+using AIGenVideo.Server.Bootstraping.VideoGenerate;
+  
 var builder = WebApplication.CreateBuilder(args);
+
 
 builder.AddApplicationServices();
 builder.AddSwaggerUIService();
 builder.AddIdentityServices();
 builder.AddAuthenticationScheme();
+builder.AddSocialPlatformServices();
 builder.Services.AddContentGenerateServices(builder.Configuration);
 builder.AddOptionPattern();
+
+builder.Services.AddContentGenerateServices(builder.Configuration);
+builder.Services.AddVideoGenerateServices(builder.Configuration);
+builder.Services.AddImageGenerationServices();
+
 builder.AddCors();
+
 var app = builder.Build();
 
 app.UseDefaultFiles();
@@ -17,7 +27,7 @@ app.UseStaticFiles();
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
-    
+
     app.UseSwagger();
     app.UseSwaggerUI();
 }

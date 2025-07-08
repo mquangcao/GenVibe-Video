@@ -189,6 +189,139 @@ namespace AIGenVideo.Server.Data.Migrations
                     b.ToTable("Payments");
                 });
 
+            modelBuilder.Entity("AIGenVideo.Server.Data.Entities.Platform", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("ApiBaseUrl")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("LogoUrl")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("OAuthUrl")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.ToTable("Platforms");
+                });
+
+            modelBuilder.Entity("AIGenVideo.Server.Data.Entities.UploadLog", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PlatformId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("VideoId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PlatformId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("UploadLogs");
+                });
+
+            modelBuilder.Entity("AIGenVideo.Server.Data.Entities.UserSocialAccount", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("AccessToken")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("ConnectedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("ExternalUserId")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<bool>("IsRevoked")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("LastRefreshedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("PlatformId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("RefreshToken")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Scopes")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("TokenExpiry")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PlatformId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("UserSocialAccounts");
+                });
+
             modelBuilder.Entity("AIGenVideo.Server.Data.Entities.UserVipSubscription", b =>
                 {
                     b.Property<string>("UserId")
@@ -352,6 +485,45 @@ namespace AIGenVideo.Server.Data.Migrations
                     b.ToTable("UserTokens", (string)null);
                 });
 
+
+            modelBuilder.Entity("VideoData", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)")
+                        .HasColumnName("id");
+
+                    b.Property<string>("AudioFileUrl")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)")
+                        .HasColumnName("audioFileUrl");
+
+                    b.Property<string>("Captions")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("captions");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)")
+                        .HasColumnName("createdBy");
+
+                    b.Property<string>("ImageList")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("imageList");
+
+                    b.Property<string>("Script")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("script");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("VideoData");
+                });
+
             modelBuilder.Entity("AIGenVideo.Server.Data.Entities.Payment", b =>
                 {
                     b.HasOne("AIGenVideo.Server.Data.Entities.VipPlan", "Package")
@@ -369,6 +541,44 @@ namespace AIGenVideo.Server.Data.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("AIGenVideo.Server.Data.Entities.UploadLog", b =>
+                {
+                    b.HasOne("AIGenVideo.Server.Data.Entities.Platform", "Platform")
+                        .WithMany()
+                        .HasForeignKey("PlatformId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("AIGenVideo.Server.Data.Entities.AppUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Platform");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("AIGenVideo.Server.Data.Entities.UserSocialAccount", b =>
+                {
+                    b.HasOne("AIGenVideo.Server.Data.Entities.Platform", "Platform")
+                        .WithMany("UserSocialAccounts")
+                        .HasForeignKey("PlatformId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("AIGenVideo.Server.Data.Entities.AppUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Platform");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("AIGenVideo.Server.Data.Entities.UserVipSubscription", b =>
                 {
                     b.HasOne("AIGenVideo.Server.Data.Entities.AppUser", "User")
@@ -378,6 +588,7 @@ namespace AIGenVideo.Server.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -437,6 +648,11 @@ namespace AIGenVideo.Server.Data.Migrations
 
                     b.Navigation("VipSubscription")
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("AIGenVideo.Server.Data.Entities.Platform", b =>
+                {
+                    b.Navigation("UserSocialAccounts");
                 });
 #pragma warning restore 612, 618
         }
