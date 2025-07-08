@@ -13,4 +13,8 @@ public class Constants
     public const string MOMO_GATEWAY = "momo";
 
     public const string CURRENCY_VND = "VND";
+
+    public const string YOUTUBE_PLATFORM_CODE = "youtube";
+    public const string TIKTOK_PLATFORM_CODE = "tiktok";
+    public const string FACEBOOK_PLATFORM_CODE = "facebook";
 }

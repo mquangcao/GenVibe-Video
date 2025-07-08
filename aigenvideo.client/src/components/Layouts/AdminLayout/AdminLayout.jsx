@@ -1,15 +1,8 @@
 import { AppSidebar } from '@/components/NavBar';
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from '@/components/ui/breadcrumb';
-import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
-import { Separator } from '@radix-ui/react-dropdown-menu';
-import { Home, Map, Receipt, Settings, Settings2, Users } from 'lucide-react';
+import { BreadcrumbItem, BreadcrumbPage } from '@/components/ui/breadcrumb';
+import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
+
+import { Home, Map, Receipt, Settings, Users } from 'lucide-react';
 import React from 'react';
 import { useLocation } from 'react-router-dom';
 
@@ -25,8 +18,8 @@ const items = [
     icon: Users,
   },
   {
-    title: 'Transactions',
-    url: '/admin/transactions',
+    title: 'Payment Manager',
+    url: '/admin/payment-manager',
     icon: Receipt,
   },
   {
