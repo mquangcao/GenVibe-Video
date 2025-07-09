@@ -549,6 +549,7 @@ namespace AIGenVideo.Server.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
 
             modelBuilder.Entity("VideoData", b =>
                 {
