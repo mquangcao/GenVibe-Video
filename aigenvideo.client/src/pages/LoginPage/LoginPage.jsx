@@ -16,6 +16,8 @@ const navigateTo = (role) => {
   }
 };
 
+console.log(12);
+
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const { isAuthenticated, authDispatch, role, isLoading: loadApi } = useAuth();

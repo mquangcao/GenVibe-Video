@@ -1,6 +1,15 @@
 ﻿using AIGenVideo.Server.Models.Configurations;
+using AIGenVideo.Server.Repository;
+using AIGenVideo.Server.Services.SocialPlatform;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.IdentityModel.Tokens;
+
+using Payment.Abstractions;
+using Payment.Gateway;
+using Payment.Gateway.Momo;
+using Payment.Gateway.Momo.Config;
+using Payment.Gateway.VnPay;
+using Payment.Gateway.VnPay.Config;
 using AIGenVideo.Server.Bootstraping.VideoGenerate;
 
 namespace AIGenVideo.Server.Bootstraping;
@@ -16,10 +25,37 @@ public static class ApplicationServiceExtensions
         builder.Services.AddHttpClient();
 
         // Add application services here
-        // Example: builder.Services.AddScoped<IMyService, MyService>();
         builder.Services.AddSingleton<IEmailSender, MailKitEmailSender>();
         builder.Services.AddScoped<ITokenService, JwtTokenService>();
         builder.Services.AddScoped<IAuthService, AuthService>();
+        builder.Services.AddScoped<IRoleRepository, RoleRepository>();
+        builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
+        builder.Services.AddScoped<IVipPlansRepository, VipPlansRepository>();
+        builder.Services.AddScoped<IPaymentService, PaymentService>();
+        builder.Services.AddScoped<IUserVipService, UserVipService>();
+        builder.Services.AddScoped<IUserVipSubscriptionRepository, UserVipSubscriptionRepository>();
+
+        builder.Services.AddScoped<ISocialPlatformService, SocialPlatformService>();
+
+        // payment
+        builder.Services.AddScoped<VnPayPaymentGateway>();
+        builder.Services.AddScoped<MomoPaymentGateway>();
+        builder.Services.AddScoped<IPaymentGatewayFactory, PaymentGatewayFactory>();
+
+        //redis
+        builder.Services.AddStackExchangeRedisCache(options =>
+        {
+            options.Configuration = builder.Configuration.GetConnectionString("Redis");
+            options.InstanceName = "AIGenVideo:";
+        });
+
+        builder.Services.AddScoped<IOAuthStateService, OAuthStateService>();
+
+        builder.Services.AddScoped<YouTubePlatformService>();
+        builder.Services.AddScoped<TiktokPlatformService>();
+        builder.Services.AddScoped<FacebookPlatformService>();
+        builder.Services.AddScoped<SocialPlatformFactory>();
+
 
         // Add video generation services
         builder.Services.AddVideoGenerateServices(builder.Configuration);
@@ -90,12 +126,12 @@ public static class ApplicationServiceExtensions
     {
         builder.Services.AddAuthentication(options =>
         {
-            options.DefaultAuthenticateScheme =
-            options.DefaultChallengeScheme =
-            options.DefaultForbidScheme =
-            options.DefaultScheme =
-            options.DefaultSignInScheme =
-            options.DefaultSignOutScheme = JwtBearerDefaults.AuthenticationScheme;
+            options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+            options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+            options.DefaultForbidScheme = JwtBearerDefaults.AuthenticationScheme;
+            //options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+            //options.DefaultSignInScheme = JwtBearerDefaults.AuthenticationScheme;
+            //options.DefaultSignOutScheme = JwtBearerDefaults.AuthenticationScheme;
 
         }).AddJwtBearer(options =>
         {
@@ -122,7 +158,27 @@ public static class ApplicationServiceExtensions
         builder.Services.Configure<JwtOptions>(builder.Configuration.GetRequiredSection("JWT"));
         builder.Services.Configure<EmailOptions>(builder.Configuration.GetSection("EmailSettings"));
         builder.Services.Configure<LoginGoogleOptions>(builder.Configuration.GetSection("Authentication:Google"));
+        builder.Services.Configure<MomoConfig>(builder.Configuration.GetSection("Payment:Momo"));
+        builder.Services.Configure<VnpayConfig>(builder.Configuration.GetSection("Payment:VnPay"));
+        builder.Services.Configure<TikTokOptions>(builder.Configuration.GetSection("Authentication:TikTok"));
+        builder.Services.Configure<FacebookOptions>(builder.Configuration.GetSection("Authentication:Facebook"));
 
+        return builder;
+    }
+
+    public static IHostApplicationBuilder AddCors(this IHostApplicationBuilder builder)
+    {
+        builder.Services.AddCors(options =>
+        {
+            options.AddPolicy("AllowAll", policy =>
+            {
+                policy
+                    .WithOrigins("https://localhost:50464")      
+                    .AllowAnyMethod()
+                    .AllowAnyHeader()
+                    .AllowCredentials();     // nếu có dùng cookie / auth
+            });
+        });
         return builder;
     }
 }

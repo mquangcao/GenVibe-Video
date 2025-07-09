@@ -7,15 +7,14 @@ using AIGenVideo.Server.Bootstraping.VideoGenerate;
 using AIGenVideo.Server.Bootstraping.ImageGenerate;
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddMicrosoftIdentityWebApi(builder.Configuration.GetSection("AzureAd"));
-
 builder.AddApplicationServices();
 builder.AddSwaggerUIService();
 builder.AddIdentityServices();
-//builder.AddAuthenticationScheme();    
-builder.AddOptionPattern();
+builder.AddAuthenticationScheme();
+builder.AddSocialPlatformServices();
 builder.Services.AddContentGenerateServices(builder.Configuration);
+builder.AddOptionPattern();
+builder.AddCors();
 builder.Services.AddVideoGenerateServices(builder.Configuration);
 builder.Services.AddImageGenerationServices();
 var app = builder.Build();
@@ -36,10 +35,10 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 app.UseRequestLogging();
-
+app.UseCors("AllowAll");
 app.UseAuthentication();
-
 app.UseAuthorization();
+
 app.MapControllers();
 
 app.MapFallbackToFile("/index.html");

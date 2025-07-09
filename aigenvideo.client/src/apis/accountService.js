@@ -1,5 +1,5 @@
-import axiosClient from "./axiosClient";
+import axiosClient from './axiosClient';
 
 export const getAccountProfile = async () => {
-    return await axiosClient.get(`api/account/profile`);
-}
+  return await axiosClient.get(`api/account/profile`);
+};
