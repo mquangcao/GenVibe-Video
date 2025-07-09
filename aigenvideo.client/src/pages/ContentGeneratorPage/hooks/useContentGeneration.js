@@ -11,6 +11,8 @@ export const useContentGeneration = (setActiveTab) => {
     const [images, setImages] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState(null);
+    const [selectedStyle, setSelectedStyle] = useState('Anime');
+    const [selectedAudience, setSelectedAudience] = useState('Children');
 
     const availableContexts = ['YouTube', 'Wikipedia', 'Groq'];
 
@@ -75,9 +77,11 @@ export const useContentGeneration = (setActiveTab) => {
     
         try {
           
-            const generationPromises = videoResult.map((scene) =>
-                imageService.generateImage({ Prompt: scene.title })
-            );
+            const generationPromises = videoResult.map((scene) => { 
+                // Construct the full prompt for each scene
+                const fullPrompt = `${scene.title}, for ${selectedAudience.toLowerCase()}, ${selectedStyle} style`;
+            return imageService.generateImage({ Prompt: fullPrompt });
+        });
             const generationResponses = await Promise.all(generationPromises);
     
             const aiGeneratedImages = generationResponses.map((response, index) => {
@@ -179,6 +183,10 @@ export const useContentGeneration = (setActiveTab) => {
         handleGenerateAndUpload,
         handleRejectImage,
         handleCreateFromTopic,
-        handleUseSuggestion
+        handleUseSuggestion,
+        selectedStyle,
+        setSelectedStyle,
+        selectedAudience,
+        setSelectedAudience
     };
 };
