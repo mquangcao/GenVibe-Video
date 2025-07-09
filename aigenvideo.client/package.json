@@ -14,6 +14,9 @@
     "@emotion/styled": "^11.14.0",
     "@hookform/resolvers": "^5.1.1",
     "@mui/material": "^7.1.1",
+    "@ffmpeg/core": "^0.10.0",
+    "@ffmpeg/ffmpeg": "^0.10.1",
+    "@mui/material": "^7.1.0",
     "@radix-ui/react-avatar": "^1.1.10",
     "@radix-ui/react-collapsible": "^1.1.11",
     "@radix-ui/react-dialog": "^1.1.14",
@@ -68,5 +71,6 @@
     "tw-animate-css": "^1.3.0",
     "vite": "^6.3.5",
     "vite-plugin-svgr": "^4.3.0"
+    "vite-plugin-cross-origin-isolation": "^0.1.6"
   }
 }

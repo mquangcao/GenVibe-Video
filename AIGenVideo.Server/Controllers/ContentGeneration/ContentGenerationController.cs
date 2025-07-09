@@ -32,62 +32,62 @@ public class ContentGenerationController : ControllerBase
             if (request == null)
             {
                 _logger.LogWarning("Received null request");
-                return BadRequest(new ApiContentGenerateResponse<object> 
-                { 
-                    Success = false, 
-                    Message = "Request body cannot be null" 
+                return BadRequest(new ApiContentGenerateResponse<object>
+                {
+                    Success = false,
+                    Message = "Request body cannot be null"
                 });
             }
 
             if (string.IsNullOrEmpty(request.Topic))
             {
                 _logger.LogWarning("Received empty topic");
-                return BadRequest(new ApiContentGenerateResponse<object> 
-                { 
-                    Success = false, 
-                    Message = "Topic is required" 
+                return BadRequest(new ApiContentGenerateResponse<object>
+                {
+                    Success = false,
+                    Message = "Topic is required"
                 });
             }
 
             if (string.IsNullOrEmpty(request.Context))
             {
                 _logger.LogWarning("Received empty context");
-                return BadRequest(new ApiContentGenerateResponse<object> 
-                { 
-                    Success = false, 
-                    Message = "Context is required" 
+                return BadRequest(new ApiContentGenerateResponse<object>
+                {
+                    Success = false,
+                    Message = "Context is required"
                 });
             }
 
             _logger.LogInformation("Generating content for topic: {Topic} with context: {Context}", request.Topic, request.Context);
             var suggestions = await _contentService.GenerateContentAsync(request);
-            
+
             var response = new ApiContentGenerateResponse<List<SuggestionModel>>
             {
                 Success = true,
                 Data = suggestions,
                 Message = "Content generated successfully."
             };
-            
+
             _logger.LogInformation("Successfully generated content with {Count} suggestions", suggestions.Count);
             return Ok(response);
         }
         catch (NotSupportedException ex)
         {
             _logger.LogWarning(ex, "Unsupported context requested: {Context}", request.Context);
-            return BadRequest(new ApiContentGenerateResponse<object> 
-            { 
-                Success = false, 
-                Message = ex.Message 
+            return BadRequest(new ApiContentGenerateResponse<object>
+            {
+                Success = false,
+                Message = ex.Message
             });
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error generating content for topic: {Topic} with context: {Context}", request.Topic, request.Context);
-            return StatusCode(500, new ApiContentGenerateResponse<object> 
-            { 
-                Success = false, 
-                Message = $"An unexpected server error occurred: {ex.Message}" 
+            return StatusCode(500, new ApiContentGenerateResponse<object>
+            {
+                Success = false,
+                Message = $"An unexpected server error occurred: {ex.Message}"
             });
         }
     }

@@ -8,6 +8,7 @@ import child_process from 'child_process';
 import { env } from 'process';
 import tailwindcss from '@tailwindcss/vite';
 import svgr from 'vite-plugin-svgr';
+import crossOriginIsolation from 'vite-plugin-cross-origin-isolation'
 
 const baseFolder = env.APPDATA !== undefined && env.APPDATA !== '' ? `${env.APPDATA}/ASP.NET/https` : `${env.HOME}/.aspnet/https`;
 
@@ -40,11 +41,12 @@ const target = env.ASPNETCORE_HTTPS_PORT
 export default defineConfig({
   plugins: [
     svgr({
-      exportAsReactComponent: true, // ✅ cái này bạn đã đúng
+        exportAsReactComponent: true, // ✅ cái này bạn đã đúng
     }),
-    plugin(),
-    tailwindcss(),
-  ],
+    plugin(), 
+    tailwindcss(), 
+    crossOriginIsolation()
+],
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),

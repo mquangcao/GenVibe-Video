@@ -1,5 +1,10 @@
-using AIGenVideo.Server.Bootstraping.ContentGenerate;  
-
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.ResponseCompression;
+using Microsoft.Identity.Web;
+using AIGenVideo.Server.Bootstraping.ContentGenerate;
+using AIGenVideo.Server.Bootstraping.VideoGenerate;
+using AIGenVideo.Server.Bootstraping.ImageGenerate;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddApplicationServices();
@@ -10,7 +15,11 @@ builder.AddSocialPlatformServices();
 builder.Services.AddContentGenerateServices(builder.Configuration);
 builder.AddOptionPattern();
 builder.AddCors();
+builder.Services.AddVideoGenerateServices(builder.Configuration);
+builder.Services.AddImageGenerationServices();
 var app = builder.Build();
+
+
 
 app.UseDefaultFiles();
 app.UseStaticFiles();
@@ -18,7 +27,7 @@ app.UseStaticFiles();
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
-    
+
     app.UseSwagger();
     app.UseSwaggerUI();
 }

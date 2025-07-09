@@ -10,7 +10,7 @@ public class ApplicationDbContext : IdentityDbContext<AppUser, AppRole, string>
     public DbSet<Platform> Platforms { get; set; }
     public DbSet<UploadLog> UploadLogs { get; set; }
     public DbSet<UserSocialAccount> UserSocialAccounts { get; set; }
-
+    public DbSet<VideoData> VideoData { get; set; } = default!;
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
     {
     }

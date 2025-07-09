@@ -30,14 +30,13 @@ public class GeminiClient : IGeminiClient
         var requestBody = new
         {
             contents = new[]
+        {
+            new { parts = new[] { new { text = prompt } } }
+        },
+            // This part is very important! It tells Gemini to send clean JSON.
+            generationConfig = new
             {
-                new
-                {
-                    parts = new[]
-                    {
-                        new { text = prompt }
-                    }
-                }
+                response_mime_type = "application/json",
             }
         };
 
