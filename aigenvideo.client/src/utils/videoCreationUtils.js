@@ -31,19 +31,21 @@ function hexToRGB(hexColor) {
     const b = parseInt(hex.substring(4, 6), 16);
     return `${r},${g},${b}`;
 }
+
 /**
- * Creates SRT subtitle content from scene summaries and their durations
+ * Creates SRT subtitle content from scene summaries with custom segment durations
  * @param {Array} scenes - Array of scene objects with summary text
- * @param {Array} audioDurations - Array of audio durations for each scene
+ * @param {Array} segmentDurations - Array of desired segment durations (overrides audio durations)
+ * @param {number} transitionDuration - Duration of silent transitions between scenes
  * @returns {string} - SRT formatted subtitle content
  */
-export function generateSRTSubtitles(scenes, audioDurations) {
+export function generateSRTSubtitlesWithCustomDurations(scenes, segmentDurations, transitionDuration = 1) {
     let srtContent = '';
     let currentTime = 0;
 
     for (let i = 0; i < scenes.length; i++) {
         const startTime = currentTime;
-        const endTime = currentTime + audioDurations[i];
+        const endTime = currentTime + segmentDurations[i];
 
         // Format time for SRT (HH:MM:SS,mmm)
         const formatTime = (timeInSeconds) => {
@@ -60,19 +62,24 @@ export function generateSRTSubtitles(scenes, audioDurations) {
         srtContent += `${formatTime(startTime)} --> ${formatTime(endTime)}\n`;
         srtContent += `${scenes[i].summary.trim()}\n\n`;
 
-        currentTime = endTime;
+        // Move to next segment start time (segment duration + transition duration)
+        currentTime = endTime + (i < scenes.length - 1 ? transitionDuration : 0);
     }
 
     return srtContent;
 }
 
 /**
- * Creates a video from images and individual audio files with subtitles using FFmpeg
+ * Creates a video from images and individual audio files with custom segment durations and subtitles using FFmpeg
  * @param {Object} ffmpeg - FFmpeg instance
  * @param {Array} images - Array of image objects with urls
  * @param {Array} audioUrls - Array of audio URLs, one for each image
  * @param {Array} scenes - Array of scene objects with summary text for subtitles
  * @param {Object} options - Optional configuration
+ * @param {Array} options.segmentDurations - Array of custom durations for each segment (e.g., [4, 2] for 4s and 2s segments)
+ * @param {number} options.transitionDuration - Duration of transition between segments in seconds (default: 1)
+ * @param {boolean} options.embedSubtitles - Whether to embed subtitles into video (default: false)
+ * @param {Object} options.subtitleStyle - Subtitle styling options
  * @returns {Promise<{videoUrl: string, subtitleUrl: string}>} - URLs of the created video and subtitle file
  */
 export async function createVideoFromImagesAndIndividualAudiosWithSubtitles(ffmpeg, images, audioUrls, scenes, options = {}) {
@@ -81,15 +88,15 @@ export async function createVideoFromImagesAndIndividualAudiosWithSubtitles(ffmp
         throw new Error('Missing required parameters or mismatched counts for video creation');
     }
 
-
+    const transitionDuration = options.transitionDuration || 1;
 
     try {
-        console.log('Starting video creation with individual audio files and subtitles...');
-        console.log('Subtitle options:', { options });
+        console.log('Starting video creation with custom segment durations and subtitles...');
+        console.log(`Transition duration: ${transitionDuration}s`);
 
         const audioDurations = [];
 
-        // Process audio files
+        // Process audio files and get durations
         console.log('Processing audio files...');
         for (let i = 0; i < audioUrls.length; i++) {
             const audioResponse = await fetch(audioUrls[i], { credentials: 'omit' });
@@ -116,9 +123,13 @@ export async function createVideoFromImagesAndIndividualAudiosWithSubtitles(ffmp
             console.log(`Audio ${i} duration:`, audioDuration, 'seconds');
         }
 
-        // Generate SRT subtitles
-        console.log('Generating subtitles...');
-        const srtContent = generateSRTSubtitles(scenes, audioDurations);
+        // Use custom segment durations if provided, otherwise use audio durations
+        const segmentDurations = options.segmentDurations || audioDurations;
+        console.log('Using segment durations:', segmentDurations);
+
+        // Generate SRT subtitles with custom timing
+        console.log('Generating subtitles with custom segment timing...');
+        const srtContent = generateSRTSubtitlesWithCustomDurations(scenes, segmentDurations, transitionDuration);
         console.log('Generated SRT content length:', srtContent.length);
         console.log('SRT preview:', srtContent.substring(0, 200) + '...');
 
@@ -141,55 +152,118 @@ export async function createVideoFromImagesAndIndividualAudiosWithSubtitles(ffmp
             }
         }
 
-        // Create individual video segments
-        console.log('Creating individual video segments...');
+        // Create individual video segments with custom durations
+        console.log('Creating individual video segments with custom durations...');
         for (let i = 0; i < images.length; i++) {
+            const segmentDuration = segmentDurations[i] + 1;
+            const audioDuration = audioDurations[i];
+
+            console.log(`Creating segment ${i}: video=${segmentDuration}s, audio=${audioDuration}s`);
+
+            if (segmentDuration <= audioDuration) {
+                // Segment duration is shorter or equal to audio - trim audio
+                await ffmpeg.run(
+                    '-i', `audio${i}.mp3`,
+                    '-af', 'apad=pad_dur=1s',
+                    `audio${i}.mp3`
+                )
+
+                await ffmpeg.run(
+                    '-loop', '1',
+                    '-i', `img${i}.jpg`,
+                    '-i', `audio${i}.mp3`,
+                    '-vf', 'scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:black',
+                    '-c:v', 'libx264',
+                    '-t', segmentDuration.toString(),
+                    '-pix_fmt', 'yuv420p',
+                    '-c:a', 'aac',
+                    '-b:a', '192k',
+                    `segment${i}.mp4`
+                );
+            } else {
+                // Segment duration is longer than audio - pad audio with silence
+                await ffmpeg.run(
+                    '-loop', '1',
+                    '-i', `img${i}.jpg`,
+                    '-i', `audio${i}.mp3`,
+                    '-filter_complex',
+                    `[1:a]apad=pad_dur=${segmentDuration - audioDuration}[a]`,
+                    '-map', '0:v',
+                    '-map', '[a]',
+                    '-vf', 'scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:black',
+                    '-c:v', 'libx264',
+                    '-t', segmentDuration.toString(),
+                    '-pix_fmt', 'yuv420p',
+                    '-c:a', 'aac',
+                    '-b:a', '192k',
+                    `segment${i}.mp4`
+                );
+            }
+            console.log(`Created segment ${i} with duration ${segmentDuration}s`);
+        }
+
+        if (images.length === 1) {
+            // Single segment, no transitions needed
+            await ffmpeg.run('-y', '-i', 'segment0.mp4', '-c', 'copy', 'temp_video.mp4');
+        } else {
+            // Create transition segments (silent video with fade effect)
+            console.log('Creating transition segments...');
+            for (let i = 0; i < images.length - 1; i++) {
+                const currentImage = `img${i}.jpg`;
+                const nextImage = `img${i + 1}.jpg`;
+
+                // Create transition with crossfade effect but no audio
+                await ffmpeg.run(
+                    '-loop', '1', '-i', currentImage,
+                    '-loop', '1', '-i', nextImage,
+                    '-filter_complex',
+                    `[0:v]scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:black[v0];[1:v]scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:black[v1];[v0][v1]xfade=transition=fade:duration=${transitionDuration}:offset=0[v]`,
+                    '-map', '[v]',
+                    '-c:v', 'libx264',
+                    '-t', transitionDuration.toString(),
+                    '-pix_fmt', 'yuv420p',
+                    '-an', // No audio for transition
+                    `transition${i}.mp4`
+                );
+                console.log(`Created transition ${i} with duration ${transitionDuration}s`);
+            }
+
+            // Create concat file for segments and transitions
+            let concatText = '';
+            for (let i = 0; i < images.length; i++) {
+                concatText += `file 'segment${i}.mp4'\n`;
+                if (i < images.length - 1) {
+                    concatText += `file 'transition${i}.mp4'\n`;
+                }
+            }
+            ffmpeg.FS('writeFile', 'concat_list.txt', new TextEncoder().encode(concatText));
+
+            console.log('Concatenating video segments with transitions...');
             await ffmpeg.run(
-                '-loop', '1',
-                '-i', `img${i}.jpg`,
-                '-i', `audio${i}.mp3`,
-                '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2',
-                '-c:v', 'libx264',
-                '-t', audioDurations[i].toString(),
-                '-pix_fmt', 'yuv420p',
-                '-c:a', 'aac',
-                '-b:a', '192k',
-                '-shortest',
-                `segment${i}.mp4`
+                '-f', 'concat',
+                '-safe', '0',
+                '-i', 'concat_list.txt',
+                '-c', 'copy',
+                'temp_video.mp4'
             );
-            console.log(`Created segment ${i}`);
         }
 
-        // Create concat file for segments
-        let concatText = '';
-        for (let i = 0; i < images.length; i++) {
-            concatText += `file 'segment${i}.mp4'\n`;
-        }
-        ffmpeg.FS('writeFile', 'concat_list.txt', new TextEncoder().encode(concatText));
-
-        // Concatenate all segments
-        console.log('Concatenating video segments...');
-        await ffmpeg.run(
-            '-f', 'concat',
-            '-safe', '0',
-            '-i', 'concat_list.txt',
-            '-c', 'copy',
-            'temp_video.mp4'
-        );
-
+        // Add subtitles to the video
         if (options.embedSubtitles) {
             // Embed subtitles as burned-in text (hard subtitles)
             console.log('Embedding hard subtitles into video...');
 
-            const fontSize = options.subtitleStyle.fontSize || 24; // Default font size
-            const fontColor = options.subtitleStyle.fontColor || '#ffffff'; // Default font color
-            const backgroundColor = options.subtitleStyle.backgroundColor || '#000000'; // Default background color
-            const position = options.subtitleStyle.position || 'bottom'; // Default position
+            const fontSize = options.subtitleStyle?.fontSize || 24;
+            const fontColor = options.subtitleStyle?.fontColor || '#ffffff';
+            const backgroundColor = options.subtitleStyle?.backgroundColor || '#000000';
+            const position = options.subtitleStyle?.position || 'bottom';
             const ffmpegFontColor = hexToFFmpegColor(fontColor);
             const ffmpegBackgroundColor = hexToFFmpegColor(backgroundColor);
-            console.log('Subtitle style-----:', { ffmpegFontColor, ffmpegBackgroundColor, fontSize, position });
+
+            console.log('Subtitle style:', { ffmpegFontColor, ffmpegBackgroundColor, fontSize, position });
+
             try {
-                // Load font file for subtitle rendering
+                // Try to load font file for subtitle rendering
                 await ffmpeg.FS('writeFile', 'tmp/Roboto-Regular.ttf', await fetchFile('/fonts/Roboto-Regular.ttf'));
                 const subtitleFilter = `subtitles=subtitles.srt:fontsdir=/tmp:force_style='FontName=Roboto, FontSize=${fontSize}, FontColor=${ffmpegFontColor}, BackgroundColor=${ffmpegBackgroundColor}, Alignment=2, MarginV=20'`;
                 console.log('Using subtitle filter:', subtitleFilter);
@@ -231,7 +305,7 @@ export async function createVideoFromImagesAndIndividualAudiosWithSubtitles(ffmp
             console.log('Video created for external subtitles');
         }
 
-        console.log('FFmpeg processing completed');
+        console.log('FFmpeg processing with custom durations and subtitles completed');
 
         // Verify the output file
         const outputStat = ffmpeg.FS('stat', 'output.mp4');
@@ -265,19 +339,28 @@ export async function createVideoFromImagesAndIndividualAudiosWithSubtitles(ffmp
             }
         }
 
+        // Clean up transition files
+        for (let i = 0; i < images.length - 1; i++) {
+            try {
+                ffmpeg.FS('unlink', `transition${i}.mp4`);
+            } catch (e) {
+                console.warn(`Failed to unlink transition file ${i}:`, e);
+            }
+        }
+
         try {
-            ffmpeg.FS('unlink', 'concat_list.txt');
             ffmpeg.FS('unlink', 'subtitles.srt');
             ffmpeg.FS('unlink', 'temp_video.mp4');
             ffmpeg.FS('unlink', 'output.mp4');
             ffmpeg.FS('unlink', 'tmp/Roboto-Regular.ttf');
+            ffmpeg.FS('unlink', 'concat_list.txt');
         } catch (e) {
             console.warn('Failed to unlink some temp files:', e);
         }
 
         return { videoUrl: videoURL, subtitleUrl: subtitleURL };
     } catch (error) {
-        console.error('Error in video creation with subtitles:', error);
+        console.error('Error in video creation with custom durations and subtitles:', error);
         throw error;
     }
 }
