@@ -56,6 +56,8 @@ const ContentGeneratorPage = () => {
     handleCreateVideo,
     handleGenerateAndUpload,
     handleRejectImage,
+    handleCreateFromTopic: createFromTopic,
+    handleUseSuggestion,
     selectedStyle,
     setSelectedStyle,
     selectedAudience,
