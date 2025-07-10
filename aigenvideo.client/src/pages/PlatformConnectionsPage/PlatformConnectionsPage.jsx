@@ -45,9 +45,11 @@ export default function PlatformConnectionsPage() {
       loading: true,
     },
   ]);
+  const { ToastSuccess, ToastError } = useToast();
 
   useEffect(() => {
     const loadConnectedAccounts = async () => {
+      console.log('Loading connected accounts...');
       try {
         var response = await getAllPlatformConnections();
         if (response.data.success) {
@@ -96,69 +98,142 @@ export default function PlatformConnectionsPage() {
     };
 
     loadConnectedAccounts();
-  }, []);
+    // console.log('weiiii 111');
+    // const handleMessage = async (event) => {
+    //   console.log(event);
+    //   console.log('weiiii 222');
+    //   console.log('Received message from popup:', event.data);
+    //   if (event.origin !== 'https://localhost:7073') return;
+    //   const { success, platform } = event.data;
+    //   console.log('Received message from popup:', event.data);
+    //   if (success) {
+    //     try {
+    //       var platformInfo = await getPlatformInfo(platform);
+    //       if (platformInfo.data.success) {
+    //         const { channelName, subscriberCount, videoCount, viewCount, avatarUrl, channelHandle, connectedDate, lastSync } =
+    //           platformInfo.data.data;
+    //         console.log('Platform info:', platformInfo.data.data, platform, success);
+    //         const localDate = dayjs.utc(lastSync).local();
+    //         const fromNow = localDate.fromNow();
+    //         setPlatformSlots((prev) =>
+    //           prev.map((slot) =>
+    //             slot.platform === platform
+    //               ? {
+    //                   ...slot,
+    //                   loading: false,
+    //                   connected: true,
+    //                   account: {
+    //                     name: channelName,
+    //                     username: channelHandle,
+    //                     avatar: avatarUrl,
+    //                     verified: false,
+    //                     stats: {
+    //                       followers: subscriberCount,
+    //                       views: viewCount,
+    //                       videos: videoCount,
+    //                     },
+    //                   },
+    //                   tokenStatus: 'healthy',
+    //                   lastSync: fromNow,
+    //                   connectedDate: new Date(connectedDate).toLocaleDateString('en-US', {
+    //                     month: 'short',
+    //                     day: 'numeric',
+    //                     year: 'numeric',
+    //                   }),
+    //                 }
+    //               : slot
+    //           )
+    //         );
+    //         ToastSuccess(`Kết nối thành công với ${channelName}!`);
+    //       }
+    //     } catch (error) {
+    //       console.error('Error fetching channel name:', error);
+    //       ToastError('Kết nối thành công nhưng không thể lấy tên kênh!');
+    //     }
+    //   } else {
+    //     ToastError('Kết nối thất bại!');
+    //   }
+    // };
 
-  useEffect(() => {
-    const handleMessage = async (event) => {
-      if (event.origin !== 'https://localhost:7073') return;
+    // window.addEventListener('message', handleMessage);
+
+    // return () => {
+    //   window.removeEventListener('message', handleMessage); // cleanup
+    // };
+    const bc = new BroadcastChannel('connect-channel');
+    bc.onmessage = (event) => {
+      console.log('Received from popup:', event.data);
       const { success, platform } = event.data;
+      console.log('Received from popup:', event.data);
       if (success) {
-        try {
-          var platformInfo = await getPlatformInfo(platform);
-          if (platformInfo.data.success) {
-            const { channelName, subscriberCount, videoCount, viewCount, avatarUrl, channelHandle, connectedDate, lastSync } =
-              platformInfo.data.data;
-
-            const localDate = dayjs.utc(lastSync).local();
-            const fromNow = localDate.fromNow();
-            setPlatformSlots((prev) =>
-              prev.map((slot) =>
-                slot.platform === platform
-                  ? {
-                      ...slot,
-                      loading: false,
-                      connected: true,
-                      account: {
-                        name: channelName,
-                        username: channelHandle,
-                        avatar: avatarUrl,
-                        verified: false,
-                        stats: {
-                          followers: subscriberCount,
-                          views: viewCount,
-                          videos: videoCount,
-                        },
-                      },
-                      tokenStatus: 'healthy',
-                      lastSync: fromNow,
-                      connectedDate: new Date(connectedDate).toLocaleDateString('en-US', {
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric',
-                      }),
-                    }
-                  : slot
-              )
-            );
-            ToastSuccess(`Kết nối thành công với ${channelName}!`);
-          }
-        } catch (error) {
-          console.error('Error fetching channel name:', error);
-          ToastError('Kết nối thành công nhưng không thể lấy tên kênh!');
-        }
-      } else {
-        ToastError('Kết nối thất bại!');
+        // xử lý tiếp
       }
     };
-
-    window.addEventListener('message', handleMessage);
-
-    return () => {
-      window.removeEventListener('message', handleMessage); // cleanup
-    };
   }, []);
+  // console.log('weiiii');
+  // useEffect(() => {
+  //   console.log('weiiii');
 
-  const { ToastSuccess, ToastError } = useToast();
+  //   const handleMessage = async (event) => {
+  //     console.log('Received message from popup:', event.data);
+  //     if (event.origin !== 'https://localhost:7073') return;
+  //     const { success, platform } = event.data;
+  //     console.log('Received message from popup:', event.data);
+  //     if (success) {
+  //       try {
+  //         var platformInfo = await getPlatformInfo(platform);
+  //         if (platformInfo.data.success) {
+  //           const { channelName, subscriberCount, videoCount, viewCount, avatarUrl, channelHandle, connectedDate, lastSync } =
+  //             platformInfo.data.data;
+  //           console.log('Platform info:', platformInfo.data.data, platform, success);
+  //           const localDate = dayjs.utc(lastSync).local();
+  //           const fromNow = localDate.fromNow();
+  //           setPlatformSlots((prev) =>
+  //             prev.map((slot) =>
+  //               slot.platform === platform
+  //                 ? {
+  //                     ...slot,
+  //                     loading: false,
+  //                     connected: true,
+  //                     account: {
+  //                       name: channelName,
+  //                       username: channelHandle,
+  //                       avatar: avatarUrl,
+  //                       verified: false,
+  //                       stats: {
+  //                         followers: subscriberCount,
+  //                         views: viewCount,
+  //                         videos: videoCount,
+  //                       },
+  //                     },
+  //                     tokenStatus: 'healthy',
+  //                     lastSync: fromNow,
+  //                     connectedDate: new Date(connectedDate).toLocaleDateString('en-US', {
+  //                       month: 'short',
+  //                       day: 'numeric',
+  //                       year: 'numeric',
+  //                     }),
+  //                   }
+  //                 : slot
+  //             )
+  //           );
+  //           ToastSuccess(`Kết nối thành công với ${channelName}!`);
+  //         }
+  //       } catch (error) {
+  //         console.error('Error fetching channel name:', error);
+  //         ToastError('Kết nối thành công nhưng không thể lấy tên kênh!');
+  //       }
+  //     } else {
+  //       ToastError('Kết nối thất bại!');
+  //     }
+  //   };
+
+  //   window.addEventListener('message', handleMessage);
+
+  //   return () => {
+  //     window.removeEventListener('message', handleMessage); // cleanup
+  //   };
+  // }, []);
 
   const handleConnect = async (platform) => {
     try {
@@ -173,14 +248,19 @@ export default function PlatformConnectionsPage() {
         )
       );
       var response = await getUrlConnection(platform);
-      const popup = window.open(response.data.data.url, '_blank', 'width=500,height=600');
-      const popupCheckInterval = setInterval(() => {
-        if (!popup || popup.closed) {
-          clearInterval(popupCheckInterval);
+      const popup = window.open(response.data.data.url, '_blank', 'popup,width=600,height=600');
+      window.addEventListener('message', (event) => {
+        if (event.origin !== 'https://localhost:7073') return;
 
-          setPlatformSlots((prev) => prev.map((slot) => (slot.platform === platform ? { ...slot, loading: false } : slot)));
-        }
-      }, 2000);
+        console.log('Received message from popup:', event.data);
+      });
+      // const popupCheckInterval = setInterval(() => {
+      //   if (!popup || popup.closed) {
+      //     clearInterval(popupCheckInterval);
+
+      //     setPlatformSlots((prev) => prev.map((slot) => (slot.platform === platform ? { ...slot, loading: false } : slot)));
+      //   }
+      // }, 2000);
     } catch (err) {
       console.error(err);
       ToastError('Không thể kết nối.');

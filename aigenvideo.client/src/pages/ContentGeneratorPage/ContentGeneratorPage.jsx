@@ -62,6 +62,8 @@ const ContentGeneratorPage = () => {
     setSelectedStyle,
     selectedAudience,
     setSelectedAudience,
+    handleCreateFromTopic: createFromTopic,
+    handleUseSuggestion,
   } = useContentGeneration(setActiveTab);
 
   // Combined values

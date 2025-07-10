@@ -322,4 +322,9 @@ public class FacebookPlatformService : IPlatformService
     {
         throw new NotImplementedException();
     }
+
+    public Task<VideoAnalytics?> GetVideoAnalyticsAsync(string videoId, DateTime? startDate, DateTime? endDate)
+    {
+        throw new NotImplementedException();
+    }
 }

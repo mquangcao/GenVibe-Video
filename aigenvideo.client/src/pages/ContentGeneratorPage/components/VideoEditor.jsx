@@ -1,5 +1,7 @@
 ﻿import React, { useState, useRef, useEffect } from 'react';
 import {
+
+  FaTrash,
   FaArrowLeft,
   FaVolumeUp,
   FaFileDownload,
@@ -20,6 +22,26 @@ import SceneEditor from './SceneEditor';
 import CustomScenesTab from './tabs/CustomScenesTab';
 import VoiceSettings from './VoiceSettings';
 import SubtitleSettings from './SubtitleSettings';
+  FaPlus,
+  FaPause,
+  FaMinusCircle,
+  FaQuoteRight,
+  FaImages,
+  FaVideo,
+  FaCogs,
+  FaMicrophone,
+  FaFileAudio,
+  FaEdit,
+  FaPlay,
+  FaClosedCaptioning,
+} from 'react-icons/fa';
+import { useFFmpeg } from '@/hooks/useFFmpeg';
+import {
+  createVideoFromImagesAndIndividualAudios,
+  createVideoFromImagesAndIndividualAudiosWithSubtitles,
+} from '@/utils/videoCreationUtils';
+import { saveFullVideoData } from '@/apis/saveFullVideoData';
+import { generateAudio } from '@/apis/audioService';
 
 const VideoEditor = ({
   videoPrompt,
@@ -48,10 +70,12 @@ const VideoEditor = ({
   selectedAudience,
   setSelectedAudience,
 }) => {
+
   // Video review state
   const [isReviewingAudio, setIsReviewingAudio] = useState(false);
   const [ccEnabled, setCcEnabled] = useState(true);
   const videoRef = useRef(null);
+
 
   const [subtitleSettings, setSubtitleSettings] = useState({
     enabled: true,
@@ -150,6 +174,7 @@ const VideoEditor = ({
             <div className="flex-1 flex flex-col space-y-5 overflow-y-auto space-x-2">
               <div>
                 <label className="block text-sm font-medium text-slate-200 mb-4">
+
                   Enter text, describe the content you want to generate
                 </label>
                 <textarea
@@ -383,6 +408,7 @@ const VideoEditor = ({
             </div>
 
             {/* Review Audio Voice Button - keep as is */}
+
             <div className="mt-4 pt-4 border-t border-slate-700/50 space-y-3">
               <button
                 onClick={reviewAudioVoice}
@@ -425,11 +451,13 @@ const VideoEditor = ({
                                     )*/}
                 </div>
 
+
                 <div className="bg-slate-700 p-4 rounded-lg relative">
                   <video
                     ref={videoRef}
                     controls
                     className="w-full rounded-lg border border-slate-600"
+
                     src={videoProcessor.videoUrl}
                     onLoadedData={() => {
                       if (videoRef.current && videoProcessor.subtitleUrl && !subtitleSettings.embedInVideo) {
@@ -440,6 +468,7 @@ const VideoEditor = ({
                       }
                     }}
                   >
+
                     {!subtitleSettings.embedInVideo && videoProcessor.subtitleUrl && (
                       <track kind="subtitles" src={videoProcessor.subtitleUrl} srcLang="en" label="English" default={ccEnabled} />
                     )}
@@ -585,7 +614,6 @@ const VideoEditor = ({
                 onImageGenerate={sceneManager.generateImageForScene}
               />
             ))}
-
             <div className="sticky bottom-0 p-2 bg-slate-800 rounded-lg shadow-lg border border-slate-700 mt-6 flex justify-end">
               <button
                 onClick={() => {
