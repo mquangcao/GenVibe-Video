@@ -18,3 +18,4 @@ export { default as SocialVideoManagementPage } from './SocialVideoManagementPag
 export { default as UploadVideoPage } from './UploadVideoPage';
 export { default as EditorPage } from './EditorPage';
 export { default as ImageGeneratorPage } from './ImageGeneratorPage';
+export { default as MyVideosPage } from './MyVideosPage';

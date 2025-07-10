@@ -1,6 +1,6 @@
 ﻿using AIGenVideo.Server.Services.SocialPlatform;
-using Google.Apis.YouTube.v3;
 using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 
 namespace AIGenVideo.Server.Controllers.SocialPlatform;
 
@@ -9,13 +9,14 @@ namespace AIGenVideo.Server.Controllers.SocialPlatform;
 public class VideoController : ControllerBase
 {
     private readonly YouTubePlatformService _youTubePlatformService;
-
-    public VideoController(YouTubePlatformService youTubePlatformService)
+    private readonly ApplicationDbContext _dbContext;
+    public VideoController(YouTubePlatformService youTubePlatformService, ApplicationDbContext dbContext)
     {
         _youTubePlatformService = youTubePlatformService;
+        _dbContext = dbContext;
     }
 
-    
+
     [HttpPost("upload")]
     [Authorize]
     public async Task<IActionResult> UploadVideo([FromBody] UploadVideoRequest request)
@@ -89,5 +90,66 @@ public class VideoController : ControllerBase
             return StatusCode(500, $"Internal server error: {ex.Message}");
         }
     }
+
+    [HttpGet("my-videos")]
+    [Authorize] 
+    public async Task<IActionResult> GetMyVideos()
+    {
+        var userId = User.GetUserId();
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Unauthorized("User ID is missing.");
+        }
+
+        // Lấy các video do người dùng tạo
+        var videos = await _dbContext.VideoData
+            .Where(v => v.CreatedBy == userId)
+            .OrderByDescending(v => v.CreatedAt)
+            .ToListAsync();
+
+        // Map dữ liệu sang DTO phù hợp
+        var result = videos.Select(v => new
+        {
+            id = v.Id,
+            caption = v.Captions,
+            videoUrl = v.VideoUrl,
+            createdAt = v.CreatedAt.ToString("yyyy-MM-dd")
+        });
+
+        return Ok(ApiResponse.SuccessResponse(result));
+    }
+
+    [HttpGet("my-videos/{id}")]
+    [Authorize]
+    public async Task<IActionResult> GetVideoById(string id)
+    {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Unauthorized("User ID is missing.");
+        }
+
+        // Tìm video theo ID và người tạo
+        var video = await _dbContext.VideoData
+            .FirstOrDefaultAsync(v => v.Id == id && v.CreatedBy == userId);
+
+        if (video == null)
+        {
+            return NotFound("Video not found or you do not have access.");
+        }
+
+        var result = new
+        {
+            id = video.Id,
+            caption = video.Captions,
+            videoUrl = video.VideoUrl,
+            createdAt = video.CreatedAt.ToString("yyyy-MM-dd")
+        };
+
+        return Ok(ApiResponse.SuccessResponse(result));
+    }
+
+
+
 
 }

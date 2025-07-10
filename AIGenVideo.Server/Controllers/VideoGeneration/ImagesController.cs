@@ -1,5 +1,6 @@
 using AIGenVideo.Server.Abstractions.VideoGenerate;
 using AIGenVideo.Server.Data.Migrations;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AIGenVideo.Server.Controllers.VideoGeneration;
@@ -19,13 +20,17 @@ public class ImagesController : ControllerBase
 
     // In your ImagesController.cs or a new VideoDataController.cs
 
+    
     [HttpPost("save-video-data")]
+    [Authorize]
     public async Task<IActionResult> SaveFullVideoData([FromBody] VideoData requestData)
     {
         if (requestData == null)
         {
             return BadRequest("No data provided.");
         }
+
+        requestData.CreatedBy = HttpContext.User.GetUserId();
 
         // You can add validation here if needed
 

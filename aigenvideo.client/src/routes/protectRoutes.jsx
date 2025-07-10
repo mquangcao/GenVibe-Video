@@ -5,6 +5,7 @@ import {
   EditorPage,
   EditUserPage,
   HomePage,
+  MyVideosPage,
   PaymentManagerPage,
   PaymentSuccessPage,
   PlatformConnectionsPage,
@@ -71,7 +72,7 @@ export const protectRoutes = [
     // requiredRoles: ['user', 'vip', 'admin'],
   },
   {
-    path: 'social-video-management',
+    path: 'upload/:videoUrl',
     element: <SocialVideoManagementPage />,
     layout: null, // No layout for social video management page
     // requiredRoles: ['user', 'vip', 'admin'],
@@ -83,9 +84,14 @@ export const protectRoutes = [
     // requiredRoles: ['user', 'vip', 'admin'],
   },
   {
-    path: 'editor',
+    path: 'edit/:videoUrl',
     element: <EditorPage />,
     layout: null, // No layout for editor page
     // requiredRoles: ['user', 'vip', 'admin'],
+  },
+  {
+    path: 'my-videos',
+    element: <MyVideosPage />,
+    layout: null, // No layout for my videos page
   },
 ];
