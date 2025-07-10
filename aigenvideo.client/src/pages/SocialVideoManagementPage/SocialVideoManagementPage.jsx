@@ -30,41 +30,35 @@ import {
   Settings,
   ArrowLeft,
   Link2,
+  Copy,
+  Check,
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import AnalyticsDialog from './AnalyticsDialog';
+import { Label } from '@/components/ui/label';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { getVideoById, getVideoUploadedPlatforms, uploadVideoToPlatform } from '@/apis/videoService';
 
-// interface PlatformStatus {
-//   platform: "youtube" | "tiktok" | "facebook"
-//   platformName: string
-//   icon: React.ReactNode
-//   color: string
-//   bgColor: string
-//   uploaded: boolean
-//   connected: boolean
-//   uploading?: boolean
-//   url?: string
-//   title?: string
-//   description?: string
-//   stats?: {
-//     views: string
-//     likes: string
-//     comments: string
-//     shares?: string
-//   }
-//   uploadDate?: string
-//   monthlyStats?: {
-//     month: string
-//     views: number
-//     likes: number
-//     comments: number
-//     shares: number
-//   }[]
-// }
+function generateVideoUrl(platformCode, videoId) {
+  if (!platformCode || !videoId) return null;
+
+  switch (platformCode.toLowerCase()) {
+    case 'youtube':
+      return `https://www.youtube.com/watch?v=${videoId}`;
+    case 'tiktok':
+      return `https://www.tiktok.com/video/${videoId}`;
+    case 'facebook':
+      return `https://www.facebook.com/video.php?v=${videoId}`;
+    default:
+      return null;
+  }
+}
 
 export default function SocialVideoManagementPage() {
+  const { videoid } = useParams();
+  console.log('Video ID:', videoid);
   const [videoData, setVideoData] = useState({
-    title: 'How to Build a Modern React App in 2024',
+    videoUrl: 'How to Build a Modern React App in 2024',
     description: 'Complete tutorial covering Next.js, TypeScript, and modern development practices',
     thumbnail: 'https://placehold.co/200x350',
     duration: '15:42',
@@ -73,7 +67,6 @@ export default function SocialVideoManagementPage() {
     totalLikes: '2.1K',
     totalComments: '156',
   });
-
   const [platforms, setPlatforms] = useState([
     {
       platform: 'youtube',
@@ -81,24 +74,8 @@ export default function SocialVideoManagementPage() {
       icon: <Icons.Youtube className="w-10 h-10" />,
       color: 'text-red-600',
       bgColor: 'bg-red-50',
-      uploaded: true,
-      connected: true,
-      url: 'https://youtube.com/watch?v=abc123',
-      title: 'How to Build a Modern React App in 2024 - Complete Guide',
-      description:
-        'Complete tutorial covering Next.js, TypeScript, and modern development practices. Perfect for beginners and intermediate developers.',
-      stats: {
-        views: '32.1K',
-        likes: '1.8K',
-        comments: '124',
-        shares: '89',
-      },
-      uploadDate: 'Dec 18, 2024',
-      monthlyStats: [
-        { month: 'Oct', views: 8500, likes: 420, comments: 32, shares: 18 },
-        { month: 'Nov', views: 12300, likes: 680, comments: 45, shares: 28 },
-        { month: 'Dec', views: 11300, likes: 700, comments: 47, shares: 43 },
-      ],
+      uploaded: false,
+      connected: false,
     },
     {
       platform: 'tiktok',
@@ -115,25 +92,74 @@ export default function SocialVideoManagementPage() {
       icon: <Icons.Facebook className="w-10 h-10" />,
       color: 'text-blue-600',
       bgColor: 'bg-blue-50',
-      uploaded: true,
-      connected: true,
-      url: 'https://facebook.com/video/123',
-      title: 'Modern React Development Tutorial 2024',
-      description: 'Learn how to build modern React applications with the latest tools and best practices.',
-      stats: {
-        views: '8.9K',
-        likes: '245',
-        comments: '28',
-        shares: '67',
-      },
-      uploadDate: 'Dec 18, 2024',
-      monthlyStats: [
-        { month: 'Oct', views: 2100, likes: 85, comments: 8, shares: 15 },
-        { month: 'Nov', views: 3200, likes: 120, comments: 12, shares: 22 },
-        { month: 'Dec', views: 3600, likes: 140, comments: 18, shares: 30 },
-      ],
+      uploaded: false,
+      connected: false,
     },
   ]);
+
+  useState(() => {
+    const getVideoData = async () => {
+      try {
+        const response = await getVideoById(videoid);
+
+        if (response.data.success) {
+          const backendRsp = response.data.data;
+          setVideoData({
+            id: backendRsp.id,
+            caption: backendRsp.caption,
+            videoUrl: backendRsp.videoUrl,
+            createdDate: backendRsp.createdDate,
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching video data:', error);
+      }
+    };
+
+    getVideoData();
+
+    const getVideoPlatform = async () => {
+      try {
+        console.log('checkckck');
+        const response = await getVideoUploadedPlatforms(videoid);
+        if (response.data.success) {
+          console.log('Video data fetched successfully:', response.data.data);
+          const backendData = response.data.data;
+          const updated = platforms.map((p) => {
+            const match = backendData.find((x) => {
+              console.log('x.platformCode:', x, 'p.platform:', p.platform);
+              return x.platformCode === p.platform;
+            });
+            return {
+              ...p,
+              connected: match.isConnect,
+              uploaded: match.isPublish,
+              url: generateVideoUrl(p.platform, match.videoId),
+              title: match.title,
+              description: match.description,
+              uploadDate: new Date(match.createdAt).toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+              }),
+              stats: {
+                views: match.analytics.basicStats.viewCount || '0',
+                likes: match.analytics.basicStats.likeCount || '0',
+                comments: match.analytics.basicStats.commentCount || '0',
+                shares: match.analytics.basicStats.shareCount || '0',
+              },
+              analytics: match.analytics,
+            };
+          });
+          setPlatforms(updated);
+        }
+      } catch (error) {
+        console.error('Error fetching video data:', error);
+      }
+    };
+
+    getVideoPlatform();
+  }, []);
 
   const [editingPlatform, setEditingPlatform] = useState(null);
   const [editForm, setEditForm] = useState({ title: '', description: '' });
@@ -141,6 +167,7 @@ export default function SocialVideoManagementPage() {
   const [videoEditForm, setVideoEditForm] = useState({ title: '', description: '' });
   const [uploadingPlatform, setUploadingPlatform] = useState(null);
   const [uploadForm, setUploadForm] = useState({ title: '', description: '' });
+  const [copiedUrl, setCopiedUrl] = useState(false);
 
   const handleUploadClick = (platform) => {
     setUploadForm({
@@ -150,50 +177,39 @@ export default function SocialVideoManagementPage() {
     setUploadingPlatform(platform);
   };
 
-  const handleConfirmUpload = () => {
+  const handleConfirmUpload = async () => {
+    console.log(uploadingPlatform);
     if (uploadingPlatform) {
       // Close popup immediately to prevent spam
       setUploadingPlatform(null);
 
-      setPlatforms((prev) =>
-        prev.map((p) =>
-          p.platform === uploadingPlatform
-            ? {
-                ...p,
-                uploading: true,
-              }
-            : p
-        )
-      );
-
-      setTimeout(() => {
+      try {
         setPlatforms((prev) =>
           prev.map((p) =>
             p.platform === uploadingPlatform
               ? {
                   ...p,
-                  uploading: false,
-                  uploaded: true,
-                  url: `https://${uploadingPlatform}.com/video/new123`,
-                  title: uploadForm.title,
-                  description: uploadForm.description,
-                  stats: {
-                    views: '0',
-                    likes: '0',
-                    comments: '0',
-                    shares: '0',
-                  },
-                  uploadDate: new Date().toLocaleDateString('en-US', {
-                    month: 'short',
-                    day: 'numeric',
-                    year: 'numeric',
-                  }),
-                  monthlyStats: [{ month: 'Dec', views: 0, likes: 0, comments: 0, shares: 0 }],
+                  uploading: true,
                 }
               : p
           )
         );
-      }, 2000);
+        const response = await uploadVideoToPlatform({
+          tags: 'upload',
+          platformCode: uploadingPlatform,
+          title: uploadForm.title,
+          description: uploadForm.description,
+          videoUrl: videoData.videoUrl,
+          videoId: videoid,
+        });
+        if (response.data.success) {
+          console.log('Upload successful:', response.data);
+        } else {
+          console.error('Upload failed:', response.data.message);
+        }
+      } catch (error) {
+        console.error('Error uploading video:', error);
+      }
     }
   };
 
@@ -332,6 +348,41 @@ export default function SocialVideoManagementPage() {
     );
   };
 
+  const generateThumbnail = (videoUrl) => {
+    if (videoUrl.includes('cloudinary.com')) {
+      try {
+        const url = new URL(videoUrl);
+        const pathParts = url.pathname.split('/');
+        const uploadIndex = pathParts.findIndex((part) => part === 'upload');
+        if (uploadIndex === -1) {
+          return '/placeholder.svg?height=200&width=300';
+        }
+        const afterUpload = pathParts.slice(uploadIndex + 1);
+        const lastPart = afterUpload[afterUpload.length - 1];
+        const nameWithoutExt = lastPart.replace(/\.(mp4|mov|avi|mkv|webm)$/i, '');
+        afterUpload[afterUpload.length - 1] = nameWithoutExt + '.jpg';
+        const baseUrl = `${url.protocol}//${url.host}`;
+        const cloudPath = pathParts.slice(0, uploadIndex + 1).join('/');
+        const transformations = 'c_thumb,w_300,h_200,f_auto,q_auto';
+        return `${baseUrl}${cloudPath}/${transformations}/${afterUpload.join('/')}`;
+      } catch (error) {
+        console.error('Error generating thumbnail:', error);
+        return '/placeholder.svg?height=200&width=300';
+      }
+    }
+    return '/placeholder.svg?height=200&width=300';
+  };
+
+  const handleCopyUrl = async () => {
+    try {
+      await navigator.clipboard.writeText(videoData.videoUrl);
+      setCopiedUrl(true);
+      setTimeout(() => setCopiedUrl(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy URL:', err);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 p-6">
       {/* Back Button */}
@@ -344,21 +395,23 @@ export default function SocialVideoManagementPage() {
       </div>
       <div className="max-w-6xl mx-auto space-y-6">
         {/* Video Info Section */}
-        <Card className="border-0 shadow-sm !py-0">
+        <Card className="border-0 shadow-sm !py-0 mb-6">
           <CardContent className="p-6">
             <div className="flex flex-col lg:flex-row gap-6">
               {/* Video Thumbnail */}
-              <div className="relative" onClick={() => console.log('Play video')}>
-                <img
-                  src={videoData.thumbnail || '/placeholder.svg'}
-                  alt={videoData.title}
-                  className="w-full lg:w-80 h-48 object-cover rounded-lg"
-                />
-                <div className="absolute bottom-2 right-2 bg-black bg-opacity-75 text-white px-2 py-1 rounded text-sm">
-                  {videoData.duration}
-                </div>
+              <div className="relative" onClick={() => window.open(videoData.videoUrl, '_blank')}>
+                <Avatar className="w-full lg:w-80 h-48 rounded-lg cursor-pointer">
+                  <AvatarImage
+                    src={generateThumbnail(videoData.videoUrl) || '/placeholder.svg'}
+                    alt="Video thumbnail"
+                    className="w-full h-full object-cover"
+                  />
+                  <AvatarFallback className="bg-gray-200 text-gray-500 w-full h-full rounded-lg">
+                    <Play className="w-8 h-8" />
+                  </AvatarFallback>
+                </Avatar>
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-12 h-12 bg-white bg-opacity-90 rounded-full flex items-center justify-center">
+                  <div className="w-12 h-12 bg-white bg-opacity-90 rounded-full flex items-center justify-center hover:bg-opacity-100 transition-all">
                     <Play className="w-6 h-6 text-slate-700 ml-1" />
                   </div>
                 </div>
@@ -368,10 +421,14 @@ export default function SocialVideoManagementPage() {
               <div className="flex-1 space-y-4">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <h1 className="text-2xl font-bold text-slate-900 mb-2">{videoData.title}</h1>
-                    <p className="text-slate-600">{videoData.description}</p>
+                    <p className="text-slate-700 text-base leading-relaxed mb-4">{videoData.caption}</p>
                   </div>
-                  <Button variant="outline" size="sm" onClick={handleVideoEdit} className={'!border !border-gray-300'}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleVideoEdit}
+                    className="!border !border-gray-300 bg-transparent hover:!border-gray-400"
+                  >
                     <Edit3 className="w-4 h-4 mr-2" />
                     Edit Video
                   </Button>
@@ -384,29 +441,18 @@ export default function SocialVideoManagementPage() {
                   </div>
                 </div>
 
-                {/* Overall Stats */}
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 pt-4 border-t">
-                  <div className="text-center">
-                    <div className="flex items-center justify-center space-x-1 text-slate-600">
-                      <Eye className="w-4 h-4" />
-                      <span className="text-lg font-semibold">{videoData.totalViews}</span>
-                    </div>
-                    <p className="text-xs text-slate-500 mt-1">Total Views</p>
+                {/* Video URL */}
+                <div className="space-y-2 pt-4 border-t">
+                  <Label htmlFor="video-url" className="text-sm font-medium">
+                    Video URL
+                  </Label>
+                  <div className="flex gap-2">
+                    <Input id="video-url" value={videoData.videoUrl} readOnly className="flex-1" />
+                    <Button variant="outline" size="sm" onClick={handleCopyUrl} className="px-3 bg-transparent !border !border-gray-300">
+                      {copiedUrl ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
+                    </Button>
                   </div>
-                  <div className="text-center">
-                    <div className="flex items-center justify-center space-x-1 text-slate-600">
-                      <Heart className="w-4 h-4" />
-                      <span className="text-lg font-semibold">{videoData.totalLikes}</span>
-                    </div>
-                    <p className="text-xs text-slate-500 mt-1">Total Likes</p>
-                  </div>
-                  <div className="text-center">
-                    <div className="flex items-center justify-center space-x-1 text-slate-600">
-                      <MessageCircle className="w-4 h-4" />
-                      <span className="text-lg font-semibold">{videoData.totalComments}</span>
-                    </div>
-                    <p className="text-xs text-slate-500 mt-1">Total Comments</p>
-                  </div>
+                  {copiedUrl && <p className="text-sm text-green-600">URL copied to clipboard!</p>}
                 </div>
               </div>
             </div>
@@ -514,7 +560,7 @@ export default function SocialVideoManagementPage() {
                         </div>
                       )}
                       {/* Analytics Button */}
-                      {platform.monthlyStats && <AnalyticsDialog />}
+                      <AnalyticsDialog analytics={platform.analytics} />
 
                       {/* Actions - Fixed at bottom */}
                       <div className="grid grid-cols-3 gap-2 mt-auto pt-4">

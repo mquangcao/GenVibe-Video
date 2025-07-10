@@ -2,15 +2,11 @@
 
 public class UploadVideoRequest
 {
-    [FromForm(Name = "videoUrl")]
+    public string PlatformCode { get; set; } = default!;
     public string VideoUrl { get; set; } = default!;
-
-    [FromForm(Name = "title")]
     public string Title { get; set; } = default!;
-
-    [FromForm(Name = "description")]
     public string Description { get; set; } = default!;
-
-    [FromForm(Name = "tags")]
     public string Tags { get; set; } = default!;
+    public string VideoId { get; set; } = default!;
 }
+

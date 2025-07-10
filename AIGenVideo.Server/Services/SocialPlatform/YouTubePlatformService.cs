@@ -478,16 +478,18 @@ public class YouTubePlatformService : IPlatformService
 
         var analyticsJson = await analyticsResponse.Content.ReadAsStringAsync();
         var analyticsDoc = JsonDocument.Parse(analyticsJson);
-        var row = analyticsDoc.RootElement.GetProperty("rows")[0];
-
-        var analytics = new VideoAnalytics
+        var root = analyticsDoc.RootElement;
+        var analytics = new VideoAnalytics();
+        if (root.TryGetProperty("rows", out var rowsElement) && rowsElement.ValueKind == JsonValueKind.Array && rowsElement.GetArrayLength() > 0)
         {
-            BasicStats = basicStats,
-            EstimatedMinutesWatched = row[0].GetInt64(),
-            AverageViewDurationSeconds = row[1].GetDouble(),
-            AverageViewPercentage = row[2].GetDouble(),
-            SubscribersGained = row[3].GetInt32()
-        };
+            var row = rowsElement[0];
+            analytics.BasicStats = basicStats;
+            analytics.EstimatedMinutesWatched = row[0].GetInt64();
+            analytics.AverageViewDurationSeconds = row[1].GetDouble();
+            analytics.AverageViewPercentage = row[2].GetDouble();
+            analytics.SubscribersGained = row[3].GetInt32();
+        }
+        
 
         // Step 3: Analytics API - chart data
         var chartUrl = QueryHelpers.AddQueryString("https://youtubeanalytics.googleapis.com/v2/reports", new Dictionary<string, string?>

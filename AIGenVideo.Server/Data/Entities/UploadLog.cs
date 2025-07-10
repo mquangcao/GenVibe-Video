@@ -24,7 +24,13 @@ public class UploadLog
     public string VideoId { get; set; } = null!;
 
     [Required]
+    public string VideoDataId { get; set; } = null!;
+    [Required]
     public string Title { get; set; } = null!;
+    [Required]
+    public string Description { get; set; } = null!;
+    [Required]
+    public string Tags { get; set; } = null!;
 
     [Required]
     public string Status { get; set; } = "pending";

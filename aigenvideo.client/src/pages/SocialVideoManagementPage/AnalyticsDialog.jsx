@@ -7,33 +7,25 @@ import { Card, CardContent } from '@/components/ui/card';
 import { ResponsiveContainer, XAxis, YAxis, Tooltip, Area, AreaChart } from 'recharts';
 
 // Sample data - replace with your actual data
-const sampleData = {
-  platformName: 'YouTube',
-  stats: {
-    views: 4500000,
-    likes: 170000,
-    comments: 551,
-    shares: 4137,
-  },
-  detailedStats: {
-    totalViews: 4514964,
-    totalWatchTime: '11653 giờ:26 phút:44 giây',
-    avgWatchTime: '9.0 phút',
-    completionRate: '52.18%',
-    newSubscribers: 11633,
-  },
-  chartData: [
-    { date: '21/3', views: 800000 },
-    { date: '22/3', views: 1200000 },
-    { date: '23/3', views: 1800000 },
-    { date: '24/3', views: 1600000 },
-    { date: '25/3', views: 400000 },
-    { date: '26/3', views: 300000 },
-    { date: '27/3', views: 250000 },
-  ],
-};
 
-export default function AnalyticsDialog() {
+export default function AnalyticsDialog({ analytics }) {
+  const currentData = {
+    stats: {
+      views: analytics.basicStats.viewCount || 0,
+      likes: analytics.basicStats.likeCount || 0,
+      comments: analytics.basicStats.commentCount || 0,
+      shares: analytics.basicStats.shareCount || 0,
+    },
+    detailedStats: {
+      totalViews: analytics.basicStats.viewCount,
+      totalWatchTime: `${analytics.estimatedMinutesWatched} phút`,
+      avgWatchTime: `${analytics.averageViewDurationSeconds} giây`,
+      completionRate: `${analytics.averageViewPercentage}%`,
+      newSubscribers: 0,
+    },
+    chartData: analytics.chartData,
+  };
+  console.log(analytics);
   const formatNumber = (num) => {
     if (num >= 1000000) {
       return (num / 1000000).toFixed(1) + 'M';
@@ -70,28 +62,28 @@ export default function AnalyticsDialog() {
                 <div className="w-10 h-10 mx-auto mb-2 bg-red-100 rounded-full flex items-center justify-center">
                   <Play className="w-5 h-5 text-red-600 fill-current" />
                 </div>
-                <div className="text-xl font-bold font-mono text-gray-900">{formatNumber(sampleData.stats.views)}</div>
+                <div className="text-xl font-bold font-mono text-gray-900">{formatNumber(currentData.stats.views)}</div>
                 <div className="text-xs text-gray-500 mt-1">Lượt xem</div>
               </div>
               <div className="text-center">
                 <div className="w-10 h-10 mx-auto mb-2 bg-pink-100 rounded-full flex items-center justify-center">
                   <Heart className="w-5 h-5 text-pink-600" />
                 </div>
-                <div className="text-xl font-bold font-mono text-gray-900">{formatNumber(sampleData.stats.likes)}</div>
+                <div className="text-xl font-bold font-mono text-gray-900">{formatNumber(currentData.stats.likes)}</div>
                 <div className="text-xs text-gray-500 mt-1">Lượt thích</div>
               </div>
               <div className="text-center">
                 <div className="w-10 h-10 mx-auto mb-2 bg-blue-100 rounded-full flex items-center justify-center">
                   <MessageCircle className="w-5 h-5 text-blue-600" />
                 </div>
-                <div className="text-xl font-bold font-mono text-gray-900">{sampleData.stats.comments}</div>
+                <div className="text-xl font-bold font-mono text-gray-900">{currentData.stats.comments}</div>
                 <div className="text-xs text-gray-500 mt-1">Bình luận</div>
               </div>
               <div className="text-center">
                 <div className="w-10 h-10 mx-auto mb-2 bg-green-100 rounded-full flex items-center justify-center">
                   <Share className="w-5 h-5 text-green-600" />
                 </div>
-                <div className="text-xl font-bold font-mono text-gray-900">{formatNumber(sampleData.stats.shares)}</div>
+                <div className="text-xl font-bold font-mono text-gray-900">{formatNumber(currentData.stats.shares)}</div>
                 <div className="text-xs text-gray-500 mt-1">Chia sẻ</div>
               </div>
             </div>
@@ -104,35 +96,36 @@ export default function AnalyticsDialog() {
                 <h3 className="text-lg font-semibold text-gray-900">Số liệu chính</h3>
                 <Info className="w-4 h-4 text-gray-400" />
               </div>
-              <p className="text-sm text-gray-500">Cập nhật lần cuối: 7/1/2025</p>
 
               {/* Stats Grid */}
               <div className="grid grid-cols-2 gap-3">
                 <Card className="border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100">
                   <CardContent className="p-4">
                     <div className="text-xs text-blue-700 font-medium mb-2">Số lượt xem video</div>
-                    <div className="text-2xl font-bold font-mono text-blue-900">{sampleData.detailedStats.totalViews.toLocaleString()}</div>
+                    <div className="text-2xl font-bold font-mono text-blue-900">
+                      {currentData.detailedStats.totalViews.toLocaleString()}
+                    </div>
                   </CardContent>
                 </Card>
                 <Card className="bg-white border border-gray-200">
                   <CardContent className="p-4">
                     <div className="text-xs text-gray-600 font-medium mb-2">Tổng thời gian phát</div>
                     <div className="space-y-1">
-                      <div className="text-lg font-bold font-mono text-gray-900">11,653 giờ</div>
-                      <div className="text-sm font-mono text-gray-600">26 phút 44 giây</div>
+                      <div className="text-lg font-bold font-mono text-gray-900">{currentData.detailedStats.totalWatchTime}</div>
+                      <div className="text-sm font-mono text-gray-600">{currentData.detailedStats.totalWatchTime}</div>
                     </div>
                   </CardContent>
                 </Card>
                 <Card className="bg-white border border-gray-200">
                   <CardContent className="p-4">
                     <div className="text-xs text-gray-600 font-medium mb-2">Thời gian xem TB</div>
-                    <div className="text-2xl font-bold font-mono text-gray-900">{sampleData.detailedStats.avgWatchTime}</div>
+                    <div className="text-2xl font-bold font-mono text-gray-900">{currentData.detailedStats.avgWatchTime}</div>
                   </CardContent>
                 </Card>
                 <Card className="bg-white border border-gray-200">
                   <CardContent className="p-4">
                     <div className="text-xs text-gray-600 font-medium mb-2">Tỷ lệ xem hết</div>
-                    <div className="text-2xl font-bold font-mono text-gray-900">{sampleData.detailedStats.completionRate}</div>
+                    <div className="text-2xl font-bold font-mono text-gray-900">{currentData.detailedStats.completionRate}</div>
                   </CardContent>
                 </Card>
               </div>
@@ -142,7 +135,7 @@ export default function AnalyticsDialog() {
                 <CardContent className="p-4">
                   <div className="text-sm text-orange-700 font-medium mb-1">Người đăng ký mới</div>
                   <div className="text-2xl font-bold font-mono text-orange-900">
-                    {sampleData.detailedStats.newSubscribers.toLocaleString()}
+                    {currentData.detailedStats.newSubscribers.toLocaleString()}
                   </div>
                 </CardContent>
               </Card>
@@ -153,7 +146,7 @@ export default function AnalyticsDialog() {
                   <h4 className="text-sm font-semibold text-gray-900 mb-4">Lượt xem theo thời gian</h4>
                   <div className="h-48">
                     <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={sampleData.chartData}>
+                      <AreaChart data={currentData.chartData}>
                         <defs>
                           <linearGradient id="colorGradient" x1="0" y1="0" x2="0" y2="1">
                             <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />

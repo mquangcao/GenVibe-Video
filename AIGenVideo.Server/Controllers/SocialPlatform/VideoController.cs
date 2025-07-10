@@ -1,4 +1,5 @@
-﻿using AIGenVideo.Server.Services.SocialPlatform;
+﻿using AIGenVideo.Server.Models.DomainModels;
+using AIGenVideo.Server.Services.SocialPlatform;
 using Microsoft.AspNetCore.Authorization;
 using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
@@ -11,10 +12,12 @@ public class VideoController : ControllerBase
 {
     private readonly YouTubePlatformService _youTubePlatformService;
     private readonly ApplicationDbContext _dbContext;
-    public VideoController(YouTubePlatformService youTubePlatformService, ApplicationDbContext dbContext)
+    private readonly SocialPlatformFactory _socialPlatformFactory;
+    public VideoController(YouTubePlatformService youTubePlatformService, ApplicationDbContext dbContext, SocialPlatformFactory socialPlatformFactory)
     {
         _youTubePlatformService = youTubePlatformService;
         _dbContext = dbContext;
+        _socialPlatformFactory = socialPlatformFactory;
     }
 
 
@@ -26,6 +29,14 @@ public class VideoController : ControllerBase
         {
             return BadRequest("No video URL provided.");
         }
+
+        var platform = await _dbContext.Platforms
+            .FirstOrDefaultAsync(p => p.Code == request.PlatformCode.ToLower());
+
+        if (platform == null)
+        {
+            return BadRequest(ApiResponse.FailResponse($"Platform with code '{request.PlatformCode}' not found."));
+        }    
 
         // Tạo đường dẫn tạm để lưu video tải về
         var filePath = Path.GetTempFileName();
@@ -46,9 +57,23 @@ public class VideoController : ControllerBase
 
             System.IO.File.Delete(filePath);
 
+            _dbContext.UploadLogs.Add(new UploadLog()
+            {
+                PlatformId = platform.Id,
+                UserId = User.GetUserId(),
+                VideoId = videoId ?? "",
+                Title = request.Title,
+                Description = request.Description,
+                Tags = request.Tags,
+                CreatedAt = DateTime.UtcNow,
+                VideoDataId = request.VideoId
+            });
+
+            await _dbContext.SaveChangesAsync();
+
             if (!string.IsNullOrEmpty(videoId))
             {
-                return Ok($"Video uploaded successfully! Video ID: {videoId}");
+                return Ok(ApiResponse.SuccessResponse($"Video uploaded successfully! Video ID: {videoId}"));
             }
             else
             {
@@ -177,6 +202,75 @@ public class VideoController : ControllerBase
     {
         [Required]
         public string VideoUrl { get; set; } = default!;
+    }
+
+    [HttpGet("my-videos/{id}/upload")]
+    [Authorize]
+    public async Task<IActionResult> GetUploadPlatformAsync(string id)
+    {
+        try
+        {
+            var youtubePlatform = _socialPlatformFactory.Create("youtube");
+            var tiktokPlatform = _socialPlatformFactory.Create("tiktok");
+            var facebookPlatform = _socialPlatformFactory.Create("facebook");
+            var youtubeInfo = await youtubePlatform.GetPlatFormInfo();
+            var tiktokInfo = await tiktokPlatform.GetPlatFormInfo();
+            var facebookInfo = await facebookPlatform.GetPlatFormInfo();
+
+            var result = new List<PlatformInfo> { youtubeInfo, tiktokInfo, facebookInfo };
+            var userId = User.GetUserId();
+            var platformsStatus = new List<VideoPlatformStatusResponse>();
+            foreach (var platform in result)
+            {
+                var status = new VideoPlatformStatusResponse();
+                status.PlatformCode = platform.PlatformCode;
+                if (!platform.IsConnecting)
+                {
+                    status.IsConnect = false;
+                    platformsStatus.Add(status);
+                    continue;
+                }
+                var platformId = await _dbContext.Platforms
+                    .Where(p => p.Code == platform.PlatformCode)
+                    .Select(p => p.Id)
+                    .FirstOrDefaultAsync();
+
+                status.IsConnect = true;
+                var uploadedVideo = await _dbContext.UploadLogs
+                    .Where(log => log.PlatformId == platformId && log.UserId == userId && log.VideoDataId == id)
+                    .OrderByDescending(log => log.CreatedAt)
+                    .FirstOrDefaultAsync();
+
+                if (uploadedVideo == null)
+                {
+                    status.IsPublish = false;
+                    platformsStatus.Add(status);
+                    continue;
+                }
+                status.IsPublish = true;
+                status.Title = uploadedVideo.Title;
+                status.Description = uploadedVideo.Description;
+                status.CreatedAt = uploadedVideo.CreatedAt;
+                status.VideoId = uploadedVideo.VideoId;
+
+                var platformInstance = _socialPlatformFactory.Create(platform.PlatformCode);
+                var analytics = await platformInstance.GetVideoAnalyticsAsync(uploadedVideo.VideoId, null, null);
+                if (analytics == null)
+                {
+                    throw new Exception($"No analytics data found for video ID {uploadedVideo.VideoId} on platform {platform.PlatformCode}.");
+                }
+                status.analytics = analytics;
+                platformsStatus.Add(status);
+            }
+
+
+
+            return Ok(ApiResponse.SuccessResponse(platformsStatus));
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(ApiResponse.FailResponse(ex.Message));
+        }
     }
 
 }
