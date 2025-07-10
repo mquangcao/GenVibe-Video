@@ -51,7 +51,6 @@ export function SaveChangesDialog({ isOpen, onClose, onSaveChanges, duration, pr
     setSaveStatus('Preparing to save changes...');
 
     try {
-      console.log('quang check check', saveSettings, uploadOptions);
       const uploadResult = await onSaveChanges(saveSettings, uploadOptions);
 
       if (uploadResult) {
@@ -244,7 +243,7 @@ export function SaveChangesDialog({ isOpen, onClose, onSaveChanges, duration, pr
 
               <div className="space-y-3">
                 <div>
-                  <Label htmlFor="publicId" className="flex items-center gap-1">
+                  <Label htmlFor="publicId" className="flex items-center gap-1 mb-2">
                     <Video className="w-3 h-3" />
                     File Name
                   </Label>
@@ -258,7 +257,7 @@ export function SaveChangesDialog({ isOpen, onClose, onSaveChanges, duration, pr
                 </div>
 
                 <div>
-                  <Label htmlFor="folder" className="flex items-center gap-1">
+                  <Label htmlFor="folder" className="flex items-center gap-1 mb-2">
                     <Folder className="w-3 h-3" />
                     Folder
                   </Label>
@@ -272,7 +271,7 @@ export function SaveChangesDialog({ isOpen, onClose, onSaveChanges, duration, pr
                 </div>
 
                 <div>
-                  <Label htmlFor="tags" className="flex items-center gap-1">
+                  <Label htmlFor="tags" className="flex items-center gap-1 mb-2">
                     <Tag className="w-3 h-3" />
                     Tags (comma-separated)
                   </Label>
@@ -286,7 +285,9 @@ export function SaveChangesDialog({ isOpen, onClose, onSaveChanges, duration, pr
                 </div>
 
                 <div>
-                  <Label htmlFor="description">Description</Label>
+                  <Label htmlFor="description" className="flex items-center gap-1 mb-2">
+                    Description
+                  </Label>
                   <Textarea
                     id="description"
                     value={uploadOptions.description || ''}
@@ -315,7 +316,7 @@ export function SaveChangesDialog({ isOpen, onClose, onSaveChanges, duration, pr
           {/* Actions */}
           <div className="flex gap-2">
             <Button variant="outline" onClick={onClose} disabled={isSaving} className="flex-1 bg-transparent">
-              {result ? 'Close' : isSaving ? 'Saving...' : 'Cancel'}
+              {result ? 'Video Manager' : isSaving ? 'Saving...' : 'Cancel'}
             </Button>
             {!result && (
               <Button onClick={handleSaveChanges} disabled={isSaving || !hasChanges} className="flex-1">

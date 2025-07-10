@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useCloudEditor } from '@/hooks';
 import { Header } from '@/components/editor/header';
 import { MediaLibrary } from '@/components';
@@ -10,20 +10,40 @@ import { ToolsPanel } from '@/components';
 import { CloudStatus } from '@/components';
 import { SaveChangesDialog } from '@/components';
 import { CancelDialog } from '@/components';
+import { useNavigate, useParams } from 'react-router-dom';
+import { getVideoById } from '@/apis/videoService';
 
 // DEMO: Example base video from Cloudinary
-const DEMO_CONFIG = {
-  baseVideoUrl: 'https://res.cloudinary.com/demo/video/upload/v1574002571/elephants.mp4',
-  baseVideoPublicId: 'elephants',
-  projectId: 'demo-project-123',
-  autoSave: false,
-};
 
 export default function EditorPage() {
-  const cloudEditor = useCloudEditor(DEMO_CONFIG);
+  const { videoid } = useParams();
+  const navigate = useNavigate();
+  const [config, setConfig] = useState({});
+  const cloudEditor = useCloudEditor(config);
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [showCloudStatus, setShowCloudStatus] = useState(true);
+  useEffect(() => {
+    const getVideoData = async () => {
+      try {
+        const response = await getVideoById(videoid);
+        console.log(('Video data:', response.data));
+        if (response.data.success) {
+          const { videoUrl } = response.data.data;
+          setConfig({
+            baseVideoUrl: videoUrl,
+            baseVideoPublicId: '',
+            projectId: '',
+            autoSave: false,
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching video data:', error);
+        alert('Failed to load video data. Please try again later.');
+      }
+    };
+    getVideoData();
+  }, []);
 
   const handlePlayPause = () => {
     if (
@@ -76,7 +96,7 @@ export default function EditorPage() {
 
   const handleCloudSave = async (saveSettings, uploadOptions) => {
     console.log('💾 Saving changes with settings:', saveSettings, uploadOptions);
-    return await cloudEditor.saveChanges(saveSettings, uploadOptions);
+    return await cloudEditor.saveChanges(saveSettings, uploadOptions, videoid);
   };
 
   const handleSave = () => {
@@ -212,11 +232,14 @@ export default function EditorPage() {
       {/* Save Changes Dialog */}
       <SaveChangesDialog
         isOpen={showSaveDialog}
-        onClose={() => setShowSaveDialog(false)}
+        onClose={() => {
+          setShowSaveDialog(false);
+          navigate('/my-videos');
+        }}
         onSaveChanges={handleCloudSave}
         duration={cloudEditor.editorState.duration}
-        projectId={DEMO_CONFIG.projectId}
-        baseVideoUrl={DEMO_CONFIG.baseVideoUrl}
+        projectId={config.projectId}
+        baseVideoUrl={config.baseVideoUrl}
         hasChanges={cloudEditor.cloudState.hasChanges}
       />
 
@@ -226,7 +249,7 @@ export default function EditorPage() {
         onClose={() => setShowCancelDialog(false)}
         onConfirmCancel={handleConfirmCancel}
         hasChanges={cloudEditor.cloudState.hasChanges}
-        baseVideoUrl={DEMO_CONFIG.baseVideoUrl}
+        baseVideoUrl={config.baseVideoUrl}
       />
 
       {/* Cloud Status Toggle (if hidden) */}

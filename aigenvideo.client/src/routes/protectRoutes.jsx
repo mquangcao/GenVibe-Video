@@ -72,7 +72,7 @@ export const protectRoutes = [
     // requiredRoles: ['user', 'vip', 'admin'],
   },
   {
-    path: 'upload/:videoUrl',
+    path: 'upload/:videoid',
     element: <SocialVideoManagementPage />,
     layout: null, // No layout for social video management page
     // requiredRoles: ['user', 'vip', 'admin'],
@@ -84,7 +84,7 @@ export const protectRoutes = [
     // requiredRoles: ['user', 'vip', 'admin'],
   },
   {
-    path: 'edit/:videoUrl',
+    path: 'edit/:videoid',
     element: <EditorPage />,
     layout: null, // No layout for editor page
     // requiredRoles: ['user', 'vip', 'admin'],

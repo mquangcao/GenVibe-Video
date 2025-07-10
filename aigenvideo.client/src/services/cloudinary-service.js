@@ -50,7 +50,7 @@ export class CloudinaryService {
         body: formData,
       });
 
-      console.log('📡 Upload response status:', response.status);
+      console.log('📡 Upload response status:', response);
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -149,6 +149,6 @@ export class CloudinaryService {
 
 // FIXED: Use demo Cloudinary account for testing
 export const cloudinaryService = new CloudinaryService({
-  cloudName: 'dxz9cc66y', // Using Cloudinary's demo account for testing
-  uploadPreset: 'ml_default', // Default preset that should work
+  cloudName: import.meta.env.VITE_CLOUDINARY_CLOUD_NAME,
+  uploadPreset: import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET, // Default preset that should work
 });

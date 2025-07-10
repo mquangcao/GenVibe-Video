@@ -476,7 +476,7 @@ const VideoEditor = ({
                     size="lg"
                     className="flex items-center gap-2 bg-transparent !border !border-gray-600 text-white hover:!border-gray-500"
                     onClick={() => {
-                      navigate(`/video-manager`);
+                      navigate(`/my-videos`);
                     }}
                   >
                     <Edit className="w-4 h-4" />

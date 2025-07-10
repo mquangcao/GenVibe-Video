@@ -31,6 +31,7 @@ export function useEditor() {
     try {
       if (file.type.startsWith('video/')) {
         duration = await VideoProcessor.getVideoDuration(file);
+        console.log('==============================================Video duration:', duration);
         thumbnail = await VideoProcessor.getVideoThumbnail(file);
         console.log('Video duration:', duration);
       } else if (file.type.startsWith('image/')) {

@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { useEditor } from './useEditor';
 import { cloudinaryService } from '@/services/cloudinary-service';
 import { VideoProcessor } from '@/utils/video-processor';
+import { updateVideoById } from '@/apis/videoService';
 
 export default function useCloudEditor(config = {}) {
   const editor = useEditor();
@@ -167,7 +168,7 @@ export default function useCloudEditor(config = {}) {
 
   // FIXED: Improved save changes with better error handling and progress tracking
   const saveChanges = useCallback(
-    async (saveSettings = { format: 'webm', quality: 'medium', keepOriginal: true }, uploadOptions = {}) => {
+    async (saveSettings = { format: 'webm', quality: 'medium', keepOriginal: true }, uploadOptions = {}, videoid) => {
       console.log('💾 Starting save changes process...');
 
       if (editor.editorState.duration <= 0 || !cloudState.hasChanges) {
@@ -242,6 +243,11 @@ export default function useCloudEditor(config = {}) {
 
         console.log('🎉 Changes saved successfully!');
         console.log('🔗 Video URL:', uploadResult.secure_url);
+        try {
+          var response = await updateVideoById({ id: videoid, videoUrl: uploadResult.secure_url });
+        } catch (error) {
+          console.error('❌ Failed to update video URL:', error);
+        }
         return uploadResult;
       } catch (error) {
         console.error('💥 Save failed:', error);

@@ -1,5 +1,6 @@
 ﻿using AIGenVideo.Server.Services.SocialPlatform;
 using Microsoft.AspNetCore.Authorization;
+using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 
 namespace AIGenVideo.Server.Controllers.SocialPlatform;
@@ -149,7 +150,33 @@ public class VideoController : ControllerBase
         return Ok(ApiResponse.SuccessResponse(result));
     }
 
+    [HttpPut("my-videos/{id}")]
+    [Authorize]
+    public async Task<IActionResult> UpdateVideoUrl(string id, [FromBody] UpdateVideoUrlRequest request)
+    {
+        var userId = User.GetUserId();
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Unauthorized("User ID is missing.");
+        }
 
+        var video = await _dbContext.VideoData
+            .FirstOrDefaultAsync(v => v.Id == id && v.CreatedBy == userId);
 
+        if (video == null)
+        {
+            return NotFound("Video not found or you do not have permission to update.");
+        }
+
+        video.VideoUrl = request.VideoUrl;
+        await _dbContext.SaveChangesAsync();
+
+        return NoContent();
+    }
+    public class UpdateVideoUrlRequest
+    {
+        [Required]
+        public string VideoUrl { get; set; } = default!;
+    }
 
 }
