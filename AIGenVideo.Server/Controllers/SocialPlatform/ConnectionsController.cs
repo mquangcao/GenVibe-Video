@@ -145,14 +145,14 @@ namespace AIGenVideo.Server.Controllers.SocialPlatform
             }
 
             var html = """
-                <html>
-                <body>
-                <script>
-                    window.opener.postMessage({ success: true , platform : "youtube" }, "*");
-                    window.close();
-                </script>
-                </body>
-                </html>
+            <html>
+            <body>
+            <script>
+                window.opener.postMessage({ success: true , platform : "facebook" }, "*");
+                window.close();
+            </script>
+            </body>
+            </html>
             """;
 
             return Content(html, "text/html");

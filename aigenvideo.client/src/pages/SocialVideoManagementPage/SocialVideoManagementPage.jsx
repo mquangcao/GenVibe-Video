@@ -10,7 +10,6 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Icons } from '@/common';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Youtube,
   Music2,
@@ -33,6 +32,7 @@ import {
   Link2,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import AnalyticsDialog from './AnalyticsDialog';
 
 // interface PlatformStatus {
 //   platform: "youtube" | "tiktok" | "facebook"
@@ -514,80 +514,7 @@ export default function SocialVideoManagementPage() {
                         </div>
                       )}
                       {/* Analytics Button */}
-                      {platform.monthlyStats && (
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <Button variant="outline" size="sm" className="w-full !border !border-gray-300">
-                              <BarChart3 className="w-3 h-3 mr-2" />
-                              View Analytics
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent className="max-w-5xl">
-                            <DialogHeader>
-                              <DialogTitle>{platform.platformName} Analytics</DialogTitle>
-                            </DialogHeader>
-                            <Tabs defaultValue="charts" className="w-full">
-                              <TabsList className="grid w-full grid-cols-2">
-                                <TabsTrigger value="charts">Charts</TabsTrigger>
-                                <TabsTrigger value="data">Data</TabsTrigger>
-                              </TabsList>
-                              <TabsContent value="charts" className="space-y-6">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                  <LineChart data={platform.monthlyStats} type="views" color="#ef4444" />
-                                  <LineChart data={platform.monthlyStats} type="likes" color="#f59e0b" />
-                                  <LineChart data={platform.monthlyStats} type="comments" color="#10b981" />
-                                  <LineChart data={platform.monthlyStats} type="shares" color="#8b5cf6" />
-                                </div>
-                              </TabsContent>
-                              <TabsContent value="data" className="space-y-4">
-                                <div className="grid grid-cols-2 gap-4">
-                                  <div className="text-center p-4 bg-slate-50 rounded-lg">
-                                    <div className="text-2xl font-bold text-slate-900">{platform.stats.views}</div>
-                                    <p className="text-sm text-slate-600">Total Views</p>
-                                  </div>
-                                  <div className="text-center p-4 bg-slate-50 rounded-lg">
-                                    <div className="text-2xl font-bold text-slate-900">{platform.stats.likes}</div>
-                                    <p className="text-sm text-slate-600">Total Likes</p>
-                                  </div>
-                                  <div className="text-center p-4 bg-slate-50 rounded-lg">
-                                    <div className="text-2xl font-bold text-slate-900">{platform.stats.comments}</div>
-                                    <p className="text-sm text-slate-600">Total Comments</p>
-                                  </div>
-                                  <div className="text-center p-4 bg-slate-50 rounded-lg">
-                                    <div className="text-2xl font-bold text-slate-900">{platform.stats.shares || '0'}</div>
-                                    <p className="text-sm text-slate-600">Total Shares</p>
-                                  </div>
-                                </div>
-                                <div className="space-y-3">
-                                  {platform.monthlyStats.map((stat, index) => (
-                                    <div key={index} className="p-4 border rounded-lg">
-                                      <h4 className="font-medium text-slate-900 mb-2">{stat.month} 2024</h4>
-                                      <div className="grid grid-cols-4 gap-4 text-sm">
-                                        <div className="text-center">
-                                          <div className="font-semibold text-slate-900">{stat.views.toLocaleString()}</div>
-                                          <p className="text-slate-600">Views</p>
-                                        </div>
-                                        <div className="text-center">
-                                          <div className="font-semibold text-slate-900">{stat.likes.toLocaleString()}</div>
-                                          <p className="text-slate-600">Likes</p>
-                                        </div>
-                                        <div className="text-center">
-                                          <div className="font-semibold text-slate-900">{stat.comments.toLocaleString()}</div>
-                                          <p className="text-slate-600">Comments</p>
-                                        </div>
-                                        <div className="text-center">
-                                          <div className="font-semibold text-slate-900">{stat.shares.toLocaleString()}</div>
-                                          <p className="text-slate-600">Shares</p>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
-                              </TabsContent>
-                            </Tabs>
-                          </DialogContent>
-                        </Dialog>
-                      )}
+                      {platform.monthlyStats && <AnalyticsDialog />}
 
                       {/* Actions - Fixed at bottom */}
                       <div className="grid grid-cols-3 gap-2 mt-auto pt-4">

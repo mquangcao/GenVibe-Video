@@ -141,4 +141,9 @@ public class TiktokPlatformService : IPlatformService
     {
         throw new NotImplementedException();
     }
+
+    public Task<VideoAnalytics?> GetVideoAnalyticsAsync(string videoId, DateTime? startDate, DateTime? endDate)
+    {
+        throw new NotImplementedException();
+    }
 }

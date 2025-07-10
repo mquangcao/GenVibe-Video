@@ -2,8 +2,8 @@
 
 public class UploadVideoRequest
 {
-    [FromForm(Name = "videoFile")]
-    public IFormFile VideoFile { get; set; } = default!;
+    [FromForm(Name = "videoUrl")]
+    public string VideoUrl { get; set; } = default!;
 
     [FromForm(Name = "title")]
     public string Title { get; set; } = default!;

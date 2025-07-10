@@ -263,7 +263,7 @@ public class YouTubePlatformService : IPlatformService
                 ["client_id"] = _googleOptions.ClientId,
                 ["redirect_uri"] = redirectUrl,
                 ["response_type"] = "code",
-                ["scope"] = "openid email profile https://www.googleapis.com/auth/youtube.readonly https://www.googleapis.com/auth/youtube.upload ",
+                ["scope"] = "openid email profile https://www.googleapis.com/auth/youtube.readonly https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/yt-analytics.readonly",
                 ["access_type"] = "offline",
                 ["prompt"] = "consent",
                 ["state"] = state
@@ -425,6 +425,104 @@ public class YouTubePlatformService : IPlatformService
             _logger.LogError("Error uploading video: {Message}", ex.Message);
             return null;
         }
+    }
+
+    public async Task<VideoAnalytics?> GetVideoAnalyticsAsync(string videoId, DateTime? startDate, DateTime? endDate)
+    {
+        var accessToken = await GetAccessToken();
+        if (string.IsNullOrEmpty(accessToken)) return null;
+
+        var userId = _httpContextAccessor.HttpContext?.User?.GetUserId() ?? throw new UnauthorizedAccessException();
+
+        // Step 1: Basic stats from YouTube Data API
+        var statsRequest = new HttpRequestMessage(HttpMethod.Get,
+            $"https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&id={videoId}");
+        statsRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+
+        var statsResponse = await _httpClient.SendAsync(statsRequest);
+        statsResponse.EnsureSuccessStatusCode();
+
+        var statsJson = await statsResponse.Content.ReadAsStringAsync();
+        var statsDoc = JsonDocument.Parse(statsJson);
+        var item = statsDoc.RootElement.GetProperty("items")[0];
+        var stats = item.GetProperty("statistics");
+        var snippet = item.GetProperty("snippet");
+
+        var uploadDate = snippet.GetProperty("publishedAt").GetDateTime().Date;
+        var fromDate = startDate ?? uploadDate;
+        var toDate = endDate ?? DateTime.UtcNow.Date;
+
+        var basicStats = new VideoStats
+        {
+            VideoId = videoId,
+            ViewCount = stats.TryGetProperty("viewCount", out var view) ? long.Parse(view.GetString()!) : 0,
+            LikeCount = stats.TryGetProperty("likeCount", out var like) ? long.Parse(like.GetString()!) : 0,
+            CommentCount = stats.TryGetProperty("commentCount", out var comment) ? long.Parse(comment.GetString()!) : 0,
+        };
+
+        // Step 2: Analytics API - summary
+        var analyticsUrl = QueryHelpers.AddQueryString("https://youtubeanalytics.googleapis.com/v2/reports", new Dictionary<string, string?>
+        {
+            ["ids"] = "channel==MINE",
+            ["startDate"] = fromDate.ToString("yyyy-MM-dd"),
+            ["endDate"] = toDate.ToString("yyyy-MM-dd"),
+            ["filters"] = $"video=={videoId}",
+            ["metrics"] = "estimatedMinutesWatched,averageViewDuration,averageViewPercentage,subscribersGained"
+        });
+
+        var analyticsRequest = new HttpRequestMessage(HttpMethod.Get, analyticsUrl);
+        analyticsRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+
+        var analyticsResponse = await _httpClient.SendAsync(analyticsRequest);
+        analyticsResponse.EnsureSuccessStatusCode();
+
+        var analyticsJson = await analyticsResponse.Content.ReadAsStringAsync();
+        var analyticsDoc = JsonDocument.Parse(analyticsJson);
+        var row = analyticsDoc.RootElement.GetProperty("rows")[0];
+
+        var analytics = new VideoAnalytics
+        {
+            BasicStats = basicStats,
+            EstimatedMinutesWatched = row[0].GetInt64(),
+            AverageViewDurationSeconds = row[1].GetDouble(),
+            AverageViewPercentage = row[2].GetDouble(),
+            SubscribersGained = row[3].GetInt32()
+        };
+
+        // Step 3: Analytics API - chart data
+        var chartUrl = QueryHelpers.AddQueryString("https://youtubeanalytics.googleapis.com/v2/reports", new Dictionary<string, string?>
+        {
+            ["ids"] = "channel==MINE",
+            ["startDate"] = fromDate.ToString("yyyy-MM-dd"),
+            ["endDate"] = toDate.ToString("yyyy-MM-dd"),
+            ["filters"] = $"video=={videoId}",
+            ["metrics"] = "views",
+            ["dimensions"] = "day"
+        });
+
+        var chartRequest = new HttpRequestMessage(HttpMethod.Get, chartUrl);
+        chartRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+        var chartResponse = await _httpClient.SendAsync(chartRequest);
+        chartResponse.EnsureSuccessStatusCode();
+
+        var chartJson = await chartResponse.Content.ReadAsStringAsync();
+        var chartDoc = JsonDocument.Parse(chartJson);
+        var chartRows = chartDoc.RootElement.GetProperty("rows");
+
+        int cumulativeViews = 0;
+
+        foreach (var rowItem in chartRows.EnumerateArray())
+        {
+            cumulativeViews += rowItem[1].GetInt32(); 
+
+            analytics.ChartData.Add(new VideoChartPoint
+            {
+                Date = DateOnly.Parse(rowItem[0].GetString()!),
+                Views = cumulativeViews 
+            });
+        }
+
+        return analytics;
     }
 
     public class GoogleTokenResponse
