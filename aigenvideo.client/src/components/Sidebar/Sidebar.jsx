@@ -30,7 +30,7 @@ const navigationItems = [
     title: 'Upgrade Pro',
     href: '/pricing',
     icon: Crown,
-    badge: 'Premium',
+    badge: 'Pro',
     gradient: true,
   },
   {

@@ -341,18 +341,18 @@ function VoiceGeneratorPage() {
   };
 
   return (
-    <div className="flex h-screen bg-gray-800">
+    <div className="flex h-screen bg-gray-50">
       <div className="flex-1 flex flex-col overflow-hidden">
-        <main className="flex-1 overflow-y-auto bg-gray-800 p-4 md:p-6">
-          <section className="text-center text-white mb-8">
+        <main className="flex-1 overflow-y-auto bg-gray-50 p-4 md:p-6">
+          <section className="text-center text-gray-900 mb-8">
             <h1 className="text-3xl md:text-4xl font-bold mb-4">AI Voice Generator</h1>
-            <p className="text-lg text-gray-300 mb-6">Transform your text into natural-sounding speech with advanced AI technology</p>
+            <p className="text-lg text-gray-600 mb-6">Transform your text into natural-sounding speech with advanced AI technology</p>
           </section>
 
           {/* Expandable Controls */}
           <section className="mb-8">
             <button
-              className="flex items-center mb-4 text-purple-400 hover:text-purple-300 transition-colors"
+              className="flex items-center mb-4 text-purple-600 hover:text-purple-700 transition-colors"
               onClick={() => setShowControls((prev) => !prev)}
               type="button"
             >
@@ -360,13 +360,13 @@ function VoiceGeneratorPage() {
               {showControls ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
             </button>
             {showControls && (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-gray-700 rounded-lg p-6 shadow-xl mb-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-white rounded-lg p-6 shadow-xl mb-4 border border-gray-200">
                 <div>
-                  <h6 className="text-white font-semibold mb-3">Language</h6>
+                  <h6 className="text-gray-900 font-semibold mb-3">Language</h6>
                   <select
                     value={selectedLanguage}
                     onChange={handleLanguageChange}
-                    className="w-full bg-gray-800 text-white border border-gray-600 rounded-lg py-2 px-3 focus:border-purple-500 focus:outline-none"
+                    className="w-full bg-gray-50 text-gray-900 border border-gray-300 rounded-lg py-2 px-3 focus:border-purple-500 focus:outline-none"
                   >
                     <option value="English">English</option>
                     <option value="Chinese">Chinese</option>
@@ -376,23 +376,23 @@ function VoiceGeneratorPage() {
                     <option value="Vietnamese">Vietnamese</option>
                     <option value="Russian">Russian</option>
                   </select>
-                  <p className="text-gray-400 text-sm mt-2">Voice will be automatically selected for the chosen language.</p>
+                  <p className="text-gray-500 text-sm mt-2">Voice will be automatically selected for the chosen language.</p>
                 </div>
                 <div>
-                  <h6 className="text-white font-semibold mb-3">Quality & Details</h6>
+                  <h6 className="text-gray-900 font-semibold mb-3">Quality & Details</h6>
                   <select
                     value={selectedQuality}
                     onChange={(e) => setSelectedQuality(e.target.value)}
-                    className="w-full bg-gray-800 text-white border border-gray-600 rounded-lg py-2 px-3 focus:border-purple-500 focus:outline-none"
+                    className="w-full bg-gray-50 text-gray-900 border border-gray-300 rounded-lg py-2 px-3 focus:border-purple-500 focus:outline-none"
                   >
                     <option value="High">High</option>
                     <option value="Medium">Medium</option>
                     <option value="Low">Low</option>
                   </select>
-                  <p className="text-gray-400 text-sm mt-2">Higher quality will result in better audio, but will take longer.</p>
+                  <p className="text-gray-500 text-sm mt-2">Higher quality will result in better audio, but will take longer.</p>
                 </div>
                 <div>
-                  <h6 className="text-white font-semibold mb-3">Play Speed</h6>
+                  <h6 className="text-gray-900 font-semibold mb-3">Play Speed</h6>
                   <div className="space-y-2">
                     <input
                       type="range"
@@ -401,15 +401,15 @@ function VoiceGeneratorPage() {
                       step="0.1"
                       value={playSpeed}
                       onChange={(e) => setPlaySpeed(parseFloat(e.target.value))}
-                      className="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer"
+                      className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
                     />
-                    <div className="flex justify-between text-sm text-gray-400">
+                    <div className="flex justify-between text-sm text-gray-500">
                       <span>0.5x</span>
-                      <span className="text-white font-semibold">{playSpeed}x</span>
+                      <span className="text-gray-900 font-semibold">{playSpeed}x</span>
                       <span>2.0x</span>
                     </div>
                   </div>
-                  <p className="text-gray-400 text-sm mt-2">Adjust the playback speed of generated audio.</p>
+                  <p className="text-gray-500 text-sm mt-2">Adjust the playback speed of generated audio.</p>
                 </div>
               </div>
             )}
@@ -417,14 +417,14 @@ function VoiceGeneratorPage() {
 
           {/* Voice Generation Form */}
           <section className="mb-8">
-            <div className="bg-gray-700 rounded-lg p-6 shadow-xl">
+            <div className="bg-white rounded-lg p-6 shadow-xl border border-gray-200">
               <form onSubmit={handleGenerate}>
                 <div className="mb-4">
                   <textarea
                     value={textInput}
                     onChange={(e) => setTextInput(e.target.value)}
                     placeholder="Enter your text here to generate speech..."
-                    className="w-full h-32 p-4 bg-gray-800 text-white rounded-lg border border-gray-600 focus:border-purple-500 focus:outline-none resize-none"
+                    className="w-full h-32 p-4 bg-gray-50 text-gray-900 rounded-lg border border-gray-300 focus:border-purple-500 focus:outline-none resize-none"
                     required
                   />
                 </div>
@@ -437,7 +437,7 @@ function VoiceGeneratorPage() {
                     Generate Voice ({selectedLanguage})
                   </button>
                   <select
-                    className="bg-gray-800 text-white border border-gray-600 rounded-lg py-3 px-4 focus:border-purple-500 focus:outline-none"
+                    className="bg-gray-50 text-gray-900 border border-gray-300 rounded-lg py-3 px-4 focus:border-purple-500 focus:outline-none"
                     value="MP3"
                     readOnly
                   >
@@ -451,19 +451,19 @@ function VoiceGeneratorPage() {
 
           {/* Generated Audio List */}
           <section>
-            <h2 className="text-2xl font-semibold text-white mb-6">Generated Audio</h2>
+            <h2 className="text-2xl font-semibold text-gray-900 mb-6">Generated Audio</h2>
             <div className="space-y-6">
               {generatedAudios.map((audio) => (
-                <div key={audio.id} className="bg-gray-700 rounded-lg p-6 shadow-xl">
+                <div key={audio.id} className="bg-white rounded-lg p-6 shadow-xl border border-gray-200">
                   <div className="mb-4">
                     <div className="flex justify-between items-start mb-2">
-                      <p className="text-gray-300 text-sm">Generated from:</p>
+                      <p className="text-gray-600 text-sm">Generated from:</p>
                       {audio.language && <span className="bg-purple-600 text-white px-2 py-1 rounded text-xs">{audio.language}</span>}
                     </div>
-                    <p className="text-white bg-gray-800 p-3 rounded border-l-4 border-purple-500">{audio.text}</p>
+                    <p className="text-gray-900 bg-gray-100 p-3 rounded border-l-4 border-purple-500">{audio.text}</p>
                   </div>
 
-                  <div className="bg-gray-800 rounded-lg p-4 mb-4">
+                  <div className="bg-gray-50 rounded-lg p-4 mb-4">
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center space-x-4">
                         <button
@@ -472,20 +472,20 @@ function VoiceGeneratorPage() {
                         >
                           {audio.isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
                         </button>
-                        <span className="text-white text-sm">
+                        <span className="text-gray-900 text-sm">
                           {audio.isPlaying ? `-${audio.remainingTime}` : audio.duration} / {audio.duration}
                         </span>
                       </div>
                       <div className="relative">
                         <button
                           onClick={() => toggleShowVolume(audio.id)}
-                          className="p-2 rounded-full hover:bg-gray-700 transition-colors"
+                          className="p-2 rounded-full hover:bg-gray-200 transition-colors"
                           type="button"
                         >
                           <Volume2 className="h-5 w-5 text-gray-400" />
                         </button>
                         {audio.showVolume && (
-                          <div className="absolute right-0 mt-2 w-32 bg-gray-700 p-2 rounded shadow-lg z-10">
+                          <div className="absolute right-0 mt-2 w-32 bg-white p-2 rounded shadow-lg z-10 border border-gray-200">
                             <input
                               type="range"
                               min="0"
@@ -499,7 +499,7 @@ function VoiceGeneratorPage() {
                         )}
                       </div>
                     </div>
-                    <div className="w-full bg-gray-600 rounded-full h-2 mb-2">
+                    <div className="w-full bg-gray-300 rounded-full h-2 mb-2">
                       <div className="bg-purple-500 h-2 rounded-full" style={{ width: `${audio.progress}%` }}></div>
                     </div>
                     <audio
@@ -516,7 +516,7 @@ function VoiceGeneratorPage() {
                   <div className="flex justify-between items-center">
                     <div className="flex space-x-3">
                       <button
-                        className={`bg-gray-600 hover:bg-gray-500 text-white p-2 rounded-full transition-colors ${
+                        className={`bg-gray-200 hover:bg-gray-300 text-gray-700 p-2 rounded-full transition-colors ${
                           audio.liked ? 'text-red-500' : ''
                         }`}
                         onClick={() => toggleLike(audio.id)}

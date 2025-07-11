@@ -21,11 +21,11 @@ function HomePage() {
   ];
 
   return (
-    <div className="flex h-screen bg-gray-800">
+    <div className="flex h-screen bg-gray-100">
       <div className="flex-1 flex flex-col overflow-hidden">
-        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-800 p-0 md:p-6">
+        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-0 md:p-6 ]">
           <section
-            className="relative min-h-[300px] md:min-h-[400px] lg:min-h-[500px] flex flex-col items-center justify-center text-center text-white p-4 md:rounded-lg mb-10 animate-custom-slow-zoom-in"
+            className="relative min-h-[300px] md:min-h-[400px] lg:min-h-[500px] flex flex-col items-center justify-center text-center text-gray-900 p-4 md:rounded-lg mb-10 animate-custom-slow-zoom-in w-[90%] mx-auto "
             style={{
               backgroundImage: `url(${AI4})`,
               backgroundSize: 'cover',
@@ -33,12 +33,12 @@ function HomePage() {
             }}
           >
             {/* Lớp phủ tối màu để chữ dễ đọc hơn (tùy chọn) */}
-            <div className="absolute inset-0 bg-black opacity-60 mb:rounded-lg "></div>
+            <div className="absolute inset-0 bg-white opacity-70 mb:rounded-lg "></div>
             <div className="relative z-1 max-w-3xl">
-              <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold mb:3 sm:mb-4 text-white/100">
+              <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold mb:3 sm:mb-4 text-gray-900/100">
                 Create Powerful AI or image in seconds
               </h1>
-              <p className="text-base sm:text-lg md:text-xl mb-6 sm:mb-8 text-gray-200/70">
+              <p className="text-base sm:text-lg md:text-xl mb-6 sm:mb-8 text-gray-700/80">
                 Create amazing images effortlessly with AI technology. Just share your ideas, and watch them come to life in seconds!
               </p>
               <button
@@ -51,16 +51,16 @@ function HomePage() {
             </div>
           </section>
           <section className="px-4 md:px-0">
-            <h2 className="text-2xl md:text-3xl font-semibold text-white mb-4 md:mb-6">Your Recent Creations</h2>
+            <h2 className="text-2xl md:text-3xl font-semibold text-gray-900 mb-4 md:mb-6">Your Recent Creations</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
               {aiImages.map((image) => (
                 <div
                   key={image.id}
-                  className="bg-slate-800 rounded-lg overflow-hidden shadow-xl group transform hover: scale-105 transistion-tranform"
+                  className="bg-white rounded-lg overflow-hidden shadow-xl group transform hover: scale-105 transistion-tranform border border-gray-200"
                 >
                   <img src={image.src} alt={image.prompt} className="w-full h-48 object-cover" />
                   <div className="p-4 ">
-                    <p className="text-sm text-gray-300 truncate group-hover:whitespace-normal" title={image.prompt}>
+                    <p className="text-sm text-gray-600 truncate group-hover:whitespace-normal" title={image.prompt}>
                       {' '}
                       {image.prompt}
                     </p>

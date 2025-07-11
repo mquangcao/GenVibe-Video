@@ -156,11 +156,11 @@ const VideoEditor = ({
           <div className="space-y-5 pr-2 mt-2">
             <div className="flex-1 flex flex-col space-y-5 overflow-y-auto space-x-2">
               <div>
-                <label className="block text-sm font-medium text-slate-200 mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-4">
                   Enter text, describe the content you want to generate
                 </label>
                 <textarea
-                  className="w-full p-3 bg-slate-700 text-slate-100 rounded-lg border border-slate-600 h-40 resize-none"
+                  className="w-full p-3 bg-gray-50 text-gray-900 rounded-lg border border-gray-300 h-40 resize-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                   value={videoPrompt}
                   onChange={(e) => setVideoPrompt(e.target.value)}
                   placeholder="e.g., Create a video about the wonders of the ancient world..."
@@ -168,13 +168,13 @@ const VideoEditor = ({
               </div>
               {/* Style Selection */}
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Select a Visual Style</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Select a Visual Style</label>
                 <div className="grid grid-cols-2 gap-2">
                   {availableStyles.map((style) => (
                     <label
                       key={style}
                       htmlFor={style}
-                      className="flex items-center p-2 rounded-lg cursor-pointer transition-colors duration-200 hover:bg-slate-700/50"
+                      className="flex items-center p-2 rounded-lg cursor-pointer transition-colors duration-200 hover:bg-gray-100"
                     >
                       <input
                         type="radio"
@@ -185,24 +185,24 @@ const VideoEditor = ({
                         className="hidden peer"
                       />
                       <span
-                        className="w-4 h-4 rounded-full border-2 border-slate-500 mr-3
+                        className="w-4 h-4 rounded-full border-2 border-gray-400 mr-3
                                flex-shrink-0
                                peer-checked:border-sky-500 peer-checked:bg-sky-500"
                       ></span>
-                      <span className="text-sm font-semibold text-slate-200 ">{style}</span>
+                      <span className="text-sm font-semibold text-gray-700">{style}</span>
                     </label>
                   ))}
                 </div>
               </div>
               {/* --- Audience Selector (as Radio Buttons) --- */}
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Select Target Audience</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Select Target Audience</label>
                 <div className="grid grid-cols-3 gap-2">
                   {audiences.map((audience) => (
                     <label
                       key={audience}
                       htmlFor={audience}
-                      className="flex items-center p-2 rounded-lg cursor-pointer transition-colors duration-200 hover:bg-slate-700/50"
+                      className="flex items-center p-2 rounded-lg cursor-pointer transition-colors duration-200 hover:bg-gray-100"
                     >
                       <input
                         type="radio"
@@ -214,11 +214,11 @@ const VideoEditor = ({
                         className="hidden peer"
                       />
                       <span
-                        className="w-4 h-4 rounded-full border-2 border-slate-500 mr-3
+                        className="w-4 h-4 rounded-full border-2 border-gray-400 mr-3
                                flex-shrink-0
                                peer-checked:border-sky-500 peer-checked:bg-sky-500"
                       ></span>
-                      <span className="text-sm font-semibold text-slate-300 peer-checked:text-white">{audience}</span>
+                      <span className="text-sm font-semibold text-gray-600 peer-checked:text-gray-900">{audience}</span>
                     </label>
                   ))}
                 </div>
@@ -263,7 +263,7 @@ const VideoEditor = ({
               {/* Show scene images if any exist */}
               {scenesToDisplay.some((scene) => scene.imageUrl) && (
                 <div>
-                  <h4 className="text-sm font-semibold text-slate-300 mb-2 flex items-center gap-2">
+                  <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
                     <FaImages size={14} />
                     Scene Images ({scenesToDisplay.filter((s) => s.imageUrl).length})
                   </h4>
@@ -309,7 +309,7 @@ const VideoEditor = ({
 
               {/* Show uploaded images */}
               <div>
-                <h4 className="text-sm font-semibold text-slate-300 mb-2 flex items-center gap-2">
+                <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
                   <FaPlusCircle size={14} />
                   Uploaded Images ({images.length})
                 </h4>
@@ -320,7 +320,7 @@ const VideoEditor = ({
                         src={img.url}
                         alt={img.name}
                         crossOrigin="anonymous"
-                        className="w-full h-full object-cover rounded-lg shadow-md border-2 border-slate-700/50"
+                        className="w-full h-full object-cover rounded-lg shadow-md border-2 border-gray-300"
                       />
                       <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 rounded-lg transition-opacity flex justify-between items-start p-1.5">
                         {/* Assign to Scene Button */}
@@ -357,7 +357,7 @@ const VideoEditor = ({
                             e.stopPropagation();
                             handleRejectImage(img.id);
                           }}
-                          className="p-2 bg-slate-600/80 hover:bg-slate-500 rounded-full text-white transform transition-transform"
+                          className="p-2 bg-gray-600/80 hover:bg-gray-500 rounded-full text-white transform transition-transform"
                           title={`Delete ${img.name}`}
                         >
                           <FaMinusCircle size={14} />
@@ -368,7 +368,7 @@ const VideoEditor = ({
 
                   {/* "Add Image" Card */}
                   <button
-                    className="aspect-square flex flex-col items-center justify-center border-2 border-dashed border-slate-600 rounded-lg text-slate-500 hover:text-sky-400 hover:border-sky-500 transition-colors"
+                    className="aspect-square flex flex-col items-center justify-center border-2 border-dashed border-gray-400 rounded-lg text-gray-500 hover:text-sky-600 hover:border-sky-500 transition-colors"
                     onClick={() => document.getElementById('imageUpload').click()}
                   >
                     <FaPlusCircle size={24} />
@@ -380,8 +380,8 @@ const VideoEditor = ({
 
               {/* Image Assignment Instructions */}
               {scenesToDisplay.length > 0 && images.length > 0 && (
-                <div className="bg-blue-900/20 p-3 rounded-lg border border-blue-600/30">
-                  <p className="text-xs text-blue-300">
+                <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                  <p className="text-xs text-blue-700">
                     💡 <strong>Tip:</strong> You can assign uploaded images to specific scenes using the dropdown that appears when you
                     hover over an image. Scene images will be used for video creation instead of uploaded images.
                   </p>
@@ -390,11 +390,11 @@ const VideoEditor = ({
             </div>
 
             {/* Review Audio Voice Button - keep as is */}
-            <div className="mt-4 pt-4 border-t border-slate-700/50 space-y-3">
+            <div className="mt-4 pt-4 border-t border-gray-200 space-y-3">
               <button
                 onClick={reviewAudioVoice}
                 disabled={!videoResult || videoResult.length === 0 || isReviewingAudio || isAudioPlaying}
-                className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-all disabled:bg-slate-600 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-all disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {isReviewingAudio || isAudioPlaying ? (
                   <>
@@ -408,7 +408,7 @@ const VideoEditor = ({
                   </>
                 )}
               </button>
-              <p className="text-xs text-slate-400 text-center">Preview how the selected voice sounds with your content</p>
+              <p className="text-xs text-gray-500 text-center">Preview how the selected voice sounds with your content</p>
             </div>
           </div>
         );
@@ -419,7 +419,7 @@ const VideoEditor = ({
             {videoProcessor.videoUrl ? (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-medium text-slate-200">Generated Video</h3>
+                  <h3 className="text-lg font-medium text-gray-900">Generated Video</h3>
                   {/*subtitleSettings.enabled && (
                                         <button
                                             onClick={toggleCC}
@@ -432,11 +432,11 @@ const VideoEditor = ({
                                     )*/}
                 </div>
 
-                <div className="bg-slate-700 p-4 rounded-lg relative">
+                <div className="bg-gray-100 p-4 rounded-lg relative">
                   <video
                     ref={videoRef}
                     controls
-                    className="w-full rounded-lg border border-slate-600"
+                    className="w-full rounded-lg border border-gray-300"
                     src={videoProcessor.videoUrl}
                     onLoadedData={() => {
                       if (videoRef.current && videoProcessor.subtitleUrl && !subtitleSettings.embedInVideo) {
@@ -474,13 +474,13 @@ const VideoEditor = ({
                   <Button
                     variant="outline"
                     size="lg"
-                    className="flex items-center gap-2 bg-transparent !border !border-gray-600 text-white hover:!border-gray-500"
+                    className="flex items-center gap-2 bg-transparent !border !border-gray-300 text-gray-700 hover:!bg-gray-50 hover:!border-gray-400"
                     onClick={() => {
                       navigate(`/my-videos`);
                     }}
                   >
                     <Edit className="w-4 h-4" />
-                    Edit Video
+                    My videos
                   </Button>
                 </div>
 
@@ -497,9 +497,9 @@ const VideoEditor = ({
               </div>
             ) : (
               <div className="flex-1 flex items-center justify-center">
-                <div className="text-center text-slate-400">
+                <div className="text-center text-gray-500">
                   <FaVideo size={48} className="mx-auto mb-4 opacity-50" />
-                  <h3 className="text-lg font-medium text-slate-300 mb-2">No Video Generated</h3>
+                  <h3 className="text-lg font-medium text-gray-700 mb-2">No Video Generated</h3>
                   <p>Create a video from the Images tab or Custom Scenes to review it here.</p>
                 </div>
               </div>
@@ -507,8 +507,8 @@ const VideoEditor = ({
 
             {videoProcessor.isProcessingVideo && (
               <div className="mt-4">
-                <label className="block text-sm font-medium text-slate-300 mb-2">Processing Video: {videoProcessor.progress}%</label>
-                <div className="w-full bg-slate-700 rounded-full h-2.5">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Processing Video: {videoProcessor.progress}%</label>
+                <div className="w-full bg-gray-200 rounded-full h-2.5">
                   <div
                     className="bg-blue-600 h-2.5 rounded-full transition-all duration-300"
                     style={{ width: `${videoProcessor.progress}%` }}
@@ -527,24 +527,24 @@ const VideoEditor = ({
   return (
     <div className="flex h-full p-1 md:p-6 lg:p-8">
       {/* Left Panel: Settings */}
-      <div className="w-full md:w-1/2 bg-slate-800 p-1 flex flex-col space-y-4 rounded-l-xl">
+      <div className="w-full md:w-1/2 bg-white p-1 flex flex-col space-y-4 rounded-l-xl border border-gray-200 shadow-sm">
         <div className="flex-none mb-2">
           <button
             onClick={handleBackToGenerator}
-            className="text-sky-400 hover:text-sky-300 font-semibold text-xs px-2 py-1 rounded-md bg-slate-800"
+            className="text-sky-600 hover:text-sky-700 font-semibold text-xs px-2 py-1 rounded-md bg-gray-50 hover:bg-gray-100 transition-colors"
           >
             <FaArrowLeft className="inline mr-1" /> Back to Suggestions
           </button>
         </div>
 
         {/* Tab bar */}
-        <div className="flex items-center gap-2 bg-slate-800 rounded-xl mb-7 overflow-x-auto">
+        <div className="flex items-center gap-2 bg-gray-50 rounded-xl mb-7 overflow-x-auto p-1">
           {['reference', 'customScenes', 'images', 'videoReview'].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`text-xs font-medium text-white rounded px-2 py-1 transition-all whitespace-nowrap ${
-                activeTab === tab ? 'bg-slate-700' : 'bg-slate-800 hover:bg-slate-700'
+              className={`text-xs font-medium text-gray-900 rounded px-2 py-1 transition-all whitespace-nowrap ${
+                activeTab === tab ? 'bg-white !text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
               }`}
             >
               {tab === 'reference' && 'Reference to Video'}
@@ -564,7 +564,7 @@ const VideoEditor = ({
             <button
               onClick={handleCreateVideo}
               disabled={isLoading}
-              className="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-lg transition-all disabled:bg-slate-600 disabled:cursor-wait"
+              className="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-lg transition-all disabled:bg-gray-400 disabled:cursor-wait"
             >
               {isLoading ? 'Creating...' : 'Create'}
             </button>
@@ -573,13 +573,13 @@ const VideoEditor = ({
       </div>
 
       {/* Right Panel - Results */}
-      <div className="hidden md:flex w-1/2 bg-gray-900 items-center justify-center p-5 text-center rounded-r-xl">
+      <div className="hidden md:flex w-1/2 bg-gray-50 items-center justify-center p-5 text-center rounded-r-xl border border-l-0 border-gray-200">
         {isLoading ? (
-          <div className="text-slate-400">Generating...</div>
+          <div className="text-slate-500">Generating...</div>
         ) : scenesToDisplay.length > 0 ? (
           <div className="flex-1 flex flex-col w-full h-full overflow-y-auto pr-2 space-y-2">
-            <div className="flex justify-between items-center sticky top-0 p-2 bg-gray-900 pb-1">
-              <h3 className="text-xl font-bold text-sky-400">
+            <div className="flex justify-between items-center sticky top-0 p-2 bg-gray-50 pb-1">
+              <h3 className="text-xl font-bold text-sky-600">
                 {sceneManager.customScenes.length > 0 ? 'Custom Scenes' : 'Generated Script'}
               </h3>
             </div>
@@ -604,7 +604,7 @@ const VideoEditor = ({
               />
             ))}
 
-            <div className="sticky bottom-0 p-2 bg-slate-800 rounded-lg shadow-lg border border-slate-700 mt-6 flex justify-end">
+            <div className="sticky bottom-0 p-2 bg-white rounded-lg shadow-lg border border-gray-200 mt-6 flex justify-end">
               <button
                 onClick={() => {
                   if (activeTab === 'reference') {
@@ -623,7 +623,7 @@ const VideoEditor = ({
                   isReviewingAudio ||
                   (activeTab === 'customScenes' && sceneManager.customScenes.length === 0)
                 }
-                className="px-3 py-1 text-xs font-semibold text-white rounded-lg transition-all transform hover:scale-105 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 disabled:from-slate-600 disabled:to-slate-700 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-1 shadow"
+                className="px-3 py-1 text-xs font-semibold text-white rounded-lg transition-all transform hover:scale-105 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-1 shadow"
               >
                 {isLoading || videoProcessor.isProcessingVideo || isReviewingAudio ? (
                   <>
@@ -661,9 +661,9 @@ const VideoEditor = ({
             </div>
           </div>
         ) : (
-          <div className="text-slate-500">
-            <h3 className="text-xl font-semibold text-slate-300">Start creating content for Video now !!</h3>
-            <p className="text-slate-400 mt-2">Your generated content will appear here.</p>
+          <div className="text-gray-500">
+            <h3 className="text-xl font-semibold text-gray-700">Start creating content for Video now !!</h3>
+            <p className="text-gray-500 mt-2">Your generated content will appear here.</p>
           </div>
         )}
       </div>

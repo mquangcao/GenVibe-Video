@@ -79,14 +79,14 @@ export const protectRoutes = [
   {
     path: 'upload/:videoid',
     element: <SocialVideoManagementPage />,
-    layout: null, // No layout for social video management page
-    // requiredRoles: ['user', 'vip', 'admin'],
+    layout: RootLayout, // No layout for social video management page
+    requiredRoles: ['vip'],
   },
   {
     path: 'upload-video',
     element: <UploadVideoPage />,
-    layout: null, // No layout for upload video page
-    // requiredRoles: ['user', 'vip', 'admin'],
+    layout: RootLayout, // No layout for upload video page
+    requiredRoles: ['vip'],
   },
   {
     path: 'edit/:videoid',
