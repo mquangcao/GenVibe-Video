@@ -1,5 +1,6 @@
 import { AdminLayout } from '@/components';
 import {
+  AdminDashboard,
   BuyPage,
   CreateUserPage,
   EditorPage,
@@ -19,7 +20,7 @@ import CheckoutPage from '@/pages/CheckoutPage';
 export const protectRoutes = [
   {
     path: 'admin',
-    element: <HomePage />,
+    element: <AdminDashboard />,
     layout: AdminLayout,
     requiredRoles: ['admin'],
   },
