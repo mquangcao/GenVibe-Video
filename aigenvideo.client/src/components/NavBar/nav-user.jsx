@@ -24,6 +24,7 @@ export function NavUser() {
   const { user, isAuthenticated, authDispatch } = useAuth();
   const navigate = useNavigate();
 
+  console.log('user in NavUser:', user);
   if (!isAuthenticated) {
     return (
       <div className="flex items-center justify-center h-full">

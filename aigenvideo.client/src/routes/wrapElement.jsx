@@ -22,7 +22,7 @@ const mapAuth = (requiredRoles) => {
   if (requiredRoles && requiredRoles.includes('admin')) {
     return AdminAuth;
   }
-  if (requiredRoles && requiredRoles.includes('user-vip')) {
+  if (requiredRoles && requiredRoles.includes('vip')) {
     return UserVipAuth;
   }
   if (requiredRoles && requiredRoles.includes('user')) {

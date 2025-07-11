@@ -18,7 +18,7 @@ const UserVipAuth = ({ children, requiredRoles }) => {
   // Kiểm tra role
   if (requiredRoles && !requiredRoles.includes(role)) {
     // Không phải user hoặc vip → chuyển về trang Forbidden hoặc Not Found
-    return <Navigate to="/buy" replace />;
+    return <Navigate to="/pricing" replace />;
   }
 
   // Hợp lệ → render route con

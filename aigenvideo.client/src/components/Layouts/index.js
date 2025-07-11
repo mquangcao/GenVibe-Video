@@ -3,3 +3,4 @@ export * from './OnlyHeader';
 export * from './Footer';
 export * from './MainLayout';
 export * from './AdminLayout';
+export * from './RootLayout';

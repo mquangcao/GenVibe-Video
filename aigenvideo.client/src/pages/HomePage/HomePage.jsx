@@ -22,9 +22,7 @@ function HomePage() {
 
   return (
     <div className="flex h-screen bg-gray-800">
-      <SideBar isOpen={isSidebarOpen} toggleSideBar={toggleSidebar} />
       <div className="flex-1 flex flex-col overflow-hidden">
-        <Header />
         <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-800 p-0 md:p-6">
           <section
             className="relative min-h-[300px] md:min-h-[400px] lg:min-h-[500px] flex flex-col items-center justify-center text-center text-white p-4 md:rounded-lg mb-10 animate-custom-slow-zoom-in"
@@ -54,7 +52,7 @@ function HomePage() {
           </section>
           <section className="px-4 md:px-0">
             <h2 className="text-2xl md:text-3xl font-semibold text-white mb-4 md:mb-6">Your Recent Creations</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md: grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
               {aiImages.map((image) => (
                 <div
                   key={image.id}

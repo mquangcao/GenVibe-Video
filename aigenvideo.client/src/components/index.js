@@ -10,3 +10,4 @@ export * from './Editor';
 export * from './cloud';
 export * from './RemotionVideo';
 
+export * from './Sidebar';

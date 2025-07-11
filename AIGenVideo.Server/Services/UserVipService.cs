@@ -1,15 +1,19 @@
 ﻿
+using Microsoft.AspNetCore.Identity;
+
 namespace AIGenVideo.Server.Services;
 
 public class UserVipService : IUserVipService
 {
     private readonly ApplicationDbContext _context;
     private readonly IUserVipSubscriptionRepository _userVipSubscriptionRepository;
+    private readonly UserManager<AppUser> _userManager;
 
-    public UserVipService(ApplicationDbContext context, IUserVipSubscriptionRepository userVipSubscriptionRepository)
+    public UserVipService(ApplicationDbContext context, IUserVipSubscriptionRepository userVipSubscriptionRepository, UserManager<AppUser> userManager)
     {
         _context = context;
         _userVipSubscriptionRepository = userVipSubscriptionRepository;
+        _userManager = userManager;
     }
 
     public async Task<(bool, string?)> UpgrateVipAsync(string userId, int duration)
@@ -37,6 +41,22 @@ public class UserVipService : IUserVipService
                     ExpirationDate = DateTime.UtcNow.AddMonths(duration)
                 };
                 await _context.UserVipSubscriptions.AddAsync(userVip);
+            }
+
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null)
+            {
+                return (false, "Người dùng không tồn tại.");
+            }
+
+            var isInVipRole = await _userManager.IsInRoleAsync(user, Constants.VIP_ROLE);
+            if (!isInVipRole)
+            {
+                var result = await _userManager.AddToRoleAsync(user, Constants.VIP_ROLE);
+                if (!result.Succeeded)
+                {
+                    return (false, "Không thể gán vai trò VIP.");
+                }
             }
 
             await _context.SaveChangesAsync();

@@ -23,19 +23,4 @@ export const publicRoutes = [
     element: <ChangePasswordPage />,
     layout: null, // No layout for change password page
   },
-  {
-    path: '/voice-generator',
-    element: <VoiceGeneratorPage />,
-    layout: null, // No layout for voice generator page
-  },
-  {
-    path: '/content-generator',
-    element: <ContentGeneratorPage />,
-    layout: null,
-  },
-  {
-    path: '/image-generator',
-    element: <ImageGeneratorPage />,
-    layout: null,
-  },
 ];

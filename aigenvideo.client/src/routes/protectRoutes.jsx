@@ -1,11 +1,14 @@
 import { AdminLayout } from '@/components';
+import RootLayout from '@/components/Layouts/RootLayout';
 import {
   AdminDashboard,
   BuyPage,
+  ContentGeneratorPage,
   CreateUserPage,
   EditorPage,
   EditUserPage,
   HomePage,
+  ImageGeneratorPage,
   MyVideosPage,
   PaymentManagerPage,
   PaymentSuccessPage,
@@ -13,6 +16,7 @@ import {
   SocialVideoManagementPage,
   UploadVideoPage,
   UserManagerPage,
+  VoiceGeneratorPage,
 } from '@/pages';
 import PricingPage from '@/pages/BuyPage';
 import CheckoutPage from '@/pages/CheckoutPage';
@@ -45,8 +49,8 @@ export const protectRoutes = [
   {
     path: 'pricing',
     element: <PricingPage />,
-    layout: null, // No layout for pricing page
-    requiredRoles: ['user', 'vip', 'admin'],
+    layout: RootLayout, // No layout for pricing page
+    requiredRoles: ['user', 'vip'],
   },
   {
     path: 'payment-success',
@@ -69,7 +73,7 @@ export const protectRoutes = [
   {
     path: 'account/platform-connections',
     element: <PlatformConnectionsPage />,
-    layout: null, // No layout for platform connections page
+    layout: RootLayout, // No layout for platform connections page
     // requiredRoles: ['user', 'vip', 'admin'],
   },
   {
@@ -93,6 +97,25 @@ export const protectRoutes = [
   {
     path: 'my-videos',
     element: <MyVideosPage />,
-    layout: null, // No layout for my videos page
+    layout: RootLayout, // No layout for my videos page
+    requiredRoles: ['user', 'vip'],
+  },
+  {
+    path: '/voice-generate',
+    element: <VoiceGeneratorPage />,
+    layout: RootLayout, // No layout for voice generator page
+    requiredRoles: ['vip'],
+  },
+  {
+    path: '/video-generate',
+    element: <ContentGeneratorPage />,
+    layout: RootLayout,
+    requiredRoles: ['vip'],
+  },
+  {
+    path: '/image-generate',
+    element: <ImageGeneratorPage />,
+    layout: RootLayout,
+    requiredRoles: ['vip'],
   },
 ];

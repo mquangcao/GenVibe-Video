@@ -94,9 +94,7 @@ const ContentGeneratorPage = () => {
 
   return (
     <div className="flex h-screen bg-gray-800">
-      <SideBar isOpen={isSidebarOpen} toggleSideBar={toggleSidebar} />
       <div className="flex-1 flex flex-col overflow-hidden">
-        <Header />
         <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-800">
           {currentView === 'generator' ? (
             <GeneratorView
