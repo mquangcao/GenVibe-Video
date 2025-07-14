@@ -1,5 +1,7 @@
 'use client';
 
+import fixWebmDuration from 'webm-duration-fix';
+
 export class SyncPerfectExporter {
   constructor(width = 1920, height = 1080) {
     // Main canvas
@@ -63,11 +65,26 @@ export class SyncPerfectExporter {
           }
         };
 
-        mediaRecorder.onstop = () => {
-          const blob = new Blob(chunks, { type: 'video/webm' });
-          console.log(`✅ SYNC-PERFECT export done! Size: ${(blob.size / 1024 / 1024).toFixed(2)} MB`);
-          this.cleanup();
-          resolve(blob);
+        mediaRecorder.onstop = async () => {
+          try {
+            const rawWebmBlob = new Blob(chunks, { type: 'video/webm' });
+
+            // ✅ Tính duration theo giây từ tham số truyền vào (ms)
+            const durationInSeconds = duration / 1000;
+
+            console.log(`🛠 Fixing WebM duration... (${durationInSeconds}s)`);
+
+            const fixedWebmBlob = await fixWebmDuration(rawWebmBlob, durationInSeconds);
+
+            console.log(`✅ Duration fixed! Size: ${(fixedWebmBlob.size / 1024 / 1024).toFixed(2)} MB`);
+
+            this.cleanup();
+            resolve(fixedWebmBlob);
+          } catch (err) {
+            console.error('❌ Failed to fix duration:', err);
+            this.cleanup();
+            reject(err);
+          }
         };
 
         mediaRecorder.onerror = (event) => {

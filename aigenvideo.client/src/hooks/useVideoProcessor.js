@@ -24,6 +24,8 @@ export const useVideoProcessor = () => {
     generateAudioBlob,
     setActiveTab
   ) => {
+    console.log('First log');
+    console.log(ffmpegLoaded);
     if (!ffmpegLoaded) {
       return console.error('Cannot create video: FFmpeg not loaded');
     }

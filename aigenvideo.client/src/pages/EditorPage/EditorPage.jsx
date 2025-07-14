@@ -188,7 +188,7 @@ export default function EditorPage() {
           </div>
 
           {/* Timeline */}
-          <div className="h-64 min-h-0">
+          <div className="h-64 min-h-0 mt-20">
             <Timeline
               editorState={cloudEditor.editorState}
               onTimeChange={cloudEditor.setCurrentTime}

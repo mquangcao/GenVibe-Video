@@ -35,6 +35,7 @@ export default function MyVideosPage() {
         console.log(response.data.data);
         if (response.data.success) {
           setVideos(response.data.data);
+          console.log('Videos loaded successfully:', response.data.data);
         } else {
           console.error('No videos found');
         }
@@ -167,26 +168,12 @@ export default function MyVideosPage() {
               <Card key={video.id} className="group hover:shadow-lg transition-shadow duration-200 flex flex-col !p-0">
                 <CardHeader className="p-0 !-mb-4">
                   <div className="relative w-full h-48 overflow-hidden rounded-t-lg">
-                    <Avatar className="w-full h-full rounded-t-lg rounded-b-none">
-                      <AvatarImage
-                        src={generateThumbnail(video.videoUrl) || '/placeholder.svg'}
-                        alt={video.caption}
-                        className="w-full h-full object-cover"
-                      />
-                      <AvatarFallback className="bg-gray-200 text-gray-500 w-full h-full rounded-t-lg rounded-b-none">
-                        <Play className="w-8 h-8" />
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-200 rounded-t-lg flex items-center justify-center">
-                      <Button
-                        size="sm"
-                        className="opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                        onClick={() => window.open(video.videoUrl, '_blank')}
-                      >
-                        <Play className="w-4 h-4 mr-2" />
-                        Play
-                      </Button>
-                    </div>
+                    <video
+                      src={`/api/video/proxy-video?url=${encodeURIComponent(video.videoUrl)}`}
+                      className="w-full h-full object-cover rounded-t-lg"
+                      controls
+                      preload="metadata"
+                    />
                   </div>
                 </CardHeader>
 
@@ -243,16 +230,12 @@ export default function MyVideosPage() {
                 <CardContent className="p-4">
                   <div className="flex items-center gap-4">
                     <div className="relative">
-                      <Avatar className="w-32 h-20 rounded-lg">
-                        <AvatarImage
-                          src={generateThumbnail(video.videoUrl) || '/placeholder.svg'}
-                          alt={video.caption}
-                          className="w-full h-full object-cover"
-                        />
-                        <AvatarFallback className="bg-gray-200 text-gray-500 w-32 h-20 rounded-lg">
-                          <Play className="w-6 h-6" />
-                        </AvatarFallback>
-                      </Avatar>
+                      <video
+                        src={`/api/video/proxy-video?url=${encodeURIComponent(video.videoUrl)}`}
+                        className="w-32 h-20 object-cover rounded-t-lg"
+                        controls
+                        preload="metadata"
+                      />
                     </div>
                     <div className="flex-1">
                       <div className="flex items-start justify-between">

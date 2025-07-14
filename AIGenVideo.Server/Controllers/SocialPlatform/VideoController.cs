@@ -273,4 +273,27 @@ public class VideoController : ControllerBase
         }
     }
 
+    [HttpGet("proxy-video")]
+    public async Task<IActionResult> ProxyVideo([FromQuery] string url)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+            return BadRequest("Missing video url");
+
+        try
+        {
+            var httpClient = new HttpClient();
+            var stream = await httpClient.GetStreamAsync(url);
+
+            Response.Headers["Cross-Origin-Resource-Policy"] = "cross-origin";
+
+            return File(stream, "video/mp4", enableRangeProcessing: true); // Cho phép seek
+        }
+        catch (Exception)
+        {
+            return BadRequest("Video could not be loaded.");
+
+        }
+    }
+
+
 }

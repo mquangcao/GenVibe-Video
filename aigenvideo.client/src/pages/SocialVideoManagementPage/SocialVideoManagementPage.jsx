@@ -108,7 +108,7 @@ export default function SocialVideoManagementPage() {
             id: backendRsp.id,
             caption: backendRsp.caption,
             videoUrl: backendRsp.videoUrl,
-            createdDate: backendRsp.createdDate,
+            createdDate: backendRsp.createdAt,
           });
         }
       } catch (error) {
@@ -348,34 +348,10 @@ export default function SocialVideoManagementPage() {
     );
   };
 
-  const generateThumbnail = (videoUrl) => {
-    if (videoUrl.includes('cloudinary.com')) {
-      try {
-        const url = new URL(videoUrl);
-        const pathParts = url.pathname.split('/');
-        const uploadIndex = pathParts.findIndex((part) => part === 'upload');
-        if (uploadIndex === -1) {
-          return '/placeholder.svg?height=200&width=300';
-        }
-        const afterUpload = pathParts.slice(uploadIndex + 1);
-        const lastPart = afterUpload[afterUpload.length - 1];
-        const nameWithoutExt = lastPart.replace(/\.(mp4|mov|avi|mkv|webm)$/i, '');
-        afterUpload[afterUpload.length - 1] = nameWithoutExt + '.jpg';
-        const baseUrl = `${url.protocol}//${url.host}`;
-        const cloudPath = pathParts.slice(0, uploadIndex + 1).join('/');
-        const transformations = 'c_thumb,w_300,h_200,f_auto,q_auto';
-        return `${baseUrl}${cloudPath}/${transformations}/${afterUpload.join('/')}`;
-      } catch (error) {
-        console.error('Error generating thumbnail:', error);
-        return '/placeholder.svg?height=200&width=300';
-      }
-    }
-    return '/placeholder.svg?height=200&width=300';
-  };
-
   const handleCopyUrl = async () => {
     try {
       await navigator.clipboard.writeText(videoData.videoUrl);
+      console.log('URL copied to clipboard:', videoData);
       setCopiedUrl(true);
       setTimeout(() => setCopiedUrl(false), 2000);
     } catch (err) {
@@ -399,22 +375,13 @@ export default function SocialVideoManagementPage() {
           <CardContent className="p-6">
             <div className="flex flex-col lg:flex-row gap-6">
               {/* Video Thumbnail */}
-              <div className="relative" onClick={() => window.open(videoData.videoUrl, '_blank')}>
-                <Avatar className="w-full lg:w-80 h-48 rounded-lg cursor-pointer">
-                  <AvatarImage
-                    src={generateThumbnail(videoData.videoUrl) || '/placeholder.svg'}
-                    alt="Video thumbnail"
-                    className="w-full h-full object-cover"
-                  />
-                  <AvatarFallback className="bg-gray-200 text-gray-500 w-full h-full rounded-lg">
-                    <Play className="w-8 h-8" />
-                  </AvatarFallback>
-                </Avatar>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-12 h-12 bg-white bg-opacity-90 rounded-full flex items-center justify-center hover:bg-opacity-100 transition-all">
-                    <Play className="w-6 h-6 text-slate-700 ml-1" />
-                  </div>
-                </div>
+              <div className="relative">
+                <video
+                  src={`/api/video/proxy-video?url=${encodeURIComponent(videoData.videoUrl)}`}
+                  className="w-full lg:w-80 h-48 rounded-lg"
+                  controls
+                  preload="metadata"
+                />
               </div>
 
               {/* Video Details */}
@@ -633,8 +600,12 @@ export default function SocialVideoManagementPage() {
                         <h3 className="font-medium text-slate-900 mb-2">Not uploaded to {platform.platformName}</h3>
                         <p className="text-sm text-slate-600 mb-4">Upload this video to reach your {platform.platformName} audience</p>
                       </div>
-                      <div className="mt-auto">
-                        <Button onClick={() => handleUploadClick(platform.platform)} disabled={platform.uploading} className="w-full">
+                      <div className="mt-auto ">
+                        <Button
+                          onClick={() => handleUploadClick(platform.platform)}
+                          disabled={platform.uploading}
+                          className="w-full hover:bg-blue-100 hover:text-blue-700 "
+                        >
                           {platform.uploading ? (
                             <>
                               <div className="w-4 h-4 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -662,12 +633,11 @@ export default function SocialVideoManagementPage() {
                       <div className="mt-auto space-y-2">
                         <Link
                           to={'/account/platform-connections'}
-                          className="w-full flex items-center justify-center bg-black text-white hover:bg-blue-100 hover:text-blue-700 rounded-lg px-4 py-2"
+                          className="w-full flex items-center justify-center bg-black text-white hover:bg-blue-100 hover:text-blue-700 border-2 border-white rounded-lg px-4 py-1.5 border-t-transparent "
                         >
                           <Settings className="w-4 h-4 mr-2" />
                           Connect {platform.platformName}
                         </Link>
-                        <p className="text-xs text-slate-500 text-center">You'll be redirected to the connections page</p>
                       </div>
                     </div>
                   )}

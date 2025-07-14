@@ -19,8 +19,8 @@ export function Preview({ editorState, onPlayPause, onUpdateText, onUpdateSticke
   const [debugInfo, setDebugInfo] = useState('');
 
   // FIXED: Canvas dimensions and scale
-  const CANVAS_WIDTH = 640;
-  const CANVAS_HEIGHT = 360;
+  const CANVAS_WIDTH = 1920;
+  const CANVAS_HEIGHT = 1080;
   const EXPORT_WIDTH = 1920;
   const EXPORT_HEIGHT = 1080;
   const SCALE_X = CANVAS_WIDTH / EXPORT_WIDTH; // 0.333
@@ -433,6 +433,7 @@ export function Preview({ editorState, onPlayPause, onUpdateText, onUpdateSticke
             <video
               key={currentVideoId}
               ref={(videoRef) => {
+                console.log('📹 Current video ref =====================================================================:', currentVideo);
                 if (videoRef && currentVideo) {
                   // Sync the visible video with the hidden one
                   const syncVideo = () => {
