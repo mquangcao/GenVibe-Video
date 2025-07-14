@@ -73,7 +73,10 @@ public class VideoController : ControllerBase
 
             if (!string.IsNullOrEmpty(videoId))
             {
-                return Ok(ApiResponse.SuccessResponse($"Video uploaded successfully! Video ID: {videoId}"));
+                return Ok(ApiResponse.SuccessResponse(new
+                {
+                    videoId
+                }));
             }
             else
             {
@@ -104,6 +107,20 @@ public class VideoController : ControllerBase
             var analytics = await _youTubePlatformService.GetVideoAnalyticsAsync(videoId, startDate, endDate);
             if (analytics == null)
                 return NotFound("No analytics data found.");
+
+            if (analytics.ChartData.Count == 0)
+            {
+                analytics.ChartData.Add(new VideoChartPoint()
+                {
+                    Date = DateOnly.FromDateTime(analytics.FromDate),
+                    Views = 0
+                });
+                analytics.ChartData.Add(new VideoChartPoint()
+                {
+                    Date = DateOnly.FromDateTime(analytics.ToDate),
+                    Views = (int)analytics.BasicStats.ViewCount
+                });
+            }
 
             return Ok(analytics);
         }
@@ -139,7 +156,7 @@ public class VideoController : ControllerBase
             id = v.Id,
             caption = v.Captions,
             videoUrl = v.VideoUrl,
-            createdAt = v.CreatedAt.ToString("yyyy-MM-dd")
+            createdAt = v.CreatedAt
         });
 
         return Ok(ApiResponse.SuccessResponse(result));
@@ -169,7 +186,7 @@ public class VideoController : ControllerBase
             id = video.Id,
             caption = video.Captions,
             videoUrl = video.VideoUrl,
-            createdAt = video.CreatedAt.ToString("yyyy-MM-dd")
+            createdAt = video.CreatedAt
         };
 
         return Ok(ApiResponse.SuccessResponse(result));
@@ -260,9 +277,22 @@ public class VideoController : ControllerBase
                     throw new Exception($"No analytics data found for video ID {uploadedVideo.VideoId} on platform {platform.PlatformCode}.");
                 }
                 status.analytics = analytics;
+
+                if (status.analytics.ChartData.Count == 0)
+                {
+                    status.analytics.ChartData.Add(new VideoChartPoint()
+                    {
+                        Date = DateOnly.FromDateTime(analytics.FromDate),
+                        Views = 0
+                    });
+                    status.analytics.ChartData.Add(new VideoChartPoint()
+                    {
+                        Date = DateOnly.FromDateTime(analytics.ToDate),
+                        Views = (int)analytics.BasicStats.ViewCount
+                    });
+                }
                 platformsStatus.Add(status);
             }
-
 
 
             return Ok(ApiResponse.SuccessResponse(platformsStatus));

@@ -18,6 +18,14 @@ import { Edit3, Share2, Trash2, MoreVertical, Play, Search, Filter, Grid3X3, Lis
 import { useNavigate } from 'react-router-dom';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getMyVideos } from '@/apis/videoService';
+import dayjs from 'dayjs';
+import relativeTime from 'dayjs/plugin/relativeTime';
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
+
+dayjs.extend(relativeTime);
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 export default function MyVideosPage() {
   const navigate = useNavigate();
@@ -35,9 +43,6 @@ export default function MyVideosPage() {
         console.log(response.data.data);
         if (response.data.success) {
           setVideos(response.data.data);
-          console.log('Videos loaded successfully:', response.data.data);
-        } else {
-          console.error('No videos found');
         }
       } catch (error) {
         console.error('Failed to load videos:', error);
@@ -45,38 +50,6 @@ export default function MyVideosPage() {
     };
     loadMyVideos();
   }, []);
-
-  console.log('checkkk');
-
-  const generateThumbnail = (videoUrl) => {
-    if (videoUrl.includes('cloudinary.com')) {
-      try {
-        // Tách các phần của URL
-        const url = new URL(videoUrl);
-        const pathParts = url.pathname.split('/');
-        // Tìm index của 'upload'
-        const uploadIndex = pathParts.findIndex((part) => part === 'upload');
-        if (uploadIndex === -1) {
-          return '/placeholder.svg?height=200&width=300';
-        }
-        // Lấy phần sau 'upload'
-        const afterUpload = pathParts.slice(uploadIndex + 1);
-        // Loại bỏ extension và thêm .jpg
-        const lastPart = afterUpload[afterUpload.length - 1];
-        const nameWithoutExt = lastPart.replace(/\.(mp4|mov|avi|mkv|webm)$/i, '');
-        afterUpload[afterUpload.length - 1] = nameWithoutExt + '.jpg';
-        // Tạo URL thumbnail với transformation đơn giản hơn
-        const baseUrl = `${url.protocol}//${url.host}`;
-        const cloudPath = pathParts.slice(0, uploadIndex + 1).join('/');
-        const transformations = 'c_thumb,w_300,h_200,f_auto,q_auto';
-        return `${baseUrl}${cloudPath}/${transformations}/${afterUpload.join('/')}`;
-      } catch (error) {
-        console.error('Error generating thumbnail:', error);
-        return '/placeholder.svg?height=200&width=300';
-      }
-    }
-    return '/placeholder.svg?height=200&width=300';
-  };
 
   const handleDeleteVideo = (videoId) => {
     setVideos(videos.filter((video) => video.id !== videoId));
@@ -182,7 +155,7 @@ export default function MyVideosPage() {
                   <p className="text-gray-800 text-sm mb-3 line-clamp-3 leading-relaxed">{video.caption}</p>
                   <div className="flex items-center text-sm text-gray-500 mt-auto">
                     <Calendar className="w-3 h-3 mr-1" />
-                    {formatDate(video.createdAt)}
+                    {dayjs.utc(video.createdAt).local().fromNow()}
                   </div>
                 </CardContent>
 

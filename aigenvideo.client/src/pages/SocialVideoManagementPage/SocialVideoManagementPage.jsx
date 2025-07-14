@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -38,6 +38,16 @@ import AnalyticsDialog from './AnalyticsDialog';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getVideoById, getVideoUploadedPlatforms, uploadVideoToPlatform } from '@/apis/videoService';
+import { PlatformCardSkeleton } from './PlatformCardSkeleton';
+import dayjs from 'dayjs';
+import relativeTime from 'dayjs/plugin/relativeTime';
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
+import { useToast } from '@/hooks';
+
+dayjs.extend(relativeTime);
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 function generateVideoUrl(platformCode, videoId) {
   if (!platformCode || !videoId) return null;
@@ -56,7 +66,7 @@ function generateVideoUrl(platformCode, videoId) {
 
 export default function SocialVideoManagementPage() {
   const { videoid } = useParams();
-  console.log('Video ID:', videoid);
+  const [isLoading, setIsLoading] = useState(true);
   const [videoData, setVideoData] = useState({
     videoUrl: 'How to Build a Modern React App in 2024',
     description: 'Complete tutorial covering Next.js, TypeScript, and modern development practices',
@@ -97,7 +107,7 @@ export default function SocialVideoManagementPage() {
     },
   ]);
 
-  useState(() => {
+  useEffect(() => {
     const getVideoData = async () => {
       try {
         const response = await getVideoById(videoid);
@@ -120,7 +130,7 @@ export default function SocialVideoManagementPage() {
 
     const getVideoPlatform = async () => {
       try {
-        console.log('checkckck');
+        setIsLoading(true);
         const response = await getVideoUploadedPlatforms(videoid);
         if (response.data.success) {
           console.log('Video data fetched successfully:', response.data.data);
@@ -130,6 +140,7 @@ export default function SocialVideoManagementPage() {
               console.log('x.platformCode:', x, 'p.platform:', p.platform);
               return x.platformCode === p.platform;
             });
+            console.log('Match found:', match);
             return {
               ...p,
               connected: match.isConnect,
@@ -137,11 +148,7 @@ export default function SocialVideoManagementPage() {
               url: generateVideoUrl(p.platform, match.videoId),
               title: match.title,
               description: match.description,
-              uploadDate: new Date(match.createdAt).toLocaleDateString('en-US', {
-                month: 'short',
-                day: 'numeric',
-                year: 'numeric',
-              }),
+              uploadDate: match.createdAt,
               stats: {
                 views: match.analytics.basicStats.viewCount || '0',
                 likes: match.analytics.basicStats.likeCount || '0',
@@ -155,14 +162,14 @@ export default function SocialVideoManagementPage() {
         }
       } catch (error) {
         console.error('Error fetching video data:', error);
+      } finally {
+        setIsLoading(false);
       }
     };
 
     getVideoPlatform();
   }, []);
-
-  const [editingPlatform, setEditingPlatform] = useState(null);
-  const [editForm, setEditForm] = useState({ title: '', description: '' });
+  const { ToastError, ToastSuccess } = useToast();
   const [editingVideo, setEditingVideo] = useState(false);
   const [videoEditForm, setVideoEditForm] = useState({ title: '', description: '' });
   const [uploadingPlatform, setUploadingPlatform] = useState(null);
@@ -178,7 +185,7 @@ export default function SocialVideoManagementPage() {
   };
 
   const handleConfirmUpload = async () => {
-    console.log(uploadingPlatform);
+    console.log('CEKCKCKCK', uploadingPlatform);
     if (uploadingPlatform) {
       // Close popup immediately to prevent spam
       setUploadingPlatform(null);
@@ -203,11 +210,46 @@ export default function SocialVideoManagementPage() {
           videoId: videoid,
         });
         if (response.data.success) {
-          console.log('Upload successful:', response.data);
-        } else {
-          console.error('Upload failed:', response.data.message);
+          ToastSuccess('Video uploaded successfully');
+          setPlatforms((prev) =>
+            prev.map((p) =>
+              p.platform === uploadingPlatform
+                ? {
+                    ...p,
+                    uploaded: true,
+                    uploading: false,
+                    url: generateVideoUrl(uploadingPlatform, response.data.data.videoId),
+                    title: uploadForm.title,
+                    description: uploadForm.description,
+                    stats: {
+                      views: '0',
+                      likes: '0',
+                      comments: '0',
+                      shares: '0',
+                    },
+                    uploadDate: new Date().toISOString().split('T')[0],
+                    analytics: {
+                      chartData: [
+                        { date: new Date().toISOString().split('T')[0], views: 0 },
+                        { date: new Date().toISOString().split('T')[0], views: 0 },
+                      ],
+                      basicStats: {
+                        viewCount: 0,
+                        likeCount: 0,
+                        commentCount: 0,
+                        shareCount: 0,
+                      },
+                      estimatedMinutesWatched: 0,
+                      averageViewDurationSeconds: 0,
+                      averageViewPercentage: 0,
+                    },
+                  }
+                : p
+            )
+          );
         }
       } catch (error) {
+        ToastError('Uploading video fail');
         console.error('Error uploading video:', error);
       }
     }
@@ -227,38 +269,11 @@ export default function SocialVideoManagementPage() {
               stats: undefined,
               uploadDate: undefined,
               monthlyStats: undefined,
+              analytics: undefined,
             }
           : p
       )
     );
-  };
-
-  const handleEdit = (platform) => {
-    const platformData = platforms.find((p) => p.platform === platform);
-    if (platformData) {
-      setEditForm({
-        title: platformData.title || '',
-        description: platformData.description || '',
-      });
-      setEditingPlatform(platform);
-    }
-  };
-
-  const handleSaveEdit = () => {
-    if (editingPlatform) {
-      setPlatforms((prev) =>
-        prev.map((p) =>
-          p.platform === editingPlatform
-            ? {
-                ...p,
-                title: editForm.title,
-                description: editForm.description,
-              }
-            : p
-        )
-      );
-      setEditingPlatform(null);
-    }
   };
 
   const handleVideoEdit = () => {
@@ -404,7 +419,8 @@ export default function SocialVideoManagementPage() {
                 <div className="flex items-center space-x-4 text-sm text-slate-500">
                   <div className="flex items-center space-x-1">
                     <Calendar className="w-4 h-4" />
-                    <span>Created: {videoData.createdDate}</span>
+
+                    <span>Created: {dayjs.utc(videoData.createdDate).local().fromNow()}</span>
                   </div>
                 </div>
 
@@ -430,220 +446,183 @@ export default function SocialVideoManagementPage() {
         <div>
           <h2 className="text-xl font-semibold text-slate-900 mb-4">Platform Status</h2>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch  ">
-            {platforms.map((platform) => (
-              <Card key={platform.platform} className="border-0 shadow-sm !py-0 ">
-                <CardHeader className={`${platform.bgColor} p-4 -mb-6`}>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <div className={`p-0 rounded-lg shadow-sm ${platform.color}`}>{platform.icon}</div>
-                      <div>
-                        <CardTitle className="text-lg">{platform.platformName}</CardTitle>
-                        <div className="flex items-center space-x-2 mt-1">
-                          {platform.uploaded ? (
-                            <>
-                              <CheckCircle2 className="w-4 h-4 text-green-600" />
-                              <span className="text-sm text-green-600">Uploaded</span>
-                            </>
-                          ) : (
-                            <>
-                              <AlertCircle className="w-4 h-4 text-gray-400" />
-                              <span className="text-sm text-gray-500">{platform.connected ? 'Not uploaded' : 'Not connected'}</span>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    {platform.uploaded ? (
-                      <Badge className="bg-green-100 text-green-700 border-green-200">
-                        <CheckCircle2 className="w-3 h-3 mr-1" />
-                        Live
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline" className="border-gray-300 text-gray-600">
-                        <AlertCircle className="w-3 h-3 mr-1" />
-                        {platform.connected ? 'Pending' : 'Disconnected'}
-                      </Badge>
-                    )}
-                  </div>
-                </CardHeader>
-
-                <CardContent className="p-3 flex flex-col min-h-[400px]">
-                  {platform.uploaded && platform.stats ? (
-                    /* Uploaded State */
-                    <div className="flex flex-col h-full">
-                      <div className="flex-1 space-y-4">
-                        {/* Platform Title & Description */}
-                        <div className="space-y-2">
+            {isLoading
+              ? Array.from({ length: 3 }).map((_, index) => <PlatformCardSkeleton key={`skeleton-${index}`} />)
+              : platforms.map((platform) => (
+                  <Card key={platform.platform} className="border-0 shadow-sm !py-0 ">
+                    <CardHeader className={`${platform.bgColor} p-4 -mb-6`}>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          <div className={`p-0 rounded-lg shadow-sm ${platform.color}`}>{platform.icon}</div>
                           <div>
-                            <p className="text-xs text-slate-500 mb-1">Title on {platform.platformName}:</p>
-                            <p className="text-sm font-medium text-slate-900 line-clamp-2">{platform.title}</p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-slate-500 mb-1">Description:</p>
-                            <p className="text-xs text-slate-600 line-clamp-2">{platform.description}</p>
+                            <CardTitle className="text-lg">{platform.platformName}</CardTitle>
+                            <div className="flex items-center space-x-2 mt-1">
+                              {platform.uploaded ? (
+                                <>
+                                  <CheckCircle2 className="w-4 h-4 text-green-600" />
+                                  <span className="text-sm text-green-600">Uploaded</span>
+                                </>
+                              ) : (
+                                <>
+                                  <AlertCircle className="w-4 h-4 text-gray-400" />
+                                  <span className="text-sm text-gray-500">{platform.connected ? 'Not uploaded' : 'Not connected'}</span>
+                                </>
+                              )}
+                            </div>
                           </div>
                         </div>
-
-                        {/* Platform Stats */}
-                        <div className="grid grid-cols-2 gap-3">
-                          <div className="text-center p-2 bg-slate-50 rounded-lg">
-                            <div className="flex items-center justify-center space-x-1 text-slate-600">
-                              <Eye className="w-3 h-3" />
-                              <span className="text-sm font-semibold">{platform.stats.views}</span>
-                            </div>
-                            <p className="text-xs text-slate-500 mt-1">Views</p>
-                          </div>
-                          <div className="text-center p-2 bg-slate-50 rounded-lg">
-                            <div className="flex items-center justify-center space-x-1 text-slate-600">
-                              <Heart className="w-3 h-3" />
-                              <span className="text-sm font-semibold">{platform.stats.likes}</span>
-                            </div>
-                            <p className="text-xs text-slate-500 mt-1">Likes</p>
-                          </div>
-                          <div className="text-center p-2 bg-slate-50 rounded-lg">
-                            <div className="flex items-center justify-center space-x-1 text-slate-600">
-                              <MessageCircle className="w-3 h-3" />
-                              <span className="text-sm font-semibold">{platform.stats.comments}</span>
-                            </div>
-                            <p className="text-xs text-slate-500 mt-1">Comments</p>
-                          </div>
-                          {platform.stats.shares && (
-                            <div className="text-center p-2 bg-slate-50 rounded-lg">
-                              <div className="flex items-center justify-center space-x-1 text-slate-600">
-                                <Share2 className="w-3 h-3" />
-                                <span className="text-sm font-semibold">{platform.stats.shares}</span>
-                              </div>
-                              <p className="text-xs text-slate-500 mt-1">Shares</p>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Upload Info */}
-                      </div>
-                      {platform.uploadDate && (
-                        <div className="text-xs text-slate-500 flex items-center space-x-1 mb-2">
-                          <Calendar className="w-3 h-3" />
-                          <span>Uploaded: {platform.uploadDate}</span>
-                        </div>
-                      )}
-                      {/* Analytics Button */}
-                      <AnalyticsDialog analytics={platform.analytics} />
-
-                      {/* Actions - Fixed at bottom */}
-                      <div className="grid grid-cols-3 gap-2 mt-auto pt-4">
-                        {platform.url && (
-                          <Button variant="outline" size="sm" asChild>
-                            <a href={platform.url} target="_blank" rel="noopener noreferrer" className="!border !border-gray-300">
-                              <ExternalLink className="w-3 h-3 mr-1 " />
-                              View
-                            </a>
-                          </Button>
+                        {platform.uploaded ? (
+                          <Badge className="bg-green-100 text-green-700 border-green-200">
+                            <CheckCircle2 className="w-3 h-3 mr-1" />
+                            Live
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="border-gray-300 text-gray-600">
+                            <AlertCircle className="w-3 h-3 mr-1" />
+                            {platform.connected ? 'Pending' : 'Disconnected'}
+                          </Badge>
                         )}
-                        <Dialog>
-                          <DialogTrigger asChild>
+                      </div>
+                    </CardHeader>
+
+                    <CardContent className="p-3 flex flex-col min-h-[400px]">
+                      {platform.uploaded && platform.stats ? (
+                        /* Uploaded State */
+                        <div className="flex flex-col h-full">
+                          <div className="flex-1 space-y-4">
+                            {/* Platform Title & Description */}
+                            <div className="space-y-2">
+                              <div>
+                                <p className="text-xs text-slate-500 mb-1">Title on {platform.platformName}:</p>
+                                <p className="text-sm font-medium text-slate-900 line-clamp-2">{platform.title}</p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-slate-500 mb-1">Description:</p>
+                                <p className="text-xs text-slate-600 line-clamp-2">{platform.description}</p>
+                              </div>
+                            </div>
+
+                            {/* Platform Stats */}
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="text-center p-2 bg-slate-50 rounded-lg">
+                                <div className="flex items-center justify-center space-x-1 text-slate-600">
+                                  <Eye className="w-3 h-3" />
+                                  <span className="text-sm font-semibold">{platform.stats.views}</span>
+                                </div>
+                                <p className="text-xs text-slate-500 mt-1">Views</p>
+                              </div>
+                              <div className="text-center p-2 bg-slate-50 rounded-lg">
+                                <div className="flex items-center justify-center space-x-1 text-slate-600">
+                                  <Heart className="w-3 h-3" />
+                                  <span className="text-sm font-semibold">{platform.stats.likes}</span>
+                                </div>
+                                <p className="text-xs text-slate-500 mt-1">Likes</p>
+                              </div>
+                              <div className="text-center p-2 bg-slate-50 rounded-lg">
+                                <div className="flex items-center justify-center space-x-1 text-slate-600">
+                                  <MessageCircle className="w-3 h-3" />
+                                  <span className="text-sm font-semibold">{platform.stats.comments}</span>
+                                </div>
+                                <p className="text-xs text-slate-500 mt-1">Comments</p>
+                              </div>
+                              {platform.stats.shares && (
+                                <div className="text-center p-2 bg-slate-50 rounded-lg">
+                                  <div className="flex items-center justify-center space-x-1 text-slate-600">
+                                    <Share2 className="w-3 h-3" />
+                                    <span className="text-sm font-semibold">{platform.stats.shares}</span>
+                                  </div>
+                                  <p className="text-xs text-slate-500 mt-1">Shares</p>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Upload Info */}
+                          </div>
+                          {platform.uploadDate && (
+                            <div className="text-xs text-slate-500 flex items-center space-x-1 mb-2">
+                              <Calendar className="w-3 h-3" />
+                              <span>Uploaded: {dayjs.utc(platform.uploadDate).local().fromNow()}</span>
+                            </div>
+                          )}
+                          {/* Analytics Button */}
+                          <AnalyticsDialog analytics={platform.analytics} />
+
+                          {/* Actions - Fixed at bottom */}
+                          <div className="grid grid-cols-2 gap-2 mt-auto pt-4">
+                            {platform.url && (
+                              <Button variant="outline" size="sm" asChild>
+                                <a href={platform.url} target="_blank" rel="noopener noreferrer" className="!border !border-gray-300">
+                                  <ExternalLink className="w-3 h-3 mr-1 " />
+                                  View
+                                </a>
+                              </Button>
+                            )}
+
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => handleEdit(platform.platform)}
-                              className="!border !border-gray-300"
+                              onClick={() => handleDelete(platform.platform)}
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50 !border !border-red-200"
                             >
-                              <Edit3 className="w-3 h-3 mr-1" />
-                              Edit
+                              <Trash2 className="w-3 h-3 mr-1" />
+                              Delete
                             </Button>
-                          </DialogTrigger>
-                          <DialogContent>
-                            <DialogHeader>
-                              <DialogTitle>Edit {platform.platformName} Content</DialogTitle>
-                            </DialogHeader>
-                            <div className="space-y-4">
-                              <div>
-                                <label className="text-sm font-medium">Title</label>
-                                <Input
-                                  value={editForm.title}
-                                  onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
-                                  placeholder="Enter title"
-                                />
-                              </div>
-                              <div>
-                                <label className="text-sm font-medium">Description</label>
-                                <Textarea
-                                  value={editForm.description}
-                                  onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
-                                  placeholder="Enter description"
-                                  rows={3}
-                                />
-                              </div>
-                              <Button onClick={handleSaveEdit} className="w-full">
-                                Save Changes
-                              </Button>
+                          </div>
+                        </div>
+                      ) : platform.connected ? (
+                        /* Connected but Not Uploaded State */
+                        <div className="flex flex-col h-full">
+                          <div className="flex-1 flex flex-col justify-center text-center py-8">
+                            <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                              <Upload className="w-8 h-8 text-slate-400" />
                             </div>
-                          </DialogContent>
-                        </Dialog>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDelete(platform.platform)}
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50 !border !border-red-200"
-                        >
-                          <Trash2 className="w-3 h-3 mr-1" />
-                          Delete
-                        </Button>
-                      </div>
-                    </div>
-                  ) : platform.connected ? (
-                    /* Connected but Not Uploaded State */
-                    <div className="flex flex-col h-full">
-                      <div className="flex-1 flex flex-col justify-center text-center py-8">
-                        <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                          <Upload className="w-8 h-8 text-slate-400" />
+                            <h3 className="font-medium text-slate-900 mb-2">Not uploaded to {platform.platformName}</h3>
+                            <p className="text-sm text-slate-600 mb-4">Upload this video to reach your {platform.platformName} audience</p>
+                          </div>
+                          <div className="mt-auto ">
+                            <Button
+                              onClick={() => handleUploadClick(platform.platform)}
+                              disabled={platform.uploading}
+                              className="w-full hover:bg-blue-100 hover:text-blue-700 "
+                            >
+                              {platform.uploading ? (
+                                <>
+                                  <div className="w-4 h-4 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                  Uploading...
+                                </>
+                              ) : (
+                                <>
+                                  <Upload className="w-4 h-4 mr-2" />
+                                  Upload to {platform.platformName}
+                                </>
+                              )}
+                            </Button>
+                          </div>
                         </div>
-                        <h3 className="font-medium text-slate-900 mb-2">Not uploaded to {platform.platformName}</h3>
-                        <p className="text-sm text-slate-600 mb-4">Upload this video to reach your {platform.platformName} audience</p>
-                      </div>
-                      <div className="mt-auto ">
-                        <Button
-                          onClick={() => handleUploadClick(platform.platform)}
-                          disabled={platform.uploading}
-                          className="w-full hover:bg-blue-100 hover:text-blue-700 "
-                        >
-                          {platform.uploading ? (
-                            <>
-                              <div className="w-4 h-4 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                              Uploading...
-                            </>
-                          ) : (
-                            <>
-                              <Upload className="w-4 h-4 mr-2" />
-                              Upload to {platform.platformName}
-                            </>
-                          )}
-                        </Button>
-                      </div>
-                    </div>
-                  ) : (
-                    /* Not Connected State */
-                    <div className="flex flex-col h-full">
-                      <div className="flex-1 flex flex-col justify-center text-center py-8">
-                        <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                          <Link2 className="w-8 h-8 text-slate-400" />
+                      ) : (
+                        /* Not Connected State */
+                        <div className="flex flex-col h-full">
+                          <div className="flex-1 flex flex-col justify-center text-center py-8">
+                            <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                              <Link2 className="w-8 h-8 text-slate-400" />
+                            </div>
+                            <h3 className="font-medium text-slate-900 mb-2">{platform.platformName} not connected</h3>
+                            <p className="text-sm text-slate-600 mb-4">Connect your {platform.platformName} account to upload videos</p>
+                          </div>
+                          <div className="mt-auto space-y-2">
+                            <Link
+                              to={'/account/platform-connections'}
+                              className="w-full flex items-center justify-center bg-black text-white hover:bg-blue-100 hover:text-blue-700 border-2 border-white rounded-lg px-4 py-1.5 border-t-transparent "
+                            >
+                              <Settings className="w-4 h-4 mr-2" />
+                              Connect {platform.platformName}
+                            </Link>
+                          </div>
                         </div>
-                        <h3 className="font-medium text-slate-900 mb-2">{platform.platformName} not connected</h3>
-                        <p className="text-sm text-slate-600 mb-4">Connect your {platform.platformName} account to upload videos</p>
-                      </div>
-                      <div className="mt-auto space-y-2">
-                        <Link
-                          to={'/account/platform-connections'}
-                          className="w-full flex items-center justify-center bg-black text-white hover:bg-blue-100 hover:text-blue-700 border-2 border-white rounded-lg px-4 py-1.5 border-t-transparent "
-                        >
-                          <Settings className="w-4 h-4 mr-2" />
-                          Connect {platform.platformName}
-                        </Link>
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
           </div>
         </div>
 

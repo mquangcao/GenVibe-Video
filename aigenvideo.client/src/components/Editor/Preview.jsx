@@ -214,7 +214,7 @@ export function Preview({ editorState, onPlayPause, onUpdateText, onUpdateSticke
       (sticker) => editorState.currentTime >= sticker.startTime && editorState.currentTime < sticker.endTime
     );
 
-    let debugText = `Active: ${activeTexts.length} texts, ${activeStickers.length} stickers`;
+    let debugText = ``;
 
     // FIXED: Render text elements with proper scaling and DEBUG
     activeTexts.forEach((text, index) => {
@@ -263,8 +263,6 @@ export function Preview({ editorState, onPlayPause, onUpdateText, onUpdateSticke
       }
 
       ctx.restore();
-
-      debugText += ` | Text${index}: (${scaledX.toFixed(0)},${scaledY.toFixed(0)})`;
     });
 
     // FIXED: Render stickers with proper scaling
@@ -296,7 +294,7 @@ export function Preview({ editorState, onPlayPause, onUpdateText, onUpdateSticke
 
       ctx.restore();
 
-      debugText += ` | Sticker${index}: (${scaledX.toFixed(0)},${scaledY.toFixed(0)})`;
+      debugText += ``;
     });
 
     // DEBUG: Show debug info
@@ -433,7 +431,6 @@ export function Preview({ editorState, onPlayPause, onUpdateText, onUpdateSticke
             <video
               key={currentVideoId}
               ref={(videoRef) => {
-                console.log('📹 Current video ref =====================================================================:', currentVideo);
                 if (videoRef && currentVideo) {
                   // Sync the visible video with the hidden one
                   const syncVideo = () => {
@@ -461,7 +458,7 @@ export function Preview({ editorState, onPlayPause, onUpdateText, onUpdateSticke
                 }
               }}
               src={currentVideo.src}
-              className="absolute inset-0 w-full h-full object-cover"
+              className="absolute inset-0 w-full h-full object-contain"
               playsInline
               muted={isMuted}
               volume={volume[0] / 100}
