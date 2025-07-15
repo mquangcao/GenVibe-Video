@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -8,80 +8,63 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { CreditCard, DollarSign, TrendingUp, Users, Search, Download, RefreshCw } from 'lucide-react';
+import { useFetchList, useQuery } from '@/hooks';
+import dayjs from 'dayjs';
+import relativeTime from 'dayjs/plugin/relativeTime';
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
 
-// Mock data based on Payment entity
+dayjs.extend(relativeTime);
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
 const mockPayments = [
   {
     paymentId: 'PAY_001',
-    userId: 'USER_001',
-    packageId: 'VIP_BASIC',
-    refId: 'REF_001',
     amount: 299000,
     currency: 'VND',
     status: 'success',
     gateway: 'momo',
-    description: 'Thanh toán gói VIP Basic',
-    gatewayTransactionId: 'MOMO_TXN_001',
     createdAt: '2024-01-15T10:30:00Z',
     paidAt: '2024-01-15T10:32:00Z',
     user: { name: 'Nguyễn Văn A', email: 'nguyenvana@email.com' },
   },
   {
     paymentId: 'PAY_002',
-    userId: 'USER_002',
-    packageId: 'VIP_PRO',
-    refId: 'REF_002',
     amount: 599000,
     currency: 'VND',
     status: 'success',
     gateway: 'vnpay',
-    description: 'Thanh toán gói VIP Pro',
-    gatewayTransactionId: 'VNP_TXN_002',
     createdAt: '2024-01-15T14:20:00Z',
     paidAt: '2024-01-15T14:22:00Z',
     user: { name: 'Trần Thị B', email: 'tranthib@email.com' },
   },
   {
     paymentId: 'PAY_003',
-    userId: 'USER_003',
-    packageId: 'VIP_BASIC',
-    refId: 'REF_003',
     amount: 299000,
     currency: 'VND',
     status: 'pending',
     gateway: 'momo',
-    description: 'Thanh toán gói VIP Basic',
-    gatewayTransactionId: null,
     createdAt: '2024-01-15T16:45:00Z',
     paidAt: null,
     user: { name: 'Lê Văn C', email: 'levanc@email.com' },
   },
   {
     paymentId: 'PAY_004',
-    userId: 'USER_004',
-    packageId: 'VIP_PREMIUM',
-    refId: 'REF_004',
     amount: 999000,
     currency: 'VND',
     status: 'failed',
     gateway: 'vnpay',
-    description: 'Thanh toán gói VIP Premium',
-    gatewayTransactionId: 'VNP_TXN_004',
     createdAt: '2024-01-15T18:10:00Z',
     paidAt: null,
     user: { name: 'Phạm Thị D', email: 'phamthid@email.com' },
   },
   {
     paymentId: 'PAY_005',
-    userId: 'USER_005',
-    packageId: 'VIP_PRO',
-    refId: 'REF_005',
     amount: 599000,
     currency: 'VND',
     status: 'success',
     gateway: 'momo',
-    description: 'Thanh toán gói VIP Pro',
-    gatewayTransactionId: 'MOMO_TXN_005',
     createdAt: '2024-01-14T09:15:00Z',
     paidAt: '2024-01-14T09:17:00Z',
     user: { name: 'Hoàng Văn E', email: 'hoangvane@email.com' },
@@ -131,20 +114,21 @@ export default function AdminDashboard() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [gatewayFilter, setGatewayFilter] = useState('all');
+  const [payments, setPayments] = useState(mockPayments);
 
   // Calculate statistics
-  const totalPayments = mockPayments.length;
-  const successfulPayments = mockPayments.filter((p) => p.status === 'success');
+  const totalPayments = payments.length;
+  const successfulPayments = payments.filter((p) => p.status === 'success');
   const totalRevenue = successfulPayments.reduce((sum, p) => sum + p.amount, 0);
   const successRate = ((successfulPayments.length / totalPayments) * 100).toFixed(1);
 
-  const momoPayments = mockPayments.filter((p) => p.gateway === 'momo');
-  const vnpayPayments = mockPayments.filter((p) => p.gateway === 'vnpay');
+  const momoPayments = payments.filter((p) => p.gateway === 'momo');
+  const vnpayPayments = payments.filter((p) => p.gateway === 'vnpay');
   const momoRevenue = momoPayments.filter((p) => p.status === 'success').reduce((sum, p) => sum + p.amount, 0);
   const vnpayRevenue = vnpayPayments.filter((p) => p.status === 'success').reduce((sum, p) => sum + p.amount, 0);
 
   // Filter payments
-  const filteredPayments = mockPayments.filter((payment) => {
+  const filteredPayments = payments.filter((payment) => {
     const matchesSearch =
       payment.user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       payment.user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -155,6 +139,39 @@ export default function AdminDashboard() {
     return matchesSearch && matchesStatus && matchesGateway;
   });
 
+  const [query, updateQuery, resetData] = useQuery({
+    page: 1,
+    limit: 10,
+    sort: 'email',
+    order: 'asc',
+    search: '',
+    id: '',
+    email: '',
+    fromDate: '',
+    toDate: '',
+    status: 'all',
+  });
+
+  const { data } = useFetchList('/api/admin/payments', query);
+  useEffect(() => {
+    const items = !data
+      ? mockPayments
+      : data.items.map((payment) => ({
+          paymentId: payment.paymentId,
+          user: {
+            name: payment.name || 'N/A',
+            email: payment.email || 'N/A',
+          },
+          currency: 'VND',
+          status: payment.status || 'expired',
+          gateway: payment.gateway || 'N/A',
+          email: payment.email || 'N/A',
+          name: payment.packageName || 'N/A',
+          amount: payment.amount || 0,
+          createdAt: payment.createdAt,
+        }));
+    setPayments(items);
+  }, [data]);
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -162,15 +179,15 @@ export default function AdminDashboard() {
         <div className="px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Dashboard Thanh toán</h1>
+              <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
               <p className="text-gray-600">Quản lý và thống kê các giao dịch thanh toán</p>
             </div>
-            <div className="flex items-center gap-3">
-              <Button variant="outline" size="sm">
+            <div className="flex items-center gap-3 ">
+              <Button variant="outline" size="sm" className="!border-gray-300 !border">
                 <RefreshCw className="h-4 w-4 mr-2" />
                 Làm mới
               </Button>
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" className="!border-gray-300 !border">
                 <Download className="h-4 w-4 mr-2" />
                 Xuất báo cáo
               </Button>
@@ -181,7 +198,7 @@ export default function AdminDashboard() {
 
       <div className="p-6">
         {/* Overview Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Tổng giao dịch</CardTitle>
@@ -212,17 +229,6 @@ export default function AdminDashboard() {
             <CardContent>
               <div className="text-2xl font-bold">{successRate}%</div>
               <p className="text-xs text-muted-foreground">+2.1% so với tháng trước</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Khách hàng</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{new Set(mockPayments.map((p) => p.userId)).size}</div>
-              <p className="text-xs text-muted-foreground">+5 khách hàng mới</p>
             </CardContent>
           </Card>
         </div>
@@ -275,7 +281,7 @@ export default function AdminDashboard() {
             <CardContent>
               <div className="space-y-4">
                 {['success', 'pending', 'failed', 'expired'].map((status) => {
-                  const count = mockPayments.filter((p) => p.status === status).length;
+                  const count = payments.filter((p) => p.status === status).length;
                   const percentage = ((count / totalPayments) * 100).toFixed(1);
                   return (
                     <div key={status} className="flex items-center justify-between">
@@ -311,7 +317,7 @@ export default function AdminDashboard() {
                 />
               </div>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-full sm:w-[180px]">
+                <SelectTrigger className="w-full sm:w-[200px] !border-gray-300 !border">
                   <SelectValue placeholder="Trạng thái" />
                 </SelectTrigger>
                 <SelectContent>
@@ -323,7 +329,7 @@ export default function AdminDashboard() {
                 </SelectContent>
               </Select>
               <Select value={gatewayFilter} onValueChange={setGatewayFilter}>
-                <SelectTrigger className="w-full sm:w-[180px]">
+                <SelectTrigger className="w-full sm:w-[150px] !border-gray-300 !border">
                   <SelectValue placeholder="Cổng thanh toán" />
                 </SelectTrigger>
                 <SelectContent>
@@ -350,7 +356,7 @@ export default function AdminDashboard() {
                 <TableBody>
                   {filteredPayments.map((payment) => (
                     <TableRow key={payment.paymentId}>
-                      <TableCell className="font-medium">{payment.paymentId}</TableCell>
+                      <TableCell className="text-gray-600 font-semibold">{payment.paymentId}</TableCell>
                       <TableCell>
                         <div>
                           <div className="font-medium">{payment.user.name}</div>
@@ -362,8 +368,8 @@ export default function AdminDashboard() {
                       <TableCell>{getStatusBadge(payment.status)}</TableCell>
                       <TableCell>
                         <div className="text-sm">
-                          <div>{new Date(payment.createdAt).toLocaleDateString('vi-VN')}</div>
-                          <div className="text-gray-500">{new Date(payment.createdAt).toLocaleTimeString('vi-VN')}</div>
+                          <div>{dayjs.utc(payment.createdAt).local().fromNow()}</div>
+                          <div className="text-gray-500">{dayjs.utc(payment.createdAt).local().format('dd MM HH:mm')}</div>
                         </div>
                       </TableCell>
                     </TableRow>

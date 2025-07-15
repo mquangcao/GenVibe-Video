@@ -86,7 +86,8 @@ namespace AIGenVideo.Server.Controllers.Admin
                         Amount = payment.Amount,
                         Gateway = payment.Gateway,
                         Status = payment.Status,
-                        CreatedAt = payment.CreatedAt
+                        CreatedAt = payment.CreatedAt,
+                        Name = payment.User.FullName
                     });
                 });
 

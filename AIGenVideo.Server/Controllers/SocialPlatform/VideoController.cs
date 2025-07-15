@@ -38,7 +38,6 @@ public class VideoController : ControllerBase
             return BadRequest(ApiResponse.FailResponse($"Platform with code '{request.PlatformCode}' not found."));
         }    
 
-        // Tạo đường dẫn tạm để lưu video tải về
         var filePath = Path.GetTempFileName();
 
         try
@@ -144,19 +143,18 @@ public class VideoController : ControllerBase
             return Unauthorized("User ID is missing.");
         }
 
-        // Lấy các video do người dùng tạo
         var videos = await _dbContext.VideoData
             .Where(v => v.CreatedBy == userId)
             .OrderByDescending(v => v.CreatedAt)
             .ToListAsync();
 
-        // Map dữ liệu sang DTO phù hợp
         var result = videos.Select(v => new
         {
             id = v.Id,
             caption = v.Captions,
             videoUrl = v.VideoUrl,
-            createdAt = v.CreatedAt
+            createdAt = v.CreatedAt,
+            title = v.Title
         });
 
         return Ok(ApiResponse.SuccessResponse(result));
@@ -186,7 +184,8 @@ public class VideoController : ControllerBase
             id = video.Id,
             caption = video.Captions,
             videoUrl = video.VideoUrl,
-            createdAt = video.CreatedAt
+            createdAt = video.CreatedAt,
+            title = video.Title
         };
 
         return Ok(ApiResponse.SuccessResponse(result));

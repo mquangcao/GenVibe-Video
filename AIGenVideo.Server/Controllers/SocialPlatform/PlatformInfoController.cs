@@ -18,14 +18,24 @@ public class PlatformInfoController : Controller
     {
         try
         {
-            var youtubePlatform = _socialPlatformFactory.Create("youtube");
-            var tiktokPlatform = _socialPlatformFactory.Create("tiktok");
-            var facebookPlatform = _socialPlatformFactory.Create("facebook");
-            var youtubeInfo = await youtubePlatform.GetPlatFormInfo();
-            var tiktokInfo = await tiktokPlatform.GetPlatFormInfo();
-            var facebookInfo = await facebookPlatform.GetPlatFormInfo();
+            var platformCodes = new[] {
+                Constants.YOUTUBE_PLATFORM_CODE,
+                Constants.TIKTOK_PLATFORM_CODE,
+                Constants.FACEBOOK_PLATFORM_CODE
+            };
+            var platformInfos = new List<PlatformInfo>();
+            foreach (var code in platformCodes)
+            {
+                var platform = _socialPlatformFactory.Create(code);
+                var info = await platform.GetPlatFormInfo();
+                if (info != null)
+                {
+                    platformInfos.Add(info);
+                }
+            }
 
-            return Ok(ApiResponse<List<PlatformInfo>>.SuccessResponse([youtubeInfo, tiktokInfo, facebookInfo]));
+
+            return Ok(ApiResponse<List<PlatformInfo>>.SuccessResponse(platformInfos));
         }
         catch (Exception ex)
         {

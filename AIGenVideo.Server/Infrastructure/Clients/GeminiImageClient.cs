@@ -1,5 +1,4 @@
 using AIGenVideo.Server.Abstractions.ImageGenerate;
-using Microsoft.Extensions.Logging;
 using System.Text;
 using System.Text.Json;
 
@@ -15,12 +14,8 @@ namespace AIGenVideo.Server.Infrastructure.Clients
         public GeminiImageClient(HttpClient httpClient, IConfiguration configuration, ILogger<GeminiImageClient> logger)
         {
             _httpClient = httpClient;
-            _apiKey = configuration["ApiKeys:Gemini"];
+            _apiKey = configuration["ApiKeys:Gemini"] ?? throw new ArgumentNullException(nameof(_apiKey), "Gemini API Key is not configured.");
             _logger = logger;
-            if (string.IsNullOrEmpty(_apiKey))
-            {
-                throw new ArgumentNullException(nameof(_apiKey), "Gemini API Key is not configured.");
-            }
         }
 
         public async Task<string> GenerateImageAsync(string prompt)

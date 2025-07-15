@@ -1,9 +1,6 @@
 using AIGenVideo.Server.Abstractions.ContentGenerate;
 using AIGenVideo.Server.Models.RequestModels.ContentGenerate;
 using AIGenVideo.Server.Models.ResponseModels.ContentGenerate;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 
 namespace AIGenVideo.Server.Controllers.ContentGeneration;
 

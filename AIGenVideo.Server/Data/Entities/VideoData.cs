@@ -32,6 +32,7 @@ public class VideoData
     [Column("createdBy")]
     [MaxLength(255)]
     public string CreatedBy { get; set; } = default!;
+    public string Title { get; set; } = default!;
     [Column("createdAt")] // ánh xạ đúng với tên cột trong DB
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 

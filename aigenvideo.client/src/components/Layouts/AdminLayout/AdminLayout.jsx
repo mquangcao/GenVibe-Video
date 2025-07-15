@@ -36,28 +36,11 @@ const items = [
 
 function AdminLayout({ children }) {
   const location = useLocation();
-  const isActive = (url) => {
-    return location.pathname === url;
-  };
-
-  const getHeaderTitle = () => {
-    const activeItem = items.find((item) => isActive(item.url));
-    return `${activeItem ? activeItem.title : ''} Page`;
-  };
 
   return (
     <SidebarProvider>
       <AppSidebar items={items} />
-      <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
-          <div className="flex items-center gap-2 px-4">
-            <BreadcrumbItem>
-              <BreadcrumbPage className="text-lg font-semibold text-foreground ml-4">{getHeaderTitle()}</BreadcrumbPage>
-            </BreadcrumbItem>
-          </div>
-        </header>
-        {children}
-      </SidebarInset>
+      <SidebarInset>{children}</SidebarInset>
     </SidebarProvider>
   );
 }

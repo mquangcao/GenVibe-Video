@@ -151,8 +151,9 @@ export default function MyVideosPage() {
                 </CardHeader>
 
                 <CardContent className="p-4 !pb-0 !pt-0 flex-1">
-                  {/* Caption với giới hạn 3 dòng */}
-                  <p className="text-gray-800 text-sm mb-3 line-clamp-3 leading-relaxed">{video.caption}</p>
+                  <p className="text-gray-800 text-sm mb-3 line-clamp-3 leading-relaxed">
+                    {video.title == '' ? video.caption : video.title}
+                  </p>
                   <div className="flex items-center text-sm text-gray-500 mt-auto">
                     <Calendar className="w-3 h-3 mr-1" />
                     {dayjs.utc(video.createdAt).local().fromNow()}

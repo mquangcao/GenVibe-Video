@@ -1,4 +1,3 @@
-using AIGenVideo.Server.Abstractions;
 using AIGenVideo.Server.Abstractions.ContentGenerate;
 using AIGenVideo.Server.Models.ResponseModels.ContentGenerate;
 
@@ -11,7 +10,11 @@ public class YouTubeStrategy : IContentGenerationStrategy
 
     public string ContextName => "YouTube";
 
-    public YouTubeStrategy(IYouTubeClient youTubeClient) => _youTubeClient = youTubeClient;
+    public YouTubeStrategy(IYouTubeClient youTubeClient, ILogger<YouTubeStrategy> logger)
+    {
+        _youTubeClient = youTubeClient;
+        _logger = logger;
+    }
 
     public async Task<List<SuggestionModel>> GenerateAsync(string topic)
     {

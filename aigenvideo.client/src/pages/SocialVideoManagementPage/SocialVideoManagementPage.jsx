@@ -70,6 +70,7 @@ export default function SocialVideoManagementPage() {
   const [videoData, setVideoData] = useState({
     videoUrl: 'How to Build a Modern React App in 2024',
     description: 'Complete tutorial covering Next.js, TypeScript, and modern development practices',
+    title: 'How to Build a Modern React App in 2024',
     thumbnail: 'https://placehold.co/200x350',
     duration: '15:42',
     createdDate: 'Dec 18, 2024',
@@ -119,6 +120,7 @@ export default function SocialVideoManagementPage() {
             caption: backendRsp.caption,
             videoUrl: backendRsp.videoUrl,
             createdDate: backendRsp.createdAt,
+            title: backendRsp.title,
           });
         }
       } catch (error) {
@@ -185,7 +187,6 @@ export default function SocialVideoManagementPage() {
   };
 
   const handleConfirmUpload = async () => {
-    console.log('CEKCKCKCK', uploadingPlatform);
     if (uploadingPlatform) {
       // Close popup immediately to prevent spam
       setUploadingPlatform(null);
@@ -382,7 +383,6 @@ export default function SocialVideoManagementPage() {
           <ArrowLeft className="w-4 h-4" />
           <span>Back to Videos</span>
         </Button>
-        <div className="text-sm text-slate-500">Video Management</div>
       </div>
       <div className="max-w-6xl mx-auto space-y-6">
         {/* Video Info Section */}
@@ -403,17 +403,10 @@ export default function SocialVideoManagementPage() {
               <div className="flex-1 space-y-4">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <p className="text-slate-700 text-base leading-relaxed mb-4">{videoData.caption}</p>
+                    <p className="text-gray-900 text-xl font-semibold leading-snug mb-4">
+                      {videoData.title ? videoData.title : videoData.caption}
+                    </p>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleVideoEdit}
-                    className="!border !border-gray-300 bg-transparent hover:!border-gray-400"
-                  >
-                    <Edit3 className="w-4 h-4 mr-2" />
-                    Edit Video
-                  </Button>
                 </div>
 
                 <div className="flex items-center space-x-4 text-sm text-slate-500">
