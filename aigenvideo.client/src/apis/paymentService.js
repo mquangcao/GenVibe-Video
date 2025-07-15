@@ -11,3 +11,7 @@ export const payment = async (data) => {
 export const getPlans = async () => {
   return await axiosClient.get(`api/payment/plans`);
 };
+
+export const getSummary = async () => {
+  return await axiosClient.get(`api/admin/payments/summary`);
+};

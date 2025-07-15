@@ -13,6 +13,7 @@ import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
+import { getSummary } from '@/apis/paymentService';
 
 dayjs.extend(relativeTime);
 dayjs.extend(utc);
@@ -152,6 +153,57 @@ export default function AdminDashboard() {
     status: 'all',
   });
 
+  const [dashboardStats, setDashboardStats] = useState({
+    totalTransactions: 0,
+    totalRevenue: 0,
+    successRate: 0,
+    compareWithLastMonth: {
+      transactions: 0,
+      revenue: 0,
+      successRate: 0,
+    },
+    byGateway: {
+      vnpay: {
+        amount: 0,
+        amountPercentage: 0,
+        countPercentage: 0,
+        count: 0,
+      },
+      momo: {
+        amount: 0,
+        amountPercentage: 0,
+        countPercentage: 0,
+        count: 0,
+      },
+    },
+    byStatus: [
+      {
+        count: 0,
+        percentage: 0,
+        code: 'success',
+        status: 'Thành công',
+      },
+      {
+        count: 0,
+        percentage: 0,
+        code: 'pending',
+        status: 'Đang xử lý',
+      },
+      {
+        count: 0,
+        percentage: 0,
+        code: 'failed',
+        status: 'Thất bại',
+      },
+      {
+        count: 0,
+        percentage: 0,
+        code: 'expired',
+        status: 'Hết hạn',
+      },
+    ],
+  });
+
   const { data } = useFetchList('/api/admin/payments', query);
   useEffect(() => {
     const items = !data
@@ -170,6 +222,24 @@ export default function AdminDashboard() {
           amount: payment.amount || 0,
           createdAt: payment.createdAt,
         }));
+
+    const getSummaryPayment = async () => {
+      try {
+        const response = await getSummary();
+        const mergedByGateway = {
+          ...dashboardStats.byGateway,
+          ...(response.data.byGateway || {}),
+        };
+        setDashboardStats((prev) => ({
+          ...prev,
+          ...response.data,
+          byGateway: mergedByGateway,
+        }));
+      } catch (error) {
+        console.error('Failed to fetch payment summary:', error);
+      }
+    };
+    getSummaryPayment();
     setPayments(items);
   }, [data]);
   return (
@@ -205,8 +275,8 @@ export default function AdminDashboard() {
               <CreditCard className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{totalPayments}</div>
-              <p className="text-xs text-muted-foreground">+12% so với tháng trước</p>
+              <div className="text-2xl font-bold">{dashboardStats.totalTransactions}</div>
+              <p className="text-xs text-muted-foreground">{`${dashboardStats.compareWithLastMonth.transactions}%`} so với tháng trước</p>
             </CardContent>
           </Card>
 
@@ -216,8 +286,8 @@ export default function AdminDashboard() {
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{formatCurrency(totalRevenue)}</div>
-              <p className="text-xs text-muted-foreground">+8% so với tháng trước</p>
+              <div className="text-2xl font-bold">{formatCurrency(dashboardStats.totalRevenue)}</div>
+              <p className="text-xs text-muted-foreground">{`${dashboardStats.compareWithLastMonth.revenue}%`} so với tháng trước</p>
             </CardContent>
           </Card>
 
@@ -227,8 +297,8 @@ export default function AdminDashboard() {
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{successRate}%</div>
-              <p className="text-xs text-muted-foreground">+2.1% so với tháng trước</p>
+              <div className="text-2xl font-bold">{dashboardStats.successRate}%</div>
+              <p className="text-xs text-muted-foreground">{`${dashboardStats.compareWithLastMonth.successRate}%`} so với tháng trước</p>
             </CardContent>
           </Card>
         </div>
@@ -247,12 +317,12 @@ export default function AdminDashboard() {
                     <div className="w-3 h-3 bg-pink-500 rounded-full"></div>
                     <div>
                       <p className="font-medium">MoMo</p>
-                      <p className="text-sm text-gray-600">{momoPayments.length} giao dịch</p>
+                      <p className="text-sm text-gray-600">{dashboardStats.byGateway.momo.count} giao dịch</p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="font-bold">{formatCurrency(momoRevenue)}</p>
-                    <p className="text-sm text-gray-600">{((momoRevenue / totalRevenue) * 100).toFixed(1)}%</p>
+                    <p className="font-bold">{formatCurrency(dashboardStats.byGateway.momo.amount)}</p>
+                    <p className="text-sm text-gray-600">{dashboardStats.byGateway.momo.countPercentage.toFixed(1)}%</p>
                   </div>
                 </div>
 
@@ -261,12 +331,12 @@ export default function AdminDashboard() {
                     <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
                     <div>
                       <p className="font-medium">VNPay</p>
-                      <p className="text-sm text-gray-600">{vnpayPayments.length} giao dịch</p>
+                      <p className="text-sm text-gray-600">{dashboardStats.byGateway.vnpay.count} giao dịch</p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="font-bold">{formatCurrency(vnpayRevenue)}</p>
-                    <p className="text-sm text-gray-600">{((vnpayRevenue / totalRevenue) * 100).toFixed(1)}%</p>
+                    <p className="font-bold">{formatCurrency(dashboardStats.byGateway.vnpay.amount)}</p>
+                    <p className="text-sm text-gray-600">{dashboardStats.byGateway.vnpay.countPercentage.toFixed(1)}%</p>
                   </div>
                 </div>
               </div>
@@ -280,13 +350,13 @@ export default function AdminDashboard() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {['success', 'pending', 'failed', 'expired'].map((status) => {
-                  const count = payments.filter((p) => p.status === status).length;
-                  const percentage = ((count / totalPayments) * 100).toFixed(1);
+                {dashboardStats.byStatus.map((status) => {
+                  const count = status.count;
+                  const percentage = status.percentage.toFixed(1);
                   return (
-                    <div key={status} className="flex items-center justify-between">
+                    <div key={status.code} className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        {getStatusBadge(status)}
+                        {getStatusBadge(status.code)}
                         <span className="text-sm">{count} giao dịch</span>
                       </div>
                       <span className="font-medium">{percentage}%</span>
