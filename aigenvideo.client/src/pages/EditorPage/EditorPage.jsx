@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useCloudEditor } from '@/hooks';
-import { Header } from '@/components/editor/header';
+import { Header } from '@/components/Editor/Header';
 import { MediaLibrary } from '@/components';
 import { Preview } from '@/components';
 import { Timeline } from '@/components';

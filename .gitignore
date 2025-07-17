@@ -362,3 +362,9 @@ MigrationBackup/
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
 AIGenVideo.Server/google-credentials.json
+
+.env
+.env.*
+!*.example 
+Docker/*.env*
+!Docker/*.example
