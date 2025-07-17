@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useCloudEditor } from '@/hooks';
-import { Header } from '@/components/editor/header';
+import { Header } from '@/components/Editor/Header';
 import { MediaLibrary } from '@/components';
 import { Preview } from '@/components';
 import { Timeline } from '@/components';
@@ -188,7 +188,7 @@ export default function EditorPage() {
           </div>
 
           {/* Timeline */}
-          <div className="h-64 min-h-0">
+          <div className="h-64 min-h-0 mt-20">
             <Timeline
               editorState={cloudEditor.editorState}
               onTimeChange={cloudEditor.setCurrentTime}

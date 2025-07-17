@@ -24,6 +24,8 @@ export const useVideoProcessor = () => {
     generateAudioBlob,
     setActiveTab
   ) => {
+    console.log('First log');
+    console.log(ffmpegLoaded);
     if (!ffmpegLoaded) {
       return console.error('Cannot create video: FFmpeg not loaded');
     }
@@ -144,6 +146,7 @@ export const useVideoProcessor = () => {
         // Add metadata about whether custom scenes were used
         IsCustomContent: customScenes.length > 0,
         SceneCount: usedScenes.length,
+        Title: 'Video Title', // Replace with actual title input if available
       };
       await saveFullVideoData(videoDataPayload);
 

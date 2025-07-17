@@ -524,6 +524,9 @@ public class YouTubePlatformService : IPlatformService
             });
         }
 
+        analytics.FromDate = fromDate;
+        analytics.ToDate = toDate;
+
         return analytics;
     }
 

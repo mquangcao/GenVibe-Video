@@ -1,6 +1,5 @@
-using AIGenVideo.Server.Services.ImageGenerate;
 using AIGenVideo.Server.Models.RequestModels.ImageGenerate;
-using Microsoft.AspNetCore.Mvc;
+using AIGenVideo.Server.Services.ImageGenerate;
 
 namespace AIGenVideo.Server.Controllers.ImageGeneration
 {

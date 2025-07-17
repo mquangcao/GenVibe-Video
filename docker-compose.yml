@@ -1,0 +1,67 @@
+version: '2.4'
+name: ai_gen_video
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: AIGenVideo.Server/Dockerfile
+    image: aigenvideo_backend
+    container_name: aigenvideo_backend
+    ports:
+      - "3008:8080"
+    networks:
+      - aigenvideo_network
+    env_file:
+      - Docker/.env.backend
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+  frontend:
+    build:
+      context: aigenvideo.client
+      dockerfile: Dockerfile
+      args:
+        VITE_SERVER_PROXY: http://localhost:3008
+    image: aigenvideo_frontend
+    container_name: aigenvideo_frontend
+    ports:
+      - "3000:3000"
+    networks:
+      - aigenvideo_network
+    env_file:
+      - Docker/.env.backend
+    depends_on:
+      - backend
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: aigenvideo_sql
+    environment:
+      - SA_PASSWORD=Quangcao123!
+      - ACCEPT_EULA=Y
+    ports:
+      - "1433:1433"
+    networks:
+      - aigenvideo_network
+    healthcheck:
+      test: ["CMD", "bash", "-c", "</dev/tcp/localhost/1433"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  redis:
+    image: redis:7
+    container_name: aigenvideo_redis
+    ports:
+      - "6379:6379"
+    networks:
+      - aigenvideo_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+networks:
+  aigenvideo_network:
+    driver: bridge

@@ -86,7 +86,8 @@ namespace AIGenVideo.Server.Controllers.Admin
                         Amount = payment.Amount,
                         Gateway = payment.Gateway,
                         Status = payment.Status,
-                        CreatedAt = payment.CreatedAt
+                        CreatedAt = payment.CreatedAt,
+                        Name = payment.User.FullName
                     });
                 });
 
@@ -104,5 +105,121 @@ namespace AIGenVideo.Server.Controllers.Admin
                 return StatusCode(StatusCodes.Status500InternalServerError, ApiResponse.FailResponse($"An error occurred: {ex.Message}"));
             }
         }
+
+        [HttpGet]
+        [Route("summary")]
+        public async Task<IActionResult> GetPaymentSummary()
+        {
+            var now = DateTime.UtcNow;
+            var firstDayThisMonth = new DateTime(now.Year, now.Month, 1);
+            var firstDayLastMonth = firstDayThisMonth.AddMonths(-1);
+            var lastDayLastMonth = firstDayThisMonth.AddDays(-1);
+
+            // Thống kê tháng này
+            var payments = await _context.Payments
+                .Where(p => p.CreatedAt >= firstDayThisMonth)
+                .ToListAsync();
+
+            var totalTransactions = payments.Count;
+            var totalRevenue = payments.Where(p => p.Status == "success").Sum(p => p.Amount);
+            var successCount = payments.Count(p => p.Status == "success");
+            var successRate = totalTransactions > 0 ? Math.Round((double)successCount / totalTransactions * 100, 1) : 0;
+
+            // Thống kê tháng trước để so sánh
+            var lastMonthPayments = await _context.Payments
+                .Where(p => p.CreatedAt >= firstDayLastMonth && p.CreatedAt <= lastDayLastMonth)
+                .ToListAsync();
+
+            var lastTotal = lastMonthPayments.Count;
+            var lastRevenue = lastMonthPayments.Where(p => p.Status == "success").Sum(p => p.Amount);
+            var lastSuccessCount = lastMonthPayments.Count(p => p.Status == "success");
+            var lastSuccessRate = lastTotal > 0 ? (double)lastSuccessCount / lastTotal * 100 : 0;
+
+            var compare = new
+            {
+                transactions = lastTotal == 0 ? 100.0 : Math.Round(((double)(totalTransactions - lastTotal) / lastTotal) * 100, 1),
+                revenue = lastRevenue == 0 ? 100.0 : Math.Round(((double)((totalRevenue - lastRevenue) / lastRevenue)) * 100, 1),
+                successRate = Math.Round(successRate - lastSuccessRate, 1)
+            };
+
+            // Thống kê theo gateway
+            var gatewayDict = payments
+                .GroupBy(p => p.Gateway)
+                .ToDictionary(
+                    g => string.IsNullOrEmpty(g.Key) ? "Khác" : g.Key,
+                    g =>
+                    {
+                        var count = g.Count();
+                        var amount = g.Where(p => p.Status == "success").Sum(p => p.Amount);
+                        return new
+                        {
+                            count,
+                            amount,
+                            countPercentage = totalTransactions > 0
+                                ? Math.Round(count * 100.0 / totalTransactions, 1)
+                                : 0,
+                            amountPercentage = totalRevenue > 0
+                                ? Math.Round((double)amount * 100 / (double)totalRevenue, 1)
+                                : 0
+                        };
+                    });
+
+            // Thống kê theo trạng thái
+            var byStatus = new[]
+            {
+                new { code = "success", label = "Thành công" },
+                new { code = "pending", label = "Đang xử lý" },
+                new { code = "failed", label = "Thất bại" },
+                new { code = "expired", label = "Hết hạn" }
+            }
+            .Select(s =>
+            {
+                int count = 0;
+
+                if (s.code == "expired")
+                {
+                    // Đếm những thằng pending mà quá 1 tiếng → expired logic
+                    count = payments.Count(p =>
+                        (p.Status == "expired") ||
+                        (p.Status == "pending" && p.CreatedAt.AddHours(1) < now)
+                    );
+                }
+                else if (s.code == "pending")
+                {
+                    // Đếm những pending vẫn còn trong hạn 1 tiếng
+                    count = payments.Count(p =>
+                        p.Status == "pending" && p.CreatedAt.AddHours(1) >= now
+                    );
+                }
+                else
+                {
+                    // Các status khác giữ nguyên
+                    count = payments.Count(p => p.Status == s.code);
+                }
+
+                var percentage = totalTransactions > 0
+                    ? Math.Round(count * 100.0 / totalTransactions, 1)
+                    : 0;
+
+                return new
+                {
+                    status = s.label,
+                    code = s.code,
+                    count,
+                    percentage
+                };
+            });
+
+            return Ok(new
+            {
+                totalTransactions,
+                totalRevenue,
+                successRate,
+                compareWithLastMonth = compare,
+                byGateway = gatewayDict,
+                byStatus
+            });
+        }
     }
+
 }

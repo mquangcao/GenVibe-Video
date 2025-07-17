@@ -232,7 +232,7 @@ const UserManagerPage = () => {
   const debouncedSearch = useDebounce(search, 1000);
   const [query, updateQuery, setQuery] = useQuery({
     page: 1,
-    limit: 5,
+    limit: 10,
     sort: 'email',
     order: 'asc',
     search: '',

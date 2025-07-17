@@ -1,207 +1,165 @@
-# 📁 Cấu trúc dự án API ASP.NET Core Controller-based
+# 🎥 AI Short Video Creator - ASP.NET & React Web Application
+
+## 1. Giới thiệu
+
+**AI Short Video Creator** là nền tảng web giúp người dùng dễ dàng tạo video ngắn dưới 1 phút bằng công nghệ AI. Ứng dụng hỗ trợ tạo nội dung từ gợi ý chủ đề → sinh kịch bản → tạo giọng đọc → ghép video → xuất bản lên các nền tảng youtube, facebook.  
+Hệ thống cung cấp các tính năng nâng cao như tìm kiếm chủ đề theo xu hướng, tùy chọn phong cách video, xuất bản video lên mạng xã hội và phân quyền người dùng (User / VIP).
 
 ---
 
-## 📁 Abstractions
+## 2. Cấu trúc dự án
 
-- Chứa các interface định nghĩa các hợp đồng (contract) mà các dịch vụ sẽ implement.
-- **Ví dụ:** `IEmailSender.cs` định nghĩa giao diện gửi email.
-
----
-
-## 📁 Bootstraping
-
-- Dùng để cấu hình và đăng ký các dịch vụ vào DI Container.
-- **Ví dụ:** `ApplicationServiceExtensions.cs` chứa các extension method để inject các service vào `IServiceCollection`.
-
----
-
-## 📁 Common
-
-- Chứa các lớp/tệp dùng chung cho toàn bộ dự án.
-- **Ví dụ:** `Constants.cs` định nghĩa các hằng số dùng chung.
-
----
-
-## 📁 Controllers
-
-- Chứa các controller chính xử lý HTTP request/response.
-- Mỗi controller tương ứng với 1 resource trong hệ thống.
+```
+aigen-video/
+├── AIGenVideo.Server/         # ASP.NET Web API (.NET 8)
+│   ├── Controllers/           # API Controllers
+│   ├── Services/              # Business logic: YouTube, Facebook, TikTok, FFmpeg
+│   ├── Models/                # DTOs, Entities
+│   ├── Data/                  # DbContext & Migrations
+│   └── Program.cs, Startup.cs # Entry point & config
+│
+├── AIGenVideo.Client/         # React frontend (Vite + Tailwind)
+│   ├── pages/                 # Giao diện người dùng
+│   ├── components/            # UI components
+│   ├── hooks/                 # React hooks
+│   └── vite.config.js         # Vite config
+├── infras/Service             # Chứa các service bên thứ 3 (Momo,...)
+├── docker-compose.yml         # Docker Compose cấu hình backend + frontend + db + redis
+├── README.md                  # Hướng dẫn dự án
+├── .env                       # Biến môi trường cấu hình
+```
 
 ---
 
-## 📁 Data
+## 3. Chức năng chính
 
-- Chứa các thành phần liên quan đến truy xuất và thao tác với cơ sở dữ liệu. ( ở đây sử dụng EF )
+### 👤 Người dùng
 
-### 📁 Entities
+- Đăng ký, đăng nhập (Google OpenId Connect, email + password)
+- Mua Vip cho tài khoản ( thanh toán bằng Vnpay, Momo )
+- Tạo video tự động: nhập từ khóa → sinh kịch bản → sinh video
+- Tìm kiếm chủ đề xu hướng trên các nền tảng
+- Tuỳ chọn giọng đọc AI hoặc ghi âm giọng người thật
+- Chỉnh sửa video cơ bản (hiệu ứng chữ, sticker, nhạc nền)
+- Xuất video định dạng `.mp4`, xem lại video đã tạo
+- Quản lý video đã tạo
+- Xem thống kê hiệu suất video trên các nền tảng
+- Xuất bản video lên các nền tảng (Youtube, facebook)
+- Tùy chọn phong cách video (Anime, Cartoon, Romantic…)
 
-- Định nghĩa các entity tương ứng với bảng trong database.
+### 🛠️ Quản trị viên
 
-### 📁 Migrations
-
-- Chứa các migration file được tạo ra bởi Entity Framework.
-
-### 📄 ApplicationDbContext.cs
-
-- Là lớp đại diện cho DbContext chính của ứng dụng, kết nối đến database.
-
----
-
-## 📁 Helpers
-
-- Chứa các class tiện ích, hỗ trợ xử lý logic phụ (ví dụ: xử lý thời gian).
-- **Ví dụ:** `DateTimeHelper.cs`.
-
----
-
-## 📁 Mappers
-
-- Chứa các lớp dùng để ánh xạ (map) dữ liệu giữa các model khác nhau (Entity ↔ DomainModel or DTO,...).
-- **Ví dụ:** `UserMapper.cs`.
+- Quản lý người dùng, phân quyền User / VIP
+- Quản lý dashboard hệ thống
+- Quản lý các giao dịch
 
 ---
 
-## 📁 Models
+## 4. Tính năng nổi bật
 
-- Chứa các model phục vụ cho việc truyền nhận dữ liệu giữa client và server.
-
-### 📁 DomainModels
-
-- Chứa các model chính đại diện cho logic domain của hệ thống.
-
-### 📁 RequestModels
-
-- Chứa các model dùng để nhận dữ liệu từ request (input từ client).
-
-### 📁 ResponseModels
-
-- Chứa các model dùng để trả dữ liệu về cho client (output).
-
-#### 📄 ApiResponse.cs
-
-- Một lớp chuẩn hóa phản hồi API (trạng thái, thông báo, dữ liệu...), luôn sử dụng lớp này để trả về dữ liệu cho client.
-
-#### 📄 PaginationResponse.cs
-
-- Lớp dùng để phản hồi dữ liệu dạng phân trang.
+- 🤖 **AI Chatbot nội dung:** Gợi ý chủ đề, sinh kịch bản tự động
+- 🗣️ **TTS AI Voice:** Chuyển văn bản sang giọng đọc tiếng Việt tự nhiên
+- 🎬 **Ghép video tự động:** Kết hợp hình ảnh, giọng đọc, phụ đề
+- 🌐 **Đăng video mạng xã hội:** Tích hợp YouTube, TikTok, Facebook Reels API
+- 🔐 **Phân quyền + Thanh toán:** Tài khoản VIP có thể sử dụng đầy đủ tính năng
+- 💵 **Thanh toán đa cổng:** Hỗ trợ Momo, VNPAY, Internet Banking
+- 🔐 **Bảo mật nâng cao:** Mã hoá token, xác thực OAuth2, gửi OTP SMS
+- 📊 **Thống kê video:** Lượt xem, lượt tải, thời lượng trung bình...
 
 ---
 
-## 📁 Properties
+## 5. Hướng dẫn chạy dự án
 
-- Thư mục mặc định chứa file `launchSettings.json` để cấu hình môi trường khởi động cho dự án.
+### ✅ Cách 1: Dùng Docker Compose (Khuyên dùng)
 
----
+#### Bước 1: Clone dự án
 
-## 📁 Repository
+```bash
+git clone https://github.com/mquangcao/AIGenVideo.git
+```
 
-- Chứa lớp tương tác trực tiếp với database (Data Access Layer), ở đây sẽ viết các repository, các repository sẽ dùng đến EF, và các service hay các controller sẽ dùng đến repository ( đáp dứng Dependency Inversion Principle -> chữ D trong SOLID, các repository cũng cần tạo ra interface trong _Abtraction_ )
-- **Ví dụ:** `UserRepository.cs`
+#### Bước 2: Di chuyển vào thư mục dự án
 
----
+```bash
+cd AIGenVideo
+```
 
-## 📁 Services
+#### Bước 3: Điền các tham số, biến môi trường yêu cầu trong Folder Docker
 
-- Chứa các class thực thi logic nghiệp vụ của ứng dụng.
-- Đây là nơi xử lý logic chính từ Controller chuyển xuống Repository.
+#### Bước 4: Chạy ứng dụng với Docker
 
----
+```bash
+docker compose build
+docker compose up -d
+```
 
-## ✅ Ghi chú chung:
+#### Truy cập ứng dụng
 
-- Dự án sử dụng kiến trúc phân lớp: **Controller → Service → Repository**.
-- Ưu tiên phân tách rõ ràng giữa dữ liệu truyền nhận (request/response) và dữ liệu nghiệp vụ (domain).
-- Dùng Dependency Injection để dễ dàng test và mở rộng ứng dụng.
+- **Frontend (React):** http://localhost:3000
+- **Backend API (ASP.NET):** http://localhost:3008
 
----
+#### Database (SQL Server):
 
----
+- Host: `localhost`
+- Port: `1433`
+- User: `sa`
+- Password: `Quangcao123!`
 
-# 🧩 Cấu trúc thư mục dự án Frontend (React)
+#### Dừng toàn bộ dịch vụ
 
-## 📁 apis
-
-- Chứa các hàm gọi API
-- Mỗi file đại diện cho một tập hợp API liên quan đến một resource (ví dụ: `userService.js`, `authService.js`).
-
----
-
-## 📁 assets
-
-- Chứa tài nguyên tĩnh như ảnh, font, biểu tượng (icon), video, v.v.
-- Có thể chia nhỏ thành các thư mục con như `images`, `fonts`,...
-
----
-
-## 📁 common
-
-- Chứa các thành phần tái sử dụng nhưng **không liên quan đến UI**, như:
-  - Constants
-  - Config
-  - Validation schemas
-  - Custom enums...
+```bash
+docker compose down
+```
 
 ---
 
-## 📁 components
+### ⚙️ Cách 2: Tự chạy backend & frontend
 
-- Chứa các component React có thể tái sử dụng nhiều nơi trong ứng dụng (Button, Modal, Input,...).
-- Thường được chia nhỏ theo loại hoặc module.
+#### Backend (ASP.NET)
 
----
+- Cài đặt .NET 8 SDK
+- Cấu hình các tham số yêu cầu trong `appsettings.json`
+- Chạy lệnh sau trong thư mục `AIGenVideo.Server/`:
 
-## 📁 hooks
+```bash
+cd AIGenVideo.Server
+dotnet ef database update
+dotnet run
+```
 
-- Chứa các custom hooks như `useDebounce`, `useAuth`, `usePagination`,...
-- Mục tiêu: tái sử dụng logic và tách biệt khỏi component.
+#### Frontend (React)
 
----
+- Cài đặt Node.js >= 18
+- Cài đặt dependencies và chạy dev server:
 
-## 📁 lib
-
-- Chứa các thư viện hoặc tiện ích bên ngoài (hoặc wrapper của chúng).
-- Ví dụ: cấu hình axios, Firebase, dayjs, i18n,...
-
----
-
-## 📁 pages
-
-- Chứa các trang chính của ứng dụng (mỗi route tương ứng với một trang).
-- Ví dụ: `LoginPage`, `HomePage`, `DashboardPage`,...
-
----
-
-## 📁 providers
-
-- Chứa các Context Providers hoặc wrappers như:
-  - AuthProvider
-  - ThemeProvider
-  - ReduxProvider (nếu dùng)
-- Dùng để cung cấp state hoặc context cho toàn ứng dụng.
+```bash
+cd aigenvideo.client
+npm install
+npm run dev
+```
 
 ---
 
-## 📁 redux
+## 6. Thông tin kỹ thuật
 
-- Chứa các slice, store, middleware nếu dùng Redux (RTK hoặc Redux thường).
-- Cấu trúc thường là:
-  - `store.js`
-  - `slices/`
-  - `middlewares/`
+| Công nghệ         | Mô tả                       |
+| ----------------- | --------------------------- |
+| ASP.NET 8         | Web API backend             |
+| React + Vite      | SPA frontend                |
+| FFmpeg            | Xử lý video                 |
+| OpenAI / Groq API | Sinh kịch bản AI            |
+| Open Id Connect   | Đăng nhập người dùng        |
+| OAuth2            | Lấy token của bên thứ 3     |
+| SQL Server        | Cơ sở dữ liệu chính         |
+| Redis             | Caching, token storage      |
+| Docker Compose    | Triển khai đồng bộ hệ thống |
 
 ---
 
-## 📁 routes
+## 7. Đóng góp
 
-- Định nghĩa các route trong ứng dụng, có thể phân quyền (PrivateRoute, PublicRoute).
-- Có thể kèm cấu hình lazy load, layout tương ứng cho từng route.
+Chúng tôi luôn chào đón đóng góp từ cộng đồng.
 
----
-
-## 📁 utils
-
-- Chứa các hàm tiện ích (helper function) như:
-  - Format date, currency
-  - Generate random ID
-  - Debounce/throttle function,...
+- Fork repository
+- Tạo nhánh mới từ `main`
+- Commit và tạo pull request

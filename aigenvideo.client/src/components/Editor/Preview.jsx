@@ -19,8 +19,8 @@ export function Preview({ editorState, onPlayPause, onUpdateText, onUpdateSticke
   const [debugInfo, setDebugInfo] = useState('');
 
   // FIXED: Canvas dimensions and scale
-  const CANVAS_WIDTH = 640;
-  const CANVAS_HEIGHT = 360;
+  const CANVAS_WIDTH = 1920;
+  const CANVAS_HEIGHT = 1080;
   const EXPORT_WIDTH = 1920;
   const EXPORT_HEIGHT = 1080;
   const SCALE_X = CANVAS_WIDTH / EXPORT_WIDTH; // 0.333
@@ -214,7 +214,7 @@ export function Preview({ editorState, onPlayPause, onUpdateText, onUpdateSticke
       (sticker) => editorState.currentTime >= sticker.startTime && editorState.currentTime < sticker.endTime
     );
 
-    let debugText = `Active: ${activeTexts.length} texts, ${activeStickers.length} stickers`;
+    let debugText = ``;
 
     // FIXED: Render text elements with proper scaling and DEBUG
     activeTexts.forEach((text, index) => {
@@ -263,8 +263,6 @@ export function Preview({ editorState, onPlayPause, onUpdateText, onUpdateSticke
       }
 
       ctx.restore();
-
-      debugText += ` | Text${index}: (${scaledX.toFixed(0)},${scaledY.toFixed(0)})`;
     });
 
     // FIXED: Render stickers with proper scaling
@@ -296,7 +294,7 @@ export function Preview({ editorState, onPlayPause, onUpdateText, onUpdateSticke
 
       ctx.restore();
 
-      debugText += ` | Sticker${index}: (${scaledX.toFixed(0)},${scaledY.toFixed(0)})`;
+      debugText += ``;
     });
 
     // DEBUG: Show debug info
@@ -460,7 +458,7 @@ export function Preview({ editorState, onPlayPause, onUpdateText, onUpdateSticke
                 }
               }}
               src={currentVideo.src}
-              className="absolute inset-0 w-full h-full object-cover"
+              className="absolute inset-0 w-full h-full object-contain"
               playsInline
               muted={isMuted}
               volume={volume[0] / 100}

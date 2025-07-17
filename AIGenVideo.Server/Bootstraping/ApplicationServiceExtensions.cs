@@ -162,6 +162,7 @@ public static class ApplicationServiceExtensions
         builder.Services.Configure<VnpayConfig>(builder.Configuration.GetSection("Payment:VnPay"));
         builder.Services.Configure<TikTokOptions>(builder.Configuration.GetSection("Authentication:TikTok"));
         builder.Services.Configure<FacebookOptions>(builder.Configuration.GetSection("Authentication:Facebook"));
+        builder.Services.Configure<GoogleGeminiOptions>(builder.Configuration.GetSection("Gemini"));
 
         return builder;
     }
@@ -173,10 +174,10 @@ public static class ApplicationServiceExtensions
             options.AddPolicy("AllowAll", policy =>
             {
                 policy
-                    .WithOrigins("https://localhost:50464")      
+                    .AllowAnyOrigin()
                     .AllowAnyMethod()
-                    .AllowAnyHeader()
-                    .AllowCredentials();     // nếu có dùng cookie / auth
+                    .AllowAnyHeader();
+                    
             });
         });
         return builder;

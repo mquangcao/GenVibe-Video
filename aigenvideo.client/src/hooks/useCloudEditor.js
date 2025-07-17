@@ -168,7 +168,7 @@ export default function useCloudEditor(config = {}) {
 
   // FIXED: Improved save changes with better error handling and progress tracking
   const saveChanges = useCallback(
-    async (saveSettings = { format: 'webm', quality: 'medium', keepOriginal: true }, uploadOptions = {}, videoid) => {
+    async (saveSettings = { format: 'mp4', quality: 'medium', keepOriginal: true }, uploadOptions = {}, videoid) => {
       console.log('💾 Starting save changes process...');
 
       if (editor.editorState.duration <= 0 || !cloudState.hasChanges) {

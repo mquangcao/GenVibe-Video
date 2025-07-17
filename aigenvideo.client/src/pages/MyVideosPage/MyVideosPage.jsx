@@ -18,6 +18,14 @@ import { Edit3, Share2, Trash2, MoreVertical, Play, Search, Filter, Grid3X3, Lis
 import { useNavigate } from 'react-router-dom';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getMyVideos } from '@/apis/videoService';
+import dayjs from 'dayjs';
+import relativeTime from 'dayjs/plugin/relativeTime';
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
+
+dayjs.extend(relativeTime);
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 export default function MyVideosPage() {
   const navigate = useNavigate();
@@ -35,8 +43,6 @@ export default function MyVideosPage() {
         console.log(response.data.data);
         if (response.data.success) {
           setVideos(response.data.data);
-        } else {
-          console.error('No videos found');
         }
       } catch (error) {
         console.error('Failed to load videos:', error);
@@ -44,38 +50,6 @@ export default function MyVideosPage() {
     };
     loadMyVideos();
   }, []);
-
-  console.log('checkkk');
-
-  const generateThumbnail = (videoUrl) => {
-    if (videoUrl.includes('cloudinary.com')) {
-      try {
-        // Tách các phần của URL
-        const url = new URL(videoUrl);
-        const pathParts = url.pathname.split('/');
-        // Tìm index của 'upload'
-        const uploadIndex = pathParts.findIndex((part) => part === 'upload');
-        if (uploadIndex === -1) {
-          return '/placeholder.svg?height=200&width=300';
-        }
-        // Lấy phần sau 'upload'
-        const afterUpload = pathParts.slice(uploadIndex + 1);
-        // Loại bỏ extension và thêm .jpg
-        const lastPart = afterUpload[afterUpload.length - 1];
-        const nameWithoutExt = lastPart.replace(/\.(mp4|mov|avi|mkv|webm)$/i, '');
-        afterUpload[afterUpload.length - 1] = nameWithoutExt + '.jpg';
-        // Tạo URL thumbnail với transformation đơn giản hơn
-        const baseUrl = `${url.protocol}//${url.host}`;
-        const cloudPath = pathParts.slice(0, uploadIndex + 1).join('/');
-        const transformations = 'c_thumb,w_300,h_200,f_auto,q_auto';
-        return `${baseUrl}${cloudPath}/${transformations}/${afterUpload.join('/')}`;
-      } catch (error) {
-        console.error('Error generating thumbnail:', error);
-        return '/placeholder.svg?height=200&width=300';
-      }
-    }
-    return '/placeholder.svg?height=200&width=300';
-  };
 
   const handleDeleteVideo = (videoId) => {
     setVideos(videos.filter((video) => video.id !== videoId));
@@ -167,35 +141,22 @@ export default function MyVideosPage() {
               <Card key={video.id} className="group hover:shadow-lg transition-shadow duration-200 flex flex-col !p-0">
                 <CardHeader className="p-0 !-mb-4">
                   <div className="relative w-full h-48 overflow-hidden rounded-t-lg">
-                    <Avatar className="w-full h-full rounded-t-lg rounded-b-none">
-                      <AvatarImage
-                        src={generateThumbnail(video.videoUrl) || '/placeholder.svg'}
-                        alt={video.caption}
-                        className="w-full h-full object-cover"
-                      />
-                      <AvatarFallback className="bg-gray-200 text-gray-500 w-full h-full rounded-t-lg rounded-b-none">
-                        <Play className="w-8 h-8" />
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-200 rounded-t-lg flex items-center justify-center">
-                      <Button
-                        size="sm"
-                        className="opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                        onClick={() => window.open(video.videoUrl, '_blank')}
-                      >
-                        <Play className="w-4 h-4 mr-2" />
-                        Play
-                      </Button>
-                    </div>
+                    <video
+                      src={`/api/video/proxy-video?url=${encodeURIComponent(video.videoUrl)}`}
+                      className="w-full h-full object-cover rounded-t-lg"
+                      controls
+                      preload="metadata"
+                    />
                   </div>
                 </CardHeader>
 
                 <CardContent className="p-4 !pb-0 !pt-0 flex-1">
-                  {/* Caption với giới hạn 3 dòng */}
-                  <p className="text-gray-800 text-sm mb-3 line-clamp-3 leading-relaxed">{video.caption}</p>
+                  <p className="text-gray-800 text-sm mb-3 line-clamp-3 leading-relaxed">
+                    {video.title == '' ? video.caption : video.title}
+                  </p>
                   <div className="flex items-center text-sm text-gray-500 mt-auto">
                     <Calendar className="w-3 h-3 mr-1" />
-                    {formatDate(video.createdAt)}
+                    {dayjs.utc(video.createdAt).local().fromNow()}
                   </div>
                 </CardContent>
 
@@ -243,16 +204,12 @@ export default function MyVideosPage() {
                 <CardContent className="p-4">
                   <div className="flex items-center gap-4">
                     <div className="relative">
-                      <Avatar className="w-32 h-20 rounded-lg">
-                        <AvatarImage
-                          src={generateThumbnail(video.videoUrl) || '/placeholder.svg'}
-                          alt={video.caption}
-                          className="w-full h-full object-cover"
-                        />
-                        <AvatarFallback className="bg-gray-200 text-gray-500 w-32 h-20 rounded-lg">
-                          <Play className="w-6 h-6" />
-                        </AvatarFallback>
-                      </Avatar>
+                      <video
+                        src={`/api/video/proxy-video?url=${encodeURIComponent(video.videoUrl)}`}
+                        className="w-32 h-20 object-cover rounded-t-lg"
+                        controls
+                        preload="metadata"
+                      />
                     </div>
                     <div className="flex-1">
                       <div className="flex items-start justify-between">

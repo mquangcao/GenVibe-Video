@@ -9,6 +9,7 @@ import { ResponsiveContainer, XAxis, YAxis, Tooltip, Area, AreaChart } from 'rec
 // Sample data - replace with your actual data
 
 export default function AnalyticsDialog({ analytics }) {
+  console.log(analytics);
   const currentData = {
     stats: {
       views: analytics.basicStats.viewCount || 0,
@@ -129,16 +130,6 @@ export default function AnalyticsDialog({ analytics }) {
                   </CardContent>
                 </Card>
               </div>
-
-              {/* New Subscribers */}
-              <Card className="bg-gradient-to-r from-orange-50 to-yellow-50 border border-orange-200">
-                <CardContent className="p-4">
-                  <div className="text-sm text-orange-700 font-medium mb-1">Người đăng ký mới</div>
-                  <div className="text-2xl font-bold font-mono text-orange-900">
-                    {currentData.detailedStats.newSubscribers.toLocaleString()}
-                  </div>
-                </CardContent>
-              </Card>
 
               {/* Chart */}
               <Card className="bg-white border border-gray-200">

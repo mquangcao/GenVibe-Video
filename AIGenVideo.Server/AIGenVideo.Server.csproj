@@ -40,9 +40,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\aigenvideo.client\aigenvideo.client.esproj">
-      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
-    </ProjectReference>
     <ProjectReference Include="..\infras\Services\Payment.csproj" />
   </ItemGroup>
 

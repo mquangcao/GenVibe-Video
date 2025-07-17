@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using AIGenVideo.Server.Helpers;
+using Microsoft.AspNetCore.Authorization;
 
 namespace AIGenVideo.Server.Controllers.Auth;
 
@@ -39,7 +40,7 @@ public class AccountController : ControllerBase
                 Username = user.UserName ?? string.Empty,
                 Email = user.Email ?? string.Empty,
                 Name = user.FullName ?? string.Empty,
-                Role = role.FirstOrDefault() ?? Constants.USER_ROLE
+                Role = RoleHelper.GetHighestRole(role.ToList())
             }));
     }
 }

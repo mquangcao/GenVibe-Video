@@ -38,7 +38,6 @@ public class VideoController : ControllerBase
             return BadRequest(ApiResponse.FailResponse($"Platform with code '{request.PlatformCode}' not found."));
         }    
 
-        // Tạo đường dẫn tạm để lưu video tải về
         var filePath = Path.GetTempFileName();
 
         try
@@ -73,7 +72,10 @@ public class VideoController : ControllerBase
 
             if (!string.IsNullOrEmpty(videoId))
             {
-                return Ok(ApiResponse.SuccessResponse($"Video uploaded successfully! Video ID: {videoId}"));
+                return Ok(ApiResponse.SuccessResponse(new
+                {
+                    videoId
+                }));
             }
             else
             {
@@ -105,6 +107,20 @@ public class VideoController : ControllerBase
             if (analytics == null)
                 return NotFound("No analytics data found.");
 
+            if (analytics.ChartData.Count == 0)
+            {
+                analytics.ChartData.Add(new VideoChartPoint()
+                {
+                    Date = DateOnly.FromDateTime(analytics.FromDate),
+                    Views = 0
+                });
+                analytics.ChartData.Add(new VideoChartPoint()
+                {
+                    Date = DateOnly.FromDateTime(analytics.ToDate),
+                    Views = (int)analytics.BasicStats.ViewCount
+                });
+            }
+
             return Ok(analytics);
         }
         catch (UnauthorizedAccessException)
@@ -127,19 +143,18 @@ public class VideoController : ControllerBase
             return Unauthorized("User ID is missing.");
         }
 
-        // Lấy các video do người dùng tạo
         var videos = await _dbContext.VideoData
             .Where(v => v.CreatedBy == userId)
             .OrderByDescending(v => v.CreatedAt)
             .ToListAsync();
 
-        // Map dữ liệu sang DTO phù hợp
         var result = videos.Select(v => new
         {
             id = v.Id,
             caption = v.Captions,
             videoUrl = v.VideoUrl,
-            createdAt = v.CreatedAt.ToString("yyyy-MM-dd")
+            createdAt = v.CreatedAt,
+            title = v.Title
         });
 
         return Ok(ApiResponse.SuccessResponse(result));
@@ -169,7 +184,8 @@ public class VideoController : ControllerBase
             id = video.Id,
             caption = video.Captions,
             videoUrl = video.VideoUrl,
-            createdAt = video.CreatedAt.ToString("yyyy-MM-dd")
+            createdAt = video.CreatedAt,
+            title = video.Title
         };
 
         return Ok(ApiResponse.SuccessResponse(result));
@@ -260,9 +276,22 @@ public class VideoController : ControllerBase
                     throw new Exception($"No analytics data found for video ID {uploadedVideo.VideoId} on platform {platform.PlatformCode}.");
                 }
                 status.analytics = analytics;
+
+                if (status.analytics.ChartData.Count == 0)
+                {
+                    status.analytics.ChartData.Add(new VideoChartPoint()
+                    {
+                        Date = DateOnly.FromDateTime(analytics.FromDate),
+                        Views = 0
+                    });
+                    status.analytics.ChartData.Add(new VideoChartPoint()
+                    {
+                        Date = DateOnly.FromDateTime(analytics.ToDate),
+                        Views = (int)analytics.BasicStats.ViewCount
+                    });
+                }
                 platformsStatus.Add(status);
             }
-
 
 
             return Ok(ApiResponse.SuccessResponse(platformsStatus));
@@ -272,5 +301,28 @@ public class VideoController : ControllerBase
             return BadRequest(ApiResponse.FailResponse(ex.Message));
         }
     }
+
+    [HttpGet("proxy-video")]
+    public async Task<IActionResult> ProxyVideo([FromQuery] string url)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+            return BadRequest("Missing video url");
+
+        try
+        {
+            var httpClient = new HttpClient();
+            var stream = await httpClient.GetStreamAsync(url);
+
+            Response.Headers["Cross-Origin-Resource-Policy"] = "cross-origin";
+
+            return File(stream, "video/mp4", enableRangeProcessing: true); // Cho phép seek
+        }
+        catch (Exception)
+        {
+            return BadRequest("Video could not be loaded.");
+
+        }
+    }
+
 
 }

@@ -8,4 +8,6 @@ public class VideoAnalytics
     public double AverageViewPercentage { get; set; }
     public int SubscribersGained { get; set; }
     public List<VideoChartPoint> ChartData { get; set; } = new();
+    public DateTime FromDate { get; set; }
+    public DateTime ToDate { get; set; }
 }

@@ -5,8 +5,6 @@ import { Separator } from '@/components/ui/separator';
 import { Save, X, Upload, Undo, Redo, Play, Pause, Settings, FolderOpen, CloudUpload, RotateCcw } from 'lucide-react';
 
 export function Header({ isPlaying, onPlayPause, onImport, onSaveChanges, onCancel, onSave, hasChanges = false, isProcessing = false }) {
-  console.log('🔘 Header render - hasChanges:', hasChanges, 'isProcessing:', isProcessing);
-
   return (
     <div className="h-14 bg-white border-b border-gray-200 flex items-center px-4 gap-3 shadow-sm">
       {/* Logo */}
