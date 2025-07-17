@@ -174,10 +174,9 @@ public static class ApplicationServiceExtensions
             options.AddPolicy("AllowAll", policy =>
             {
                 policy
-                    .WithOrigins("https://localhost:50464")      
+                    .AllowAnyOrigin()
                     .AllowAnyMethod()
-                    .AllowAnyHeader()
-                    .AllowCredentials();     // nếu có dùng cookie / auth
+                    .AllowAnyHeader(); 
             });
         });
         return builder;
