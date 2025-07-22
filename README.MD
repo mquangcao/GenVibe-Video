@@ -140,6 +140,38 @@ npm run dev
 
 ---
 
+### User & VIP User
+
+- Màn hình đăng nhập
+  [![alt text](./Docs/login.png)]()
+- Trang chủ
+  [![alt text](./Docs/trangchu.png)]()
+- Màn hình tạo giọng đọc AI
+  [![alt text](./Docs/genVoice.png)]()
+- Màn hình tạo ảnh AI
+  [![alt text](./Docs/genImg.png)]()
+- Màn hình gợi ý nội dung xu hướng
+  [![alt text](./Docs/suges.png)]()
+- Màn hình tùy biến kịch bản video
+  [![alt text](./Docs/genKb.png)]()
+- Màn hình sinh ảnh video
+  [![alt text](./Docs/genImgVideo.png)]()
+- Màn hình video của tôi
+  [![alt text](./Docs/myvideo.png)]()
+- Màn hình chia sẻ video
+  [![alt text](./Docs/videoUpload.png)]()
+- Màn hình thống kê hiệu suất video
+  [![alt text](./Docs/videoAnalistic.png)]()
+- Màn hình thanh toán VIP
+  [![alt text](./Docs/payment.png)]()
+
+### Admin
+
+- Màn hình trang chủ
+  [![alt text](./Docs/adminDashboard.png)]()
+- Màn hình quản lý user
+  [![alt text](./Docs/managerUser.png)]()
+
 ## 6. Thông tin kỹ thuật
 
 | Công nghệ         | Mô tả                       |
