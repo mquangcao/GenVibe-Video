@@ -1,11 +1,12 @@
 import React, { useState, useRef } from 'react';
-import axios from 'axios';
 import { Header } from '@/components/Layouts/Header';
 import { SideBar } from '@/components/Layouts/SideBar';
 import { Mic, Download, Heart, Volume2, Play, Pause, ChevronDown, ChevronUp } from 'lucide-react';
 import { saveAs } from 'file-saver';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { useVoiceSelection } from '@/pages/ContentGeneratorPage/hooks/useVoiceSelection';
+import { generateAudio } from '@/apis/audioService';
 
 function VoiceGeneratorPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -36,42 +37,52 @@ function VoiceGeneratorPage() {
       liked: false,
     },
   ]);
-  const [selectedLanguage, setSelectedLanguage] = useState('English');
-  const [selectedQuality, setSelectedQuality] = useState('High');
   const [playSpeed, setPlaySpeed] = useState(1.0);
   const [showControls, setShowControls] = useState(true);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const audioRefs = useRef({});
 
-  // Voice ID mapping with languages - loaded from environment variables
-  const voiceIdMapping = {
-    Chinese: [import.meta.env.VITE_CHINESE_VOICE_1, import.meta.env.VITE_CHINESE_VOICE_2].filter(Boolean), // Remove undefined values
-    English: [import.meta.env.VITE_ENGLISH_VOICE_1, import.meta.env.VITE_ENGLISH_VOICE_2].filter(Boolean),
-    French: [import.meta.env.VITE_FRENCH_VOICE_1, import.meta.env.VITE_FRENCH_VOICE_2].filter(Boolean),
-    German: [import.meta.env.VITE_GERMAN_VOICE_1, import.meta.env.VITE_GERMAN_VOICE_2].filter(Boolean),
-    Japanese: [import.meta.env.VITE_JAPANESE_VOICE_1].filter(Boolean),
-    Vietnamese: [import.meta.env.VITE_VIETNAMESE_VOICE_1, import.meta.env.VITE_VIETNAMESE_VOICE_2].filter(Boolean),
-    Russian: [import.meta.env.VITE_RUSSIAN_VOICE_1, import.meta.env.VITE_RUSSIAN_VOICE_2].filter(Boolean),
+  // Use Google Cloud Text-to-Speech hooks
+  const { googleVoices, selectedGoogleVoice, setSelectedGoogleVoice, speechRate, setSpeechRate } = useVoiceSelection();
+
+  // Language mapping for Google Cloud voices
+  const getLanguageFromVoice = (voiceName) => {
+    const languageMap = {
+      'en-US': 'English (US)',
+      'en-GB': 'English (UK)',
+      'fr-FR': 'French',
+      'de-DE': 'German',
+      'it-IT': 'Italian',
+      'ja-JP': 'Japanese',
+      'es-ES': 'Spanish',
+      'vi-VN': 'Vietnamese',
+      'th-TH': 'Thai',
+      'cmn-CN': 'Chinese (Mandarin)',
+      'cmn-TW': 'Chinese (Traditional)',
+      'yue-HK': 'Chinese (Cantonese)',
+    };
+
+    const languageCode = voiceName.split('-').slice(0, 2).join('-');
+    return languageMap[languageCode] || languageCode;
   };
 
-  const API_KEY = import.meta.env.VITE_API_KEY;
+  // Get available languages from voices
+  const getAvailableLanguages = () => {
+    const languages = new Set();
+    googleVoices.forEach((voice) => {
+      const language = getLanguageFromVoice(voice.name);
+      languages.add(language);
+    });
+    return Array.from(languages).sort();
+  };
 
-  // Function to get random voice ID for selected language
-  const getCurrentVoiceId = () => {
-    const voiceIds = voiceIdMapping[selectedLanguage];
-    if (!voiceIds || voiceIds.length === 0) {
-      console.warn(`No voice IDs found for language: ${selectedLanguage}`);
-      return import.meta.env.VITE_VOICE_ID; // Fallback to default voice ID
-    }
-
-    // If only one voice ID, return it directly
-    if (voiceIds.length === 1) {
-      return voiceIds[0];
-    }
-
-    // If multiple voice IDs, pick random one
-    const randomIndex = Math.floor(Math.random() * voiceIds.length);
-    return voiceIds[randomIndex];
+  // Get voices for selected language
+  const getVoicesForLanguage = (selectedLanguage) => {
+    return googleVoices.filter((voice) => {
+      const voiceLanguage = getLanguageFromVoice(voice.name);
+      return voiceLanguage === selectedLanguage;
+    });
   };
 
   const formatDuration = (seconds) => {
@@ -85,50 +96,39 @@ function VoiceGeneratorPage() {
     e.preventDefault();
     if (!textInput.trim()) return;
 
+    setIsGenerating(true);
     try {
-      const qualityMap = {
-        High: 'eleven_multilingual_v2',
-        Medium: 'eleven_turbo_v2_5',
-        Low: 'eleven_flash_v2_5',
-      };
-      const modelId = qualityMap[selectedQuality];
-      const currentVoiceId = getCurrentVoiceId();
+      console.log(`Generating audio with voice: ${selectedGoogleVoice}, rate: ${speechRate}`);
 
-      console.log(`Using voice ID: ${currentVoiceId} for language: ${selectedLanguage}`);
-
-      const response = await axios({
-        method: 'POST',
-        url: `https://api.elevenlabs.io/v1/text-to-speech/${currentVoiceId}`,
-        headers: {
-          accept: 'audio/mpeg',
-          'content-type': 'application/json',
-          'xi-api-key': API_KEY,
-        },
-        data: {
-          text: textInput,
-          model_id: modelId,
-          voice_settings: {
-            stability: 0.5,
-            similarity_boost: 0.75,
-          },
-        },
-        responseType: 'arraybuffer',
+      // Use Google Cloud Text-to-Speech API
+      const response = await generateAudio({
+        text: textInput,
+        selectedGoogleVoice: selectedGoogleVoice,
+        speechRate: speechRate,
       });
 
-      const blob = new Blob([response.data], { type: 'audio/mpeg' });
-      const audioUrl = URL.createObjectURL(blob);
+      const audioBlob = response.data;
+      const audioUrl = URL.createObjectURL(audioBlob);
 
+      // Get audio duration
       const tempAudio = new Audio(audioUrl);
       const duration = await new Promise((resolve) => {
         tempAudio.addEventListener('loadedmetadata', () => {
           resolve(tempAudio.duration);
         });
+        tempAudio.addEventListener('error', () => {
+          resolve(0); // Fallback if metadata can't be loaded
+        });
       });
+
+      const selectedVoice = googleVoices.find((voice) => voice.name === selectedGoogleVoice);
+      const language = getLanguageFromVoice(selectedGoogleVoice);
 
       const newAudio = {
         id: Date.now(),
         text: textInput,
         audioUrl,
+        audioBlob, // Store the blob for download
         isPlaying: false,
         duration: formatDuration(duration),
         remainingTime: formatDuration(duration),
@@ -136,44 +136,48 @@ function VoiceGeneratorPage() {
         showVolume: false,
         progress: 0,
         liked: false,
-        language: selectedLanguage, // Store the language used
-        voiceId: currentVoiceId, // Store the voice ID used
+        language: language,
+        voiceName: selectedGoogleVoice,
+        voiceGender: selectedVoice?.gender || 'UNKNOWN',
+        speechRate: speechRate,
       };
 
       setGeneratedAudios([newAudio, ...generatedAudios]);
       setTextInput('');
 
-      toast.success(`Audio generated successfully using ${selectedLanguage} voice!`, {
+      toast.success(`Audio generated successfully using ${language} voice (${selectedVoice?.gender})!`, {
         position: 'top-right',
         autoClose: 3000,
-        theme: 'dark',
+        theme: 'light',
       });
     } catch (error) {
       console.error('Error generating audio:', error);
-      toast.error('Failed to generate audio. Please check your API key and try again.', {
+      toast.error('Failed to generate audio. Please try again.', {
         position: 'top-right',
         autoClose: 4000,
-        theme: 'dark',
+        theme: 'light',
       });
+    } finally {
+      setIsGenerating(false);
     }
   };
 
-  const handleLanguageChange = (e) => {
-    const newLanguage = e.target.value;
-    setSelectedLanguage(newLanguage);
+  const handleVoiceChange = (e) => {
+    const newVoice = e.target.value;
+    setSelectedGoogleVoice(newVoice);
 
-    // Show which voice will be used (for debugging/info)
-    const voiceIds = voiceIdMapping[newLanguage];
-    if (voiceIds && voiceIds.length > 1) {
-      toast.info(`${newLanguage} selected. Will randomly choose from ${voiceIds.length} available voices.`, {
-        position: 'top-right',
-        autoClose: 2000,
-        theme: 'dark',
-      });
-    }
+    const selectedVoiceObj = googleVoices.find((voice) => voice.name === newVoice);
+    const language = getLanguageFromVoice(newVoice);
+
+    toast.info(`${language} voice selected (${selectedVoiceObj?.gender})`, {
+      position: 'top-right',
+      autoClose: 2000,
+      theme: 'light',
+    });
   };
 
   const togglePlayPause = (id) => {
+    // Stop all other audios
     Object.entries(audioRefs.current).forEach(([audioId, audioEl]) => {
       if (Number(audioId) !== id && audioEl) {
         audioEl.pause();
@@ -219,7 +223,7 @@ function VoiceGeneratorPage() {
             closeOnClick: true,
             pauseOnHover: true,
             draggable: true,
-            theme: 'dark',
+            theme: 'light',
           });
           return { ...audio, liked: newLikedState };
         }
@@ -298,14 +302,22 @@ function VoiceGeneratorPage() {
     );
   };
 
-  const handleDownload = async (audioUrl, id) => {
+  const handleDownload = async (audioUrl, id, audioBlob) => {
     try {
-      const response = await fetch(audioUrl);
-      const blob = await response.blob();
+      let blob;
+
+      if (audioBlob) {
+        // Use the stored blob if available
+        blob = audioBlob;
+      } else {
+        // Fallback to fetching from URL
+        const response = await fetch(audioUrl);
+        blob = await response.blob();
+      }
 
       if ('showSaveFilePicker' in window) {
         const options = {
-          suggestedName: `generated_audio_${id}.mp3`,
+          suggestedName: `google_tts_audio_${id}.mp3`,
           types: [
             {
               description: 'Audio Files',
@@ -320,14 +332,14 @@ function VoiceGeneratorPage() {
         toast.success('Audio saved successfully!', {
           position: 'top-right',
           autoClose: 2000,
-          theme: 'dark',
+          theme: 'light',
         });
       } else {
-        saveAs(blob, `generated_audio_${id}.mp3`);
+        saveAs(blob, `google_tts_audio_${id}.mp3`);
         toast.success('Audio downloaded successfully!', {
           position: 'top-right',
           autoClose: 2000,
-          theme: 'dark',
+          theme: 'light',
         });
       }
     } catch (error) {
@@ -335,7 +347,7 @@ function VoiceGeneratorPage() {
       toast.error('Failed to save audio.', {
         position: 'top-right',
         autoClose: 2000,
-        theme: 'dark',
+        theme: 'light',
       });
     }
   };
@@ -346,7 +358,7 @@ function VoiceGeneratorPage() {
         <main className="flex-1 overflow-y-auto bg-gray-50 p-4 md:p-6">
           <section className="text-center text-gray-900 mb-8">
             <h1 className="text-3xl md:text-4xl font-bold mb-4">AI Voice Generator</h1>
-            <p className="text-lg text-gray-600 mb-6">Transform your text into natural-sounding speech with advanced AI technology</p>
+            <p className="text-lg text-gray-600 mb-6">Transform your text into natural-sounding speech with Google Cloud Text-to-Speech</p>
           </section>
 
           {/* Expandable Controls */}
@@ -362,37 +374,49 @@ function VoiceGeneratorPage() {
             {showControls && (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-white rounded-lg p-6 shadow-xl mb-4 border border-gray-200">
                 <div>
-                  <h6 className="text-gray-900 font-semibold mb-3">Language</h6>
+                  <h6 className="text-gray-900 font-semibold mb-3">Voice Selection</h6>
                   <select
-                    value={selectedLanguage}
-                    onChange={handleLanguageChange}
+                    value={selectedGoogleVoice}
+                    onChange={handleVoiceChange}
                     className="w-full bg-gray-50 text-gray-900 border border-gray-300 rounded-lg py-2 px-3 focus:border-purple-500 focus:outline-none"
                   >
-                    <option value="English">English</option>
-                    <option value="Chinese">Chinese</option>
-                    <option value="French">French</option>
-                    <option value="German">German</option>
-                    <option value="Japanese">Japanese</option>
-                    <option value="Vietnamese">Vietnamese</option>
-                    <option value="Russian">Russian</option>
+                    {getAvailableLanguages().map((language) => (
+                      <optgroup key={language} label={language}>
+                        {getVoicesForLanguage(language).map((voice) => (
+                          <option key={voice.name} value={voice.name}>
+                            {voice.name} ({voice.gender})
+                          </option>
+                        ))}
+                      </optgroup>
+                    ))}
                   </select>
-                  <p className="text-gray-500 text-sm mt-2">Voice will be automatically selected for the chosen language.</p>
+                  <p className="text-gray-500 text-sm mt-2">
+                    Current: {getLanguageFromVoice(selectedGoogleVoice)} -{' '}
+                    {googleVoices.find((v) => v.name === selectedGoogleVoice)?.gender}
+                  </p>
                 </div>
                 <div>
-                  <h6 className="text-gray-900 font-semibold mb-3">Quality & Details</h6>
-                  <select
-                    value={selectedQuality}
-                    onChange={(e) => setSelectedQuality(e.target.value)}
-                    className="w-full bg-gray-50 text-gray-900 border border-gray-300 rounded-lg py-2 px-3 focus:border-purple-500 focus:outline-none"
-                  >
-                    <option value="High">High</option>
-                    <option value="Medium">Medium</option>
-                    <option value="Low">Low</option>
-                  </select>
-                  <p className="text-gray-500 text-sm mt-2">Higher quality will result in better audio, but will take longer.</p>
+                  <h6 className="text-gray-900 font-semibold mb-3">Speech Rate</h6>
+                  <div className="space-y-2">
+                    <input
+                      type="range"
+                      min="0.25"
+                      max="4.0"
+                      step="0.1"
+                      value={speechRate}
+                      onChange={(e) => setSpeechRate(parseFloat(e.target.value))}
+                      className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
+                    />
+                    <div className="flex justify-between text-sm text-gray-500">
+                      <span>0.25x</span>
+                      <span className="text-gray-900 font-semibold">{speechRate}x</span>
+                      <span>4.0x</span>
+                    </div>
+                  </div>
+                  <p className="text-gray-500 text-sm mt-2">Adjust the speech rate for generation.</p>
                 </div>
                 <div>
-                  <h6 className="text-gray-900 font-semibold mb-3">Play Speed</h6>
+                  <h6 className="text-gray-900 font-semibold mb-3">Playback Speed</h6>
                   <div className="space-y-2">
                     <input
                       type="range"
@@ -426,24 +450,19 @@ function VoiceGeneratorPage() {
                     placeholder="Enter your text here to generate speech..."
                     className="w-full h-32 p-4 bg-gray-50 text-gray-900 rounded-lg border border-gray-300 focus:border-purple-500 focus:outline-none resize-none"
                     required
+                    disabled={isGenerating}
                   />
                 </div>
                 <div className="flex flex-col sm:flex-row gap-4 items-end">
                   <button
                     type="submit"
-                    className="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-6 rounded-lg inline-flex items-center transition-colors"
+                    disabled={isGenerating || !textInput.trim()}
+                    className="bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold py-3 px-6 rounded-lg inline-flex items-center transition-colors"
                   >
                     <Mic className="mr-2 h-5 w-5" />
-                    Generate Voice ({selectedLanguage})
+                    {isGenerating ? 'Generating...' : `Generate Voice (${getLanguageFromVoice(selectedGoogleVoice)})`}
                   </button>
-                  <select
-                    className="bg-gray-50 text-gray-900 border border-gray-300 rounded-lg py-3 px-4 focus:border-purple-500 focus:outline-none"
-                    value="MP3"
-                    readOnly
-                  >
-                    <option value="MP3">MP3</option>
-                    <option value="WAV">WAV</option>
-                  </select>
+                  <div className="text-gray-500 text-sm">Powered by Google Cloud Text-to-Speech</div>
                 </div>
               </form>
             </div>
@@ -458,9 +477,16 @@ function VoiceGeneratorPage() {
                   <div className="mb-4">
                     <div className="flex justify-between items-start mb-2">
                       <p className="text-gray-600 text-sm">Generated from:</p>
-                      {audio.language && <span className="bg-purple-600 text-white px-2 py-1 rounded text-xs">{audio.language}</span>}
+                      <div className="flex gap-2">
+                        {audio.language && <span className="bg-purple-600 text-white px-2 py-1 rounded text-xs">{audio.language}</span>}
+                        {audio.voiceGender && <span className="bg-blue-600 text-white px-2 py-1 rounded text-xs">{audio.voiceGender}</span>}
+                        {audio.speechRate && audio.speechRate !== 1 && (
+                          <span className="bg-green-600 text-white px-2 py-1 rounded text-xs">{audio.speechRate}x speed</span>
+                        )}
+                      </div>
                     </div>
                     <p className="text-gray-900 bg-gray-100 p-3 rounded border-l-4 border-purple-500">{audio.text}</p>
+                    {audio.voiceName && <p className="text-gray-500 text-xs mt-1">Voice: {audio.voiceName}</p>}
                   </div>
 
                   <div className="bg-gray-50 rounded-lg p-4 mb-4">
@@ -526,7 +552,7 @@ function VoiceGeneratorPage() {
                       </button>
                     </div>
                     <button
-                      onClick={() => handleDownload(audio.audioUrl, audio.id)}
+                      onClick={() => handleDownload(audio.audioUrl, audio.id, audio.audioBlob)}
                       className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg inline-flex items-center transition-colors"
                     >
                       <Download className="mr-2 h-4 w-4" />
