@@ -1,0 +1,5 @@
+# This CODEOWNERS file defines who the code owners are.
+# Code owners are the only ones who can approve PRs that modify these files.
+
+# Apply to all files in the repository
+* @mquangcao
